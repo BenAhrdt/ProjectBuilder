@@ -1,0 +1,133 @@
+:root {
+
+    /* --------------------------------------------------
+       Farben
+    -------------------------------------------------- */
+
+    --color-background: #f3f3f3;
+
+    --color-header: #ffffff;
+    --color-navbar: #ffffff;
+
+    --color-text: #ffffff;
+    --color-content-text: #222222;
+
+    --color-border: #555555;
+
+    /* --------------------------------------------------
+       Größen
+    -------------------------------------------------- */
+
+    --header-height: 60px;
+    --navbar-width: 250px;
+
+}
+
+.searchBox {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.searchBox input {
+    width: 80%;
+    padding:10px 14px;
+    border: 1px solid #dcdcdc;
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 14px;
+    outline: none;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
+}
+.searchBox input:focus {
+    border-color:
+        #4c8bf5;
+    box-shadow:
+        0 0 0 3px rgba(76,139,245,0.15);
+}
+
+
+
+
+
+
+#navbar-item-range {
+    border: 10px;
+    display: grid;
+    grid-template-rows: 40% 30% 30%;
+}
+.navbar-item-group {
+    margin-top: 30px;
+    display: grid;
+    grid-template-columns: 30px 30px 30px 30px 30px;
+}
+.navbar-item {
+    display: grid;
+    height: 40px;
+    grid-template-columns: 20% 15% 60%;
+    align-items: center;
+    position: relative;
+}
+.navbar-item-icon {
+    width: 10px;
+}
+
+
+#customers {
+    background-color: var(--color-background);
+    color: black;
+}
+
+/* Obere Kurve */
+.navbar-item::before {
+    content: "";
+
+    position: absolute;
+
+    top: -20px;
+    right: 0;
+
+    width: 20px;
+    height: 20px;
+
+    background: transparent;
+
+    border-bottom-right-radius: 10px;
+
+    box-shadow: 5px 5px 0 5px var(--color-background)
+}
+
+/* Untere Kurve */
+.navbar-item::after {
+    content: "";
+
+    position: absolute;
+
+    bottom: -20px;
+    right: 0;
+
+    width: 20px;
+    height: 20px;
+
+    background: transparent;
+
+    border-top-right-radius: 10px;
+
+    box-shadow: 5px -5px 0 5px var(--color-background)
+}
+.navbar-item-group {
+    display: flex;
+    flex-direction: column;
+}
+
+#navbar-information-version {
+    margin: 10px;
+    color: black;
+}
+
+#navbar-informations{
+    margin-bottom: 100px;
+    display: flex;
+    flex-direction: column;
+}

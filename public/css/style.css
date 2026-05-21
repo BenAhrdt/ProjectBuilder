@@ -1,0 +1,90 @@
+:root {
+
+    /* --------------------------------------------------
+       Farben
+    -------------------------------------------------- */
+
+    --color-background: #f3f3f3;
+
+    --color-header: #ffffff;
+    --color-navbar: #ffffff;
+
+    --color-text: #ffffff;
+    --color-content-text: #222222;
+
+    --color-border: #555555;
+
+    /* --------------------------------------------------
+       Größen
+    -------------------------------------------------- */
+
+    --header-height: 60px;
+    --navbar-width: 300px;
+
+}
+
+/* --------------------------------------------------
+   Grundlayout
+-------------------------------------------------- */
+
+html,
+body {
+
+    margin: 0;
+    height: 100%;
+
+    font-family: Arial, sans-serif;
+
+}
+
+#app {
+    height: 100vh;
+    display: grid;
+    grid-template-rows: var(--header-height) 1fr;
+
+}
+
+/* --------------------------------------------------
+   Header
+-------------------------------------------------- */
+
+#header {
+    background: var(--color-header);
+    color: var(--color-text);
+     box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.12);
+
+    z-index: 10;   
+
+}
+
+/* --------------------------------------------------
+   Hauptbereich
+-------------------------------------------------- */
+
+#below {
+
+    display: grid;
+    grid-template-columns: var(--navbar-width) 1fr;
+
+}
+
+/* --------------------------------------------------
+   Navigation
+-------------------------------------------------- */
+
+#navbar {
+    background: var(--color-navbar);
+    color: var(--color-text);
+    display: grid;
+    grid-template-rows: 60px 90% 10%;
+}
+
+/* --------------------------------------------------
+   Aktuelle Ansicht
+-------------------------------------------------- */
+
+#view {
+    background: var(--color-background);
+    color: var(--color-content-text);
+}

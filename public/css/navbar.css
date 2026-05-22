@@ -23,6 +23,25 @@
 
 }
 
+/* --------------------------------------------------
+   Navigation
+-------------------------------------------------- */
+
+#navbar {
+    grid-area: navbar;
+    background: var(--color-navbar);
+    color: var(--color-text);
+    display: grid;
+    grid-template-rows: 60px 90% 10%;
+    grid-template-areas:
+        "searchbar"
+        "item-range"
+        "informations";
+}
+
+    /* --------------------------------------------------
+       Searchbox
+    -------------------------------------------------- */
 .searchBox {
     display: flex;
     justify-content: center;
@@ -49,38 +68,60 @@
 
 
 
-
+    /* --------------------------------------------------
+       Item Range
+    -------------------------------------------------- */
 
 
 #navbar-item-range {
+    grid-area: item-range;
     border: 10px;
     display: grid;
-    grid-template-rows: 40% 30% 30%;
+    grid-template-rows: 30% 30% 30%;
+    margin-top: 40px;
 }
+
+    /* --------------------------------------------------
+       Item Group
+    -------------------------------------------------- */
+
 .navbar-item-group {
-    margin-top: 30px;
-    display: grid;
-    grid-template-columns: 30px 30px 30px 30px 30px;
+    display: flex;
+    flex-direction: column;
 }
+
+    /* --------------------------------------------------
+       Navbar Items
+    -------------------------------------------------- */
 .navbar-item {
     display: grid;
     height: 40px;
-    grid-template-columns: 20% 15% 60%;
+    grid-template-columns: 40% 60%;
     align-items: center;
     position: relative;
+    grid-template-areas: "icon text";
+    color: gray;
+    cursor: pointer;
 }
-.navbar-item-icon {
-    width: 10px;
-}
-
-
-#customers {
+.navbar-item.active {
     background-color: var(--color-background);
     color: black;
+    cursor: default;
+}
+.navbar-item-icon {
+    grid-area: icon;
+    display: flex;
+    justify-content: end;
+    padding-right: 10px;
+}
+
+.navbar-item-text {
+    grid-area: text;
+    padding-left: 10px;
 }
 
 /* Obere Kurve */
-.navbar-item::before {
+.navbar-item.active::before {
     content: "";
 
     position: absolute;
@@ -95,11 +136,11 @@
 
     border-bottom-right-radius: 10px;
 
-    box-shadow: 5px 5px 0 5px var(--color-background)
+    box-shadow: 5px 5px 0 5px var(--color-background);
 }
 
 /* Untere Kurve */
-.navbar-item::after {
+.navbar-item.active::after {
     content: "";
 
     position: absolute;
@@ -114,9 +155,17 @@
 
     border-top-right-radius: 10px;
 
-    box-shadow: 5px -5px 0 5px var(--color-background)
+    box-shadow: 5px -5px 0 5px var(--color-background);
 }
-.navbar-item-group {
+
+
+    /* --------------------------------------------------
+       Informations
+    -------------------------------------------------- */
+
+#navbar-informations{
+    grid-area: informations;
+    margin-bottom: 100px;
     display: flex;
     flex-direction: column;
 }
@@ -124,10 +173,4 @@
 #navbar-information-version {
     margin: 10px;
     color: black;
-}
-
-#navbar-informations{
-    margin-bottom: 100px;
-    display: flex;
-    flex-direction: column;
 }

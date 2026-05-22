@@ -1,5 +1,8 @@
 {
     "header.projectname": "Project Builder",
     "navbar.search": "Search",
-    "navbar.customers": "Customers"
+    "navbar.customers": "Customers",
+    "navbar.article": "Article",
+    "customers.customers": "Customers",
+    "articles.articles": "Articles"
 }

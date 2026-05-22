@@ -1,7 +1,13 @@
-import { loadLanguage, t } from "./i18n.js"
-await loadLanguage("de")
-import { icons } from "./icons.js"
+import { loadLanguage, t } from "./i18n.js";
+await loadLanguage("de");
+import { icons } from "./icons.js";
+import { renderCustomersView } from "./customers.js";
+import { renderArticlesView } from "./articles.js";
 
+const renderfunction = {
+    "customers": renderCustomersView,
+    "articles": renderArticlesView
+};
 const navbar = document.getElementById('navbar');
 
 navbar.innerHTML = `
@@ -13,14 +19,15 @@ navbar.innerHTML = `
     </div>
     <div id="navbar-item-range">
         <div id="navbar-item-group-1" class="navbar-item-group">
-            <div id="customers" class="navbar-item">
-                <span></span>
+            <div data-view="customers" class="navbar-item active">
                 <span class="navbar-item-icon">${icons.user}</span>
-                <div class="navbat-item-tex">${t("navbar.customers")}</div>
+                <div class="navbar-item-text">${t("navbar.customers")}</div>
+            </div>
+            <div data-view="articles" class="navbar-item ">
+                <span class="navbar-item-icon">${icons.article}</span>
+                <div class="navbar-item-text">${t("navbar.article")}</div>
             </div>
         </div>
-        <div id="navbar-item-group-2" class="navbar-item-group"></div>
-        <div id="navbar-item-group-3" class="navbar-item-group"></div>
     </div>
     <div id="navbar-informations">
         <div id="navbar-information-version" class="navbar-information">
@@ -28,3 +35,24 @@ navbar.innerHTML = `
         </div>
     </div>
 `;
+
+// Clickhandler
+const navbarItems = document.querySelectorAll(".navbar-item");
+navbarItems.forEach(item => {
+    item.addEventListener("click", () => {
+
+        // active von allen entfernen
+        navbarItems.forEach(i => {
+            i.classList.remove("active");
+        });
+
+        // active auf geklicktes Element
+        item.classList.add("active");
+
+        // Prüfen, ob in data-vie etwas liegt und rendern
+        const view = item.dataset.view;
+        if(renderfunction[view]) {
+            renderfunction[view]();
+        }
+    });
+});

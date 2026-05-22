@@ -41,7 +41,9 @@ body {
     height: 100vh;
     display: grid;
     grid-template-rows: var(--header-height) 1fr;
-
+    grid-template-areas:
+        "header"
+        "below";
 }
 
 /* --------------------------------------------------
@@ -53,8 +55,8 @@ body {
     color: var(--color-text);
      box-shadow:
         0 2px 8px rgba(0, 0, 0, 0.12);
-
     z-index: 10;   
+    grid-area: header;
 
 }
 
@@ -63,28 +65,9 @@ body {
 -------------------------------------------------- */
 
 #below {
-
+    grid-area: below;
     display: grid;
     grid-template-columns: var(--navbar-width) 1fr;
+    grid-template-areas: "navbar view";
 
-}
-
-/* --------------------------------------------------
-   Navigation
--------------------------------------------------- */
-
-#navbar {
-    background: var(--color-navbar);
-    color: var(--color-text);
-    display: grid;
-    grid-template-rows: 60px 90% 10%;
-}
-
-/* --------------------------------------------------
-   Aktuelle Ansicht
--------------------------------------------------- */
-
-#view {
-    background: var(--color-background);
-    color: var(--color-content-text);
 }

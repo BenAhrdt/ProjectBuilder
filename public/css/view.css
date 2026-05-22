@@ -1,0 +1,57 @@
+:root {
+
+    /* --------------------------------------------------
+       Farben
+    -------------------------------------------------- */
+
+    --color-background: #f3f3f3;
+
+    --color-header: #ffffff;
+    --color-navbar: #ffffff;
+
+    --color-text: #ffffff;
+    --color-content-text: #222222;
+
+    --color-border: #555555;
+
+    /* --------------------------------------------------
+       Größen
+    -------------------------------------------------- */
+
+    --header-height: 60px;
+    --navbar-width: 250px;
+
+}
+
+/* --------------------------------------------------
+   Aktuelle Ansicht
+-------------------------------------------------- */
+
+#view {
+    grid-area: view;
+    background: var(--color-background);
+    color: var(--color-content-text);
+    display: grid;
+    grid-template-columns: 5% 90% 5%;;
+    grid-template-rows: 10% 80% 10%;
+    grid-template-areas:
+      "header header header"
+      "left content right"
+      "left empty right";
+}
+
+.view-header {
+   grid-area: header;
+   display: flex;
+   align-items: center;
+   padding-left: 5%;
+   font-size: xx-large;
+   font-weight: bold;
+}
+
+.view-content {
+   grid-area: content;
+   border-radius: 8px;
+   background-color: white;
+
+}

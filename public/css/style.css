@@ -19,9 +19,10 @@
     -------------------------------------------------- */
 
     --header-height: 60px;
-    --navbar-width: 300px;
+    --navbar-width: 250px;
 
 }
+
 
 /* --------------------------------------------------
    Grundlayout
@@ -57,7 +58,6 @@ body {
         0 2px 8px rgba(0, 0, 0, 0.12);
     z-index: 10;   
     grid-area: header;
-
 }
 
 /* --------------------------------------------------
@@ -69,5 +69,6 @@ body {
     display: grid;
     grid-template-columns: var(--navbar-width) 1fr;
     grid-template-areas: "navbar view";
-
+    min-height: 0;
+    overflow: hidden;
 }

@@ -1,6 +1,8 @@
 import express from "express"
 import path from "path"
 import { fileURLToPath } from "url"
+import * as database from "./database/index.js";
+import articlesRoutes from "./routes/articles.js";
 
 const app = express()
 
@@ -34,6 +36,12 @@ app.get("/api", (req, res) => {
     })
 
 })
+
+// --------------------------------------------------
+// Artikel API
+// --------------------------------------------------
+
+app.use("/api/articles", articlesRoutes);
 
 // --------------------------------------------------
 // SPA Catch-All

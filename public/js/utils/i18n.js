@@ -6,7 +6,7 @@ let currentLanguage = "de"
 // Sprache laden
 // --------------------------------------------------
 
-export async function loadLanguage(language) {
+async function loadLanguage(language) {
 
     currentLanguage = language
 
@@ -20,8 +20,11 @@ export async function loadLanguage(language) {
 // Übersetzung holen
 // --------------------------------------------------
 
-export function t(key) {
-
+function t(key) {
     return translations[key] || key
-
 }
+
+export {
+    loadLanguage,
+    t
+};

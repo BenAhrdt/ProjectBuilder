@@ -1,0 +1,60 @@
+#importPriclistDescription {
+   padding: 10px;
+   font-size: x-large;
+}
+
+#upload-area {
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    width: 300px;
+    height: 180px;
+
+    margin-top: 30px;
+
+    border: 2px dashed #bdbdbd;
+    border-radius: 12px;
+
+    background: #fafafa;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease,
+        transform 0.15s ease;
+
+    user-select: none;
+
+}
+
+#upload-area:hover {
+
+    background: #f0f0f0;
+
+    border-color: #666666;
+
+    transform: scale(1.01);
+
+}
+
+#upload-area:active {
+
+    transform: scale(0.99);
+
+}
+
+#upload-area div {
+
+    font-size: 18px;
+    font-weight: 600;
+
+    color: #444444;
+
+    text-align: center;
+
+    pointer-events: none;
+
+}

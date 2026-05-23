@@ -3,6 +3,10 @@
     "navbar.search": "Search",
     "navbar.customers": "Customers",
     "navbar.article": "Article",
+    "navbar.importPricelist": "Import pricelist",
     "customers.customers": "Customers",
-    "articles.articles": "Articles"
+    "articles.articles": "Articles",
+    "articles.search": "Search",
+    "importPricelist.importPricelist": "Import pricelist",
+    "importPricelist.decription": "Here you can import the price list based on the Excel price list."
 }

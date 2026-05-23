@@ -1,27 +1,3 @@
-:root {
-
-    /* --------------------------------------------------
-       Farben
-    -------------------------------------------------- */
-
-    --color-background: #f3f3f3;
-
-    --color-header: #ffffff;
-    --color-navbar: #ffffff;
-
-    --color-text: #ffffff;
-    --color-content-text: #222222;
-
-    --color-border: #555555;
-
-    /* --------------------------------------------------
-       Größen
-    -------------------------------------------------- */
-
-    --header-height: 60px;
-    --navbar-width: 250px;
-
-}
 
 /* --------------------------------------------------
    Navigation
@@ -32,7 +8,7 @@
     background: var(--color-navbar);
     color: var(--color-text);
     display: grid;
-    grid-template-rows: 60px 90% 10%;
+    grid-template-rows: 60px auto 10%;
     grid-template-areas:
         "searchbar"
         "item-range"
@@ -77,8 +53,12 @@
     grid-area: item-range;
     border: 10px;
     display: grid;
-    grid-template-rows: 30% 30% 30%;
+    grid-template-rows: 1fr 1fr 1fr;
     margin-top: 40px;
+    grid-template-areas:
+        "navbar-item-group-1"
+        "navbar-item-group-2"
+        "navbar-item-group-3";
 }
 
     /* --------------------------------------------------
@@ -96,7 +76,7 @@
 .navbar-item {
     display: grid;
     height: 40px;
-    grid-template-columns: 40% 60%;
+    grid-template-columns: 30% 70%;
     align-items: center;
     position: relative;
     grid-template-areas: "icon text";
@@ -159,18 +139,58 @@
 }
 
 
+#navbar-item-group-1 {
+    grid-area: navbar-item-group-1;
+}
+
+#navbar-item-group-2 {
+    grid-area: navbar-item-group-2;
+}
+
+#navbar-item-group-3 {
+    grid-area: navbar-item-group-3;
+    display: grid;
+    grid-template-rows: 1fr 1fr 1fr 1fr 1fr;
+    grid-template-areas:
+    "item-1"
+    "item-2"
+    "item-3"
+    "item-4"
+    "importPricelist";
+    align-items: center;
+}
+
+#navbar-import-pricelist {
+    grid-area: importPricelist;
+}
+
+
     /* --------------------------------------------------
        Informations
     -------------------------------------------------- */
 
 #navbar-informations{
     grid-area: informations;
-    margin-bottom: 100px;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-rows:
+    1fr
+    1fr
+    1fr;
+    grid-template-areas:
+    "information-1"
+    "version"
+    "update";    
 }
-
+#navbar-information-1 {
+    grid-area: information-1;
+    border-top: 1px solid #ececec;
+    margin-left: 20px;
+    margin-right: 20px;
+}
 #navbar-information-version {
-    margin: 10px;
+    display: flex;
+    align-items: center;
+    grid-area: version;
+    padding-left: 20px;
     color: black;
 }

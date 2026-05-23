@@ -7,6 +7,7 @@
     "customers.customers": "Customers",
     "articles.articles": "Articles",
     "articles.search": "Search",
+    "articles.articleCount": "Actual article count",
     "importPricelist.importPricelist": "Import pricelist",
     "importPricelist.decription": "Here you can import the price list based on the Excel price list."
 }

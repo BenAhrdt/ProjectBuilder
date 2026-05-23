@@ -3,6 +3,7 @@ import multer from "multer";
 import XLSX from "xlsx";
 import * as database from "../database/index.js";
 import * as excelValidation from "../utils/excelValidation.js";
+import fs from "fs";
 
 const router = express.Router();
 
@@ -38,6 +39,7 @@ router.post(
         // JSON erzeugen
         const data =
             XLSX.utils.sheet_to_json(sheet);
+            fs.unlinkSync(req.file.path);
 
         const existingArticles =
                     database.articles.prepare(`

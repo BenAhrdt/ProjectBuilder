@@ -11,12 +11,16 @@ function renderView() {
         <div id="import-left" class="view-left"></div>
         <div id="import-content" class="view-content">
             <div id="importPriclistDescription">${i18n.t("importPricelist.decription")}</div>
-        <div id="upload-area">
-            <div>Preisliste auswählen
+        <div id="upload-wrapper">
+            <div id="upload-area">
+                <div>
+                    Preisliste auswählen
+                </div>
             </div>
         </div>
+        <div id="import-status-header">Status:</div>
+        <div id="import-status">Bereit</div>
         <input type="file" id="price-list-file" accept=".xlsx,.xls" hidden>
-        </div>
         <div id="import-right" class="view-right"/></div>
     `;
 
@@ -36,9 +40,9 @@ function generateHandler() {
             "price-list-file"
         );
 
-    const importContent =
+    const importStatus =
         document.getElementById(
-            "import-content"
+            "import-status"
         );
 
     // --------------------------------------------------
@@ -48,7 +52,7 @@ function generateHandler() {
     uploadArea.addEventListener(
         "click",
         () => {
-
+            console.log("Klick kommt");
             input.click();
 
         }
@@ -61,7 +65,8 @@ function generateHandler() {
     input.addEventListener(
         "change",
         async () => {
-
+            console.log("Change kommt");
+            importStatus.innerHTML = `Import läuft ...`
             const file =
                 input.files[0];
 
@@ -104,36 +109,42 @@ function generateHandler() {
             // Report anzeigen
             // --------------------------------------------------
 
-            importContent.innerHTML = `
+            
+            importStatus.innerHTML = `
+                    <div class="import-report">
+                        <h2>
+                            Import abgeschlossen
+                        </h2>`;
 
-                <div class="import-report">
+            if (result.imported !== 0) {
+                importStatus.innerHTML += `
+                            <p>
+                                Importiert:
+                                ${result.imported}
+                            </p>`;
+            }
 
-                    <h2>
-                        Import abgeschlossen
-                    </h2>
+            if (result.updated !== 0) {
+                importStatus.innerHTML += `
+                            <p>
+                                Aktualisiert:
+                                ${result.updated}
+                             </p>`;
+            }
 
-                    <p>
-                        Importiert:
-                        ${result.imported}
-                    </p>
-
-                    <p>
-                        Aktualisiert:
-                        ${result.updated}
-                    </p>
-
-                    <p>
-                        Übersprungen:
-                        ${result.skipped.length}
-                    </p>
-
-                </div>
-
+            if (result.skipped.length !== 0) {
+                importStatus.innerHTML += `
+                            <p>
+                                Übersprungen:
+                                ${result.skipped.length}
+                            </p>`;
+            }
+            importStatus.innerHTML += `
+            </div>
             `;
-
+            input.value = "";
         }
     );
-
 }
 
 export {

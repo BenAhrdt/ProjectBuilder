@@ -49,51 +49,6 @@ function validateArticles(articles) {
 
         }
 
-        // --------------------------------------------------
-        // Beschreibung prüfen
-        // --------------------------------------------------
-
-        if (
-            !article.description
-        ) {
-
-            result.skipped.push({
-
-                article,
-                reason:
-                    "Beschreibung fehlt"
-
-            });
-
-            continue;
-
-        }
-
-        // --------------------------------------------------
-        // Preis prüfen
-        // --------------------------------------------------
-
-        if (
-
-            article.listPrice !== null
-            &&
-            article.listPrice !== undefined
-            &&
-            isNaN(article.listPrice)
-
-        ) {
-
-            result.skipped.push({
-
-                article,
-                reason:
-                    "Preis ist keine Zahl"
-
-            });
-
-            continue;
-
-        }
 
         // --------------------------------------------------
         // Doppelte Artikelnummer

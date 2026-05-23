@@ -31,6 +31,9 @@ async function renderView() {
                     <input id="articles-search" type="text" placeholder="${i18n.t("articles.search")}...">
                 </div>
             </div>
+            <div id="articles-meta-infomrations" class="meta-informations">
+                ${i18n.t("articles.articleCount")}: ${articles.length} 
+            </div>
         </div>
 
         <div id="articles-left" class="view-left"></div>
@@ -90,7 +93,7 @@ async function renderView() {
                             </td>
 
                             <td>
-                                ${article.listPrice ?? ""} ${article.listPriceCurrency ?? ""}
+                                ${renderArticlePrice(article)}
                             </td>
 
                         </tr>
@@ -170,12 +173,28 @@ function renderArticles(articles) {
                 </td>
 
                 <td>
-                    ${article.listPrice ?? ""} ${article.listPriceCurrency ?? ""}
+                    ${renderArticlePrice(article)}
                 </td>
 
             </tr>
 
         `).join("");
+
+}
+
+function renderArticlePrice(article) {
+
+    if (
+        !isNaN(article.listPrice)
+    ) {
+
+        return `
+            ${article.listPrice}
+            ${article.listPriceCurrency ?? ""}
+        `;
+    }
+
+    return article.listPrice ?? "";
 
 }
 

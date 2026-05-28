@@ -3,6 +3,7 @@ import path from "path"
 import { fileURLToPath } from "url"
 import * as database from "./database/index.js";
 import articlesRoutes from "./routes/articles.js";
+import customersRouter from "./routes/customers.js";
 
 const app = express()
 
@@ -42,6 +43,16 @@ app.get("/api", (req, res) => {
 // --------------------------------------------------
 
 app.use("/api/articles", articlesRoutes);
+
+
+// --------------------------------------------------
+// Customers API
+// --------------------------------------------------
+
+app.use(
+    "/api/customers",
+    customersRouter
+);
 
 // --------------------------------------------------
 // SPA Catch-All

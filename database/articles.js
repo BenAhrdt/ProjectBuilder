@@ -1,5 +1,5 @@
 import Database from "better-sqlite3";
-const articles = new Database("./database/articles.db");
+const articles = new Database("./database/projectbuilder.db");
 
 // --------------------------------------------------
 // Tabellen

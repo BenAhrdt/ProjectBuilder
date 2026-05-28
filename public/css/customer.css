@@ -1,0 +1,170 @@
+#customer-content {
+
+    padding: 30px;
+
+}
+
+.customer-card {
+
+    background: var(--color-accent);
+
+    border-radius: 12px;
+
+    padding: 24px;
+
+    box-shadow:
+        0 2px 10px rgba(0,0,0,0.06);
+
+}
+
+.customer-form {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 30px;
+
+}
+
+.customer-form-top {
+
+    display: grid;
+
+    grid-template-columns:
+        1fr
+        1fr;
+
+    gap: 60px;
+
+}
+
+.customer-form-row {
+
+    display: grid;
+
+    grid-template-columns:
+        140px
+        1fr;
+
+    align-items: center;
+
+    gap: 16px;
+
+}
+
+.customer-form label {
+
+    font-weight: 600;
+
+}
+
+.customer-form input,
+.customer-form textarea {
+
+    padding: 12px 14px;
+
+    border: 1px solid #dcdcdc;
+
+    border-radius: 8px;
+
+    font-size: 14px;
+
+    outline: none;
+
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
+
+}
+
+.customer-form input:focus,
+.customer-form textarea:focus {
+
+    border-color: #4c8bf5;
+
+    box-shadow:
+        0 0 0 3px rgba(76,139,245,0.15);
+
+}
+
+.customer-discounts-wrapper {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 20px;
+
+}
+
+.customer-discounts-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, 1fr);
+
+    gap: 16px;
+
+}
+
+.discount-row {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+}
+
+.discount-row input {
+
+    width: 100px;
+
+}
+
+.customer-additional-info-wrapper {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 10px;
+
+}
+
+#customer-additional-info {
+
+    min-height: 180px;
+
+    resize: vertical;
+
+}
+
+.discount-input-wrapper {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 6px;
+
+}
+
+.discount-input {
+
+    width: 70px !important;
+
+    text-align: right;
+
+}
+
+.discount-input-wrapper span {
+
+    font-weight: 600;
+
+    color: #666;
+
+}

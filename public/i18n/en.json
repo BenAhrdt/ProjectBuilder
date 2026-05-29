@@ -4,6 +4,7 @@
     "navbar.customers": "Customers",
     "navbar.article": "Article",
     "navbar.importPricelist": "Import pricelist",
+    "navbar.projects": "Projects",
     "customers.customers": "Customers",
     "customers.customerCount": "Actual Customers Count",
     "customers.search": "Search",
@@ -20,5 +21,16 @@
     "articles.search": "Search",
     "articles.articleCount": "Actual article count",
     "importPricelist.importPricelist": "Import pricelist",
-    "importPricelist.decription": "Here you can import the price list based on the Excel price list."
+    "importPricelist.decription": "Here you can import the price list based on the Excel price list.",
+    "projects.projects": "Projects",
+    "projects.search": "Search",
+    "projects.projectCount": "Project Count",
+    "projects.projectname": "Projectname",
+    "projects.customer": "Customer",
+    "projects.description": "Description",
+    "projects.addProject": "Add Project",
+    "projects.selectCustomer": "Select Customer",
+    "project.projectname": "Projectname",
+    "project.customer": "Customer",
+    "project.description": "Description"
 }

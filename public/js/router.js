@@ -3,6 +3,8 @@ import * as articles from "./views/articles.js";
 import * as importPricelist from "./views/importPriclist.js";
 import * as navbar from "./base/navbar.js";
 import * as customer from "./views/customer.js";
+import * as projects from "./views/projects.js";
+import * as project from "./views/project.js";
 
 const routes = {
     "/": {
@@ -25,6 +27,10 @@ const routes = {
         render: customer.renderView,
         active: "customers",
     },
+    "/projects": {
+        render: projects.renderView,
+        active: "projects",
+    },
 };
 
 function navigate(path) {
@@ -39,7 +45,7 @@ function navigate(path) {
 
 function renderRoute(path) {
 
-
+    // Kunde
     if (
         path.startsWith(
             "/customer/"
@@ -55,6 +61,22 @@ function renderRoute(path) {
 
         customer.renderView(
             customerId
+        );
+
+        return;
+
+    }
+
+   //Projekt
+    if (
+        path.startsWith("/project/")
+    ) {
+
+        const projectId =
+            path.split("/")[2];
+
+        project.renderView(
+            projectId
         );
 
         return;

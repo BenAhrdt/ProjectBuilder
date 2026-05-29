@@ -22,6 +22,10 @@ navbar.innerHTML = `
                 <span class="navbar-item-icon">${utils.icons.article}</span>
                 <div class="navbar-item-text">${i18n.t("navbar.article")}</div>
             </div>
+            <div data-view="projects" class="navbar-item ">
+                <span class="navbar-item-icon">${utils.icons.projects}</span>
+                <div class="navbar-item-text">${i18n.t("navbar.projects")}</div>
+            </div>
         </div>
         <div id="navbar-item-group-3" class="navbar-item-group">
             <div id="navbar-import-pricelist" data-view="importPricelist" class="navbar-item">

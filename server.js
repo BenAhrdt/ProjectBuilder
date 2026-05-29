@@ -4,6 +4,7 @@ import { fileURLToPath } from "url"
 import * as database from "./database/index.js";
 import articlesRoutes from "./routes/articles.js";
 import customersRouter from "./routes/customers.js";
+import projectsRouter from "./routes/projects.js";
 
 const app = express()
 
@@ -52,6 +53,15 @@ app.use("/api/articles", articlesRoutes);
 app.use(
     "/api/customers",
     customersRouter
+);
+
+// --------------------------------------------------
+// Projekte API
+// --------------------------------------------------
+
+app.use(
+    "/api/projects",
+    projectsRouter
 );
 
 // --------------------------------------------------

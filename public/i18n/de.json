@@ -4,6 +4,7 @@
     "navbar.customers": "Kunden",
     "navbar.article": "Artikel",
     "navbar.importPricelist": "Preisliste importieren",
+    "navbar.projects": "Projekte",
     "customers.customers": "Kunden",
     "customers.customerCount": "Aktuelle Kundenanzahl",
     "customers.customerNumber": "Kundennummer",
@@ -20,5 +21,16 @@
     "articles.search": "Suchen",
     "articles.articleCount": "Aktuelle Artikelanzahl",
     "importPricelist.importPricelist": "Preisliste importieren",
-    "importPricelist.decription": "Hier können Sie die Preisliste auf Basis der Excel-Preiliste importieren."
+    "importPricelist.decription": "Hier können Sie die Preisliste auf Basis der Excel-Preiliste importieren.",
+    "projects.projects": "Projekte",
+    "projects.search": "Suchen",
+    "projects.projectCount": "Anzahl Projekte",
+    "projects.projectname": "Projektname",
+    "projects.customer": "Kunde",
+    "projects.description": "Beschreibung",
+    "projects.addProject": "Projekt hinzufügen",
+    "projects.selectCustomer": "Kunde auswählen",
+    "project.projectname": "Projektname",
+    "project.customer": "Kunde",
+    "project.description": "Beschreibung"
 }

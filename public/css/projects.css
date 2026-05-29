@@ -1,0 +1,453 @@
+
+/* --------------------------------------------------
+   Searchbar
+-------------------------------------------------- */
+
+#projects-search {
+
+    margin-left: 50px;
+
+    width: 200px;
+
+}
+
+/* --------------------------------------------------
+   Content
+-------------------------------------------------- */
+
+#projects-content {
+
+    grid-area: content;
+
+    overflow: auto;
+
+    min-height: 0;
+
+    border: 1px solid gray;
+
+}
+
+/* --------------------------------------------------
+   Tabelle
+-------------------------------------------------- */
+
+.projects-table {
+
+    width: 100%;
+
+    border-collapse: collapse;
+
+    font-size: 14px;
+
+}
+
+/* --------------------------------------------------
+   Header
+-------------------------------------------------- */
+
+.projects-table thead {
+
+    position: sticky;
+
+    top: 0;
+
+    z-index: 1;
+
+}
+
+.projects-table th {
+
+    background: #f7f7f7;
+
+    text-align: left;
+
+    padding: 16px;
+
+    font-weight: 600;
+
+    border-bottom: 1px solid #e5e5e5;
+
+}
+
+.projects-table th,
+.projects-table td {
+
+    padding: 12px;
+
+    border-bottom: 1px solid #e0e0e0;
+
+    text-align: left;
+
+    vertical-align: top;
+
+    white-space: normal;
+
+    overflow-wrap: break-word;
+
+    word-break: break-word;
+
+    border-right: 1px solid #f0f0f0;
+
+}
+
+/* --------------------------------------------------
+   Zellen
+-------------------------------------------------- */
+
+.projects-table td {
+
+    padding: 14px 16px;
+
+}
+
+/* --------------------------------------------------
+   Hover
+-------------------------------------------------- */
+
+.projects-table tbody tr:hover {
+
+    background: #fafafa;
+
+}
+
+/* --------------------------------------------------
+   Zebra
+-------------------------------------------------- */
+
+.projects-table tbody tr:nth-child(even) {
+
+    background: #f8f8f8;
+
+}
+
+/* --------------------------------------------------
+   Kundennummer
+-------------------------------------------------- */
+
+.projects-table th:nth-child(1),
+.projects-table td:nth-child(1) {
+
+    width: 120px;
+
+    min-width: 120px;
+
+    white-space: nowrap;
+
+    font-weight: 600;
+
+}
+
+/* --------------------------------------------------
+   Name
+-------------------------------------------------- */
+
+.projects-table th:nth-child(2),
+.projects-table td:nth-child(2) {
+
+    width: 250px;
+
+    min-width: 250px;
+
+}
+
+/* --------------------------------------------------
+   Stadt
+-------------------------------------------------- */
+
+.projects-table th:nth-child(3),
+.projects-table td:nth-child(3) {
+
+    width: 180px;
+
+    min-width: 180px;
+
+    white-space: nowrap;
+
+}
+
+/* --------------------------------------------------
+   Zusatzinformationen
+-------------------------------------------------- */
+
+.projects-table th:nth-child(4),
+.projects-table td:nth-child(4) {
+
+    width: 100%;
+
+    white-space: normal;
+
+    word-break: break-word;
+
+    overflow-wrap: anywhere;
+
+}
+
+/* --------------------------------------------------
+   Meta Informationen
+-------------------------------------------------- */
+
+#projects-meta-infomrations {
+
+    margin-left: 30px;
+
+    font-size: medium;
+
+    font-weight: normal;
+
+}
+
+.hidden {
+
+    display: none;
+
+}
+
+#project-form-container {
+
+    margin-bottom: 20px;
+
+}
+
+.project-form {
+
+    display: grid;
+
+    grid-template-columns:
+        200px
+        1fr
+        200px;
+
+    gap: 12px;
+
+    padding: 20px;
+
+    background: #f7f7f7;
+
+    border-radius: 12px;
+
+}
+
+#project-additional-info {
+
+    grid-column: 1 / -1;
+
+    min-height: 100px;
+
+    resize: vertical;
+
+}
+
+.project-form {
+
+    display: grid;
+
+    grid-template-columns:
+        180px
+        180px
+        1fr;
+
+    gap: 16px;
+
+    padding: 20px;
+
+    margin-bottom: 20px;
+
+    background: white;
+
+    border-radius: 12px;
+
+    box-shadow:
+        0 2px 10px rgba(0,0,0,0.06);
+
+}
+
+.project-form input,
+.project-form textarea {
+
+    padding: 12px 14px;
+
+    border: 1px solid #dcdcdc;
+
+    border-radius: 8px;
+
+    font-size: 14px;
+
+    outline: none;
+
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
+
+}
+
+.project-form input:focus,
+.project-form textarea:focus {
+
+    border-color: #4c8bf5;
+
+    box-shadow:
+        0 0 0 3px rgba(76,139,245,0.15);
+
+}
+
+#project-additional-info {
+
+    grid-column: 1 / -1;
+
+    min-height: 120px;
+
+    resize: vertical;
+
+}
+
+#save-project-button {
+
+    width: 180px;
+
+    padding: 12px;
+
+    border: none;
+
+    border-radius: 8px;
+
+    background: #4c8bf5;
+
+    color: white;
+
+    font-size: 14px;
+
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s;
+
+}
+
+#save-project-button:hover {
+    background: #3a76dd;
+}
+
+#add-project-button {
+
+    margin-left: 20px;
+
+    padding:
+        10px 14px;
+
+    border: none;
+
+    border-radius: 8px;
+
+    background: #4c8bf5;
+
+    color: white;
+
+    font-weight: 600;
+
+    cursor: pointer;
+
+}
+
+#add-project-button:hover {
+    background: #3a76dd;
+}
+
+#project-customer {
+
+    width: 100%;
+
+    height: 48px;
+
+    padding: 0 40px 0 14px;
+
+    border: 1px solid #dcdcdc;
+
+    border-radius: 8px;
+
+    background: white;
+
+    font-size: 14px;
+
+    outline: none;
+
+    cursor: pointer;
+
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
+
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+
+}
+
+#project-customer:focus {
+
+    border-color: #4c8bf5;
+
+    box-shadow:
+        0 0 0 3px rgba(76,139,245,0.15);
+
+}
+
+.project-select-wrapper {
+
+    position: relative;
+
+}
+
+.project-select-wrapper::after {
+
+    content: "▼";
+
+    position: absolute;
+
+    right: 14px;
+
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    pointer-events: none;
+
+    font-size: 12px;
+
+    color: #666;
+
+}
+
+.project-form input,
+.project-form select,
+.project-form textarea {
+
+    padding: 12px 14px;
+
+    border: 1px solid #dcdcdc;
+
+    border-radius: 8px;
+
+    font-size: 14px;
+
+    outline: none;
+
+    box-sizing: border-box;
+
+}
+
+#project-name,
+#project-customer {
+
+    height: 60px;
+
+}
+
+#project-description {
+
+    height: 60px;
+
+    resize: none;
+
+}

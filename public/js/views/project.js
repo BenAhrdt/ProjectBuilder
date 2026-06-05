@@ -4,6 +4,7 @@ await i18n.loadLanguage("de");
 import * as utils from "../utils/icons.js";
 
 let selectedNodeId = null;
+let collapsedNodes = new Set();
 
 const view =
     document.getElementById(
@@ -156,7 +157,7 @@ async function renderView(
 
                     <div id="project-tree">
 
-                        ${renderNodes(nodes, nodeArticles)}
+                        ${renderNodes(nodes, nodeArticles, articles)}
 
                     </div>
 
@@ -184,24 +185,35 @@ async function renderView(
                             data-article-number="${article.articleNumber}"
                         >
 
-                            <div class="project-article-header">
+                            <div class="project-article-number">
 
-                                <span class="project-article-number">
-                                    ${article.articleNumber}
-                                </span>
+                                ${article.articleNumber}
 
-                                <span class="project-article-name">
-                                    ${article.manufacturerType ?? ""}
-                                </span>
+                            </div>
 
-                                <span class="project-article-price">
-                                    ${article.listPrice ?? ""} €
-                                </span>
+                            <div class="project-article-name">
 
-                                <span class="project-article-pg">
-                                    ${article.discountGroup ?? ""}
-                                </span>
+                                ${article.manufacturerType ?? ""}
 
+                            </div>
+
+                            <div class="project-article-price">
+
+                                ${article.listPrice ?? ""} €
+
+                            </div>
+
+                            <div class="project-article-pg">
+
+                                ${article.discountGroup ?? ""}
+
+                            </div>
+
+                            <div class="project-article-icon">
+                                <img
+                                    src="${getArticleIcon(article)}"
+                                    alt=""
+                                >
                             </div>
 
                             <div class="project-article-description">
@@ -229,15 +241,17 @@ async function renderView(
     generateNodeHandler(projectId);
     registerNodeButtons(projectId);
     registerNodeSelection();
-    registerArticleSelection();
+    registerArticleSelection(articles);
+    registerNodeToggles(projectId);
+    registerNodeArticleDelete();
 }
 
 // Render Nodes
-function renderNodes(nodes, nodeArticles) {
-    return renderChildNodes(nodes, nodeArticles, null);
+function renderNodes(nodes, nodeArticles, articles) {
+    return renderChildNodes(nodes, nodeArticles, articles, null);
 }
 
-function renderChildNodes(nodes, nodeArticles, parentId) {
+function renderChildNodes(nodes, nodeArticles, articles, parentId) {
 
     const getArticlesForNode =
         nodeId =>
@@ -271,6 +285,17 @@ function renderChildNodes(nodes, nodeArticles, parentId) {
 
                     <span>
 
+                    <span
+                        class="node-toggle"
+                        data-id="${node.id}"
+                    >
+
+                        ${collapsedNodes.has(node.id)
+                            ? "▶"
+                            : "▼"}
+
+                    </span>
+
                         ${getNodeIcon(node.type)}
 
                         ${node.name}
@@ -293,21 +318,75 @@ function renderChildNodes(nodes, nodeArticles, parentId) {
 
                 </div>
 
-                ${getArticlesForNode(node.id).map(article => `
+                <div
+                    class="project-node-children"
+                    style="
+                        display:
+                        ${
+                            collapsedNodes.has(node.id)
+                                ? "none"
+                                : "block"
+                        };
+                    "
+                >
+                    ${getArticlesForNode(node.id).map(nodeArticle => {
 
-                    <div class="node-article">
+                        const fullArticle =
+                            articles.find(
+                                article =>
+                                    article.articleNumber
+                                    ===
+                                    nodeArticle.articleNumber
+                            );
+                        return `
 
-                        ${article.articleNumber}
+                            <div
+                                class="node-article"
+                                data-node-id="${node.id}"
+                                data-article-number="${nodeArticle.articleNumber}"
+                            >
 
-                    </div>
+                                <img
+                                    src="${getArticleIcon(fullArticle)}"
+                                    alt=""
+                                >
 
-                `).join("")}
+                                <div class="node-article-content">
 
-                <div class="project-node-children">
+                                    <div class="node-article-header">
+
+                                        <span class="node-article-number">
+
+                                            ${nodeArticle.articleNumber}
+
+                                        </span>
+
+                                        <span class="node-article-price">
+
+                                            (${fullArticle?.listPrice ?? ""} €)
+
+                                        </span>
+
+                                    </div>
+
+                                    <div class="node-article-name">
+
+                                        ${fullArticle?.manufacturerType ?? ""}
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        `;
+
+                    }).join("")}
 
                     ${renderChildNodes(
                         nodes,
                         nodeArticles,
+                        articles,
                         node.id
                     )}
 
@@ -671,7 +750,7 @@ function registerNodeSelection() {
 }
 
 
-function registerArticleSelection() {
+function registerArticleSelection(articles) {
 
     document
         .querySelectorAll(
@@ -736,6 +815,52 @@ function registerArticleSelection() {
 
                     );
 
+                    const fullArticle =
+                        articles.find(
+                            item =>
+                                item.articleNumber
+                                ===
+                                articleNumber
+                        );
+
+                    const selectedNode =
+                        document.querySelector(
+                            `.project-node[data-id="${selectedNodeId}"]`
+                        );
+
+                    const children =
+                        selectedNode.parentElement.querySelector(
+                            ".project-node-children"
+                        );
+
+                        children.insertAdjacentHTML(
+
+                            "afterbegin",
+
+                            `
+
+                                <div
+                                    class="node-article"
+                                    data-node-id="${selectedNodeId}"
+                                    data-article-number="${articleNumber}"
+                                >
+
+                                    <img
+                                        src="${getArticleIcon(fullArticle)}"
+                                        alt=""
+                                    >
+
+                                    <span>
+
+                                        ${articleNumber}
+
+                                    </span>
+
+                                </div>
+
+                            `
+                        );
+
                 }
 
             );
@@ -756,6 +881,149 @@ async function loadNodeArticles(
         );
 
     return await response.json();
+
+}
+
+function registerNodeToggles(
+    projectId
+) {
+
+    document
+        .querySelectorAll(
+            ".node-toggle"
+        )
+        .forEach(toggle => {
+
+        toggle.addEventListener(
+            "click",
+            event => {
+
+                event.stopPropagation();
+
+                const wrapper =
+                    toggle.closest(
+                        ".project-node-wrapper"
+                    );
+
+                const children =
+                    wrapper.querySelector(
+                        ":scope > .project-node-children"
+                    );
+
+                if (!children)
+                    return;
+
+                const isHidden =
+                    children.style.display === "none";
+
+                children.style.display =
+                    isHidden
+                        ? "block"
+                        : "none";
+
+                toggle.textContent =
+                    isHidden
+                        ? "▼"
+                        : "▶";
+
+            }
+        );
+
+        });
+
+}
+
+function getArticleIcon(
+    article
+) {
+
+    const text = `
+
+        ${article.manufacturerType ?? ""}
+        ${article.description ?? ""}
+
+    `.toLowerCase();
+
+    if (
+        text.includes(
+            "b21"
+        )
+    ) {
+
+        return "/icons/b21.png";
+
+    }
+
+    if (
+        text.includes(
+            "b23"
+        )
+    ) {
+
+        return "/icons/b23.png";
+
+    }
+
+    if (
+        text.includes(
+            "b24"
+        )
+    ) {
+
+        return "/icons/b24.png";
+
+    }
+
+    if (
+        text.includes(
+            "umg 800"
+        )
+    ) {
+
+        return "/icons/umg800.png";
+
+    }
+
+    return "/icons/article.png";
+
+}
+
+function registerNodeArticleDelete() {
+
+    document
+        .querySelectorAll(
+            ".node-article"
+        )
+        .forEach(article => {
+
+            article.addEventListener(
+                "click",
+                async event => {
+
+                    event.stopPropagation();
+
+                    const nodeId =
+                        article.dataset.nodeId;
+
+                    const articleNumber =
+                        article.dataset.articleNumber;
+
+                    await fetch(
+
+                        `/api/projectNodeArticles/${nodeId}/${articleNumber}`,
+
+                        {
+                            method: "DELETE"
+                        }
+
+                    );
+
+                    article.remove();
+
+                }
+            );
+
+        });
 
 }
 

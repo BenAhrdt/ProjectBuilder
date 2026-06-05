@@ -70,4 +70,34 @@ router.post(
     }
 );
 
+router.delete(
+    "/:projectNodeId/:articleNumber",
+    (req, res) => {
+
+        const {
+            projectNodeId,
+            articleNumber
+        } = req.params;
+
+        database.projectNodeArticles.prepare(`
+
+            DELETE FROM projectNodeArticles
+
+            WHERE projectNodeId = ?
+            AND articleNumber = ?
+
+        `).run(
+
+            projectNodeId,
+            articleNumber
+
+        );
+
+        res.json({
+            success: true
+        });
+
+    }
+);
+
 export default router;

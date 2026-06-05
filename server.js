@@ -5,6 +5,8 @@ import * as database from "./database/index.js";
 import articlesRoutes from "./routes/articles.js";
 import customersRouter from "./routes/customers.js";
 import projectsRouter from "./routes/projects.js";
+import projectNodesRouter from "./routes/projectNodes.js";
+import projectNodeArticlesRouter from "./routes/projectNodeArticles.js";
 
 const app = express()
 
@@ -62,6 +64,24 @@ app.use(
 app.use(
     "/api/projects",
     projectsRouter
+);
+
+// --------------------------------------------------
+// Nodes API
+// --------------------------------------------------
+
+app.use(
+    "/api/projectNodes",
+    projectNodesRouter
+);
+
+// --------------------------------------------------
+// Project Nodes API
+// --------------------------------------------------
+
+app.use(
+    "/api/projectNodeArticles",
+    projectNodeArticlesRouter
 );
 
 // --------------------------------------------------

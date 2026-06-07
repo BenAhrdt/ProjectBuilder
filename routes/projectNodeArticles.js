@@ -17,6 +17,11 @@ router.get(
 
                 FROM projectNodeArticles
 
+                ORDER BY
+                    projectNodeId ASC,
+                    COALESCE(sortOrder, id) ASC,
+                    id ASC
+
             `).all();
 
         res.json(
@@ -30,13 +35,29 @@ router.post(
     "/",
     (req, res) => {
 
-        database.projectNodeArticles.prepare(`
+        const nextSortOrder =
+            database.projectNodeArticles.prepare(`
+
+                SELECT COALESCE(MAX(sortOrder), -1) + 1 AS sortOrder
+
+                FROM projectNodeArticles
+
+                WHERE projectNodeId = ?
+
+            `).get(
+                req.body.projectNodeId
+            ).sortOrder;
+
+        const result =
+            database.projectNodeArticles.prepare(`
 
             INSERT INTO projectNodeArticles (
 
                 projectNodeId,
                 articleNumber,
-                quantity
+                quantity,
+                positionName,
+                sortOrder
 
             )
 
@@ -44,7 +65,9 @@ router.post(
 
                 @projectNodeId,
                 @articleNumber,
-                @quantity
+                @quantity,
+                @positionName,
+                @sortOrder
 
             )
 
@@ -57,9 +80,190 @@ router.post(
                 req.body.articleNumber,
 
             quantity:
-                1
+                req.body.quantity ?? 1,
+
+            positionName:
+                req.body.positionName ?? null,
+
+            sortOrder:
+                req.body.sortOrder ?? nextSortOrder
 
         });
+
+        const article =
+            database.projectNodeArticles.prepare(`
+
+                SELECT *
+
+                FROM projectNodeArticles
+
+                WHERE id = ?
+
+            `).get(
+                result.lastInsertRowid
+            );
+
+        res.json(
+            article
+        );
+
+    }
+);
+
+router.patch(
+    "/reorder/:projectNodeId",
+    (req, res) => {
+
+        const updateSortOrder =
+            database.projectNodeArticles.prepare(`
+
+                UPDATE projectNodeArticles
+
+                SET sortOrder = @sortOrder
+
+                WHERE id = @id
+                AND projectNodeId = @projectNodeId
+
+            `);
+
+        const transaction =
+            database.projectNodeArticles.transaction(positions => {
+
+                positions.forEach((position, index) => {
+
+                    updateSortOrder.run({
+
+                        id:
+                            position.id,
+
+                        projectNodeId:
+                            req.params.projectNodeId,
+
+                        sortOrder:
+                            index
+
+                    });
+
+                });
+
+            });
+
+        transaction(
+            Array.isArray(req.body.positions)
+                ? req.body.positions
+                : []
+        );
+
+        res.json({
+            success: true
+        });
+
+    }
+);
+
+router.patch(
+    "/:id",
+    (req, res) => {
+
+        const {
+            id
+        } = req.params;
+
+        const current =
+            database.projectNodeArticles.prepare(`
+
+                SELECT *
+
+                FROM projectNodeArticles
+
+                WHERE id = ?
+
+            `).get(
+                id
+            );
+
+        if (!current) {
+
+            res.status(404).json({
+                error: "Position nicht gefunden"
+            });
+
+            return;
+
+        }
+
+        const quantity =
+            req.body.quantity === undefined
+                ? current.quantity
+                : Number(req.body.quantity);
+
+        database.projectNodeArticles.prepare(`
+
+            UPDATE projectNodeArticles
+
+            SET
+                quantity = @quantity,
+                positionName = @positionName,
+                sortOrder = @sortOrder
+
+            WHERE id = @id
+
+        `).run({
+
+            id,
+
+            quantity:
+                Number.isFinite(quantity)
+                &&
+                quantity > 0
+                    ? quantity
+                    : current.quantity,
+
+            positionName:
+                req.body.positionName === undefined
+                    ? current.positionName
+                    : req.body.positionName || null,
+
+            sortOrder:
+                req.body.sortOrder === undefined
+                    ? current.sortOrder
+                    : Number(req.body.sortOrder)
+
+        });
+
+        const updated =
+            database.projectNodeArticles.prepare(`
+
+                SELECT *
+
+                FROM projectNodeArticles
+
+                WHERE id = ?
+
+            `).get(
+                id
+            );
+
+        res.json(
+            updated
+        );
+
+    }
+);
+
+router.delete(
+    "/:id",
+    (req, res) => {
+
+        database.projectNodeArticles.prepare(`
+
+            DELETE FROM projectNodeArticles
+
+            WHERE id = ?
+
+        `).run(
+            req.params.id
+        );
 
         res.json({
 

@@ -3,10 +3,260 @@ await i18n.loadLanguage("de");
 
 import * as utils from "../utils/icons.js";
 
-let selectedNodeId = null;
 let collapsedNodes = new Set();
+let currentNodes = [];
+let currentArticles = [];
+let currentNodeArticles = [];
+let articleLayoutResizeRegistered = false;
+let draggedArticleNumber = null;
+const pendingNodeArticleOrderRequests =
+    new Set();
 const articleFavoritesStorageKey =
     "projectBuilder.articleFavorites";
+const articleFavoritesCollapsedStorageKey =
+    "projectBuilder.articleFavoritesCollapsed";
+const minimumArticleListHeight =
+    420;
+const articleIconRules = [
+    {
+        icon: "module-ct8-lp.png",
+        keywords: [
+            "ct8-lp",
+            "ct 8-lp",
+            "ct8 lp",
+            "ct 8 lp",
+            "800-ct8-lp"
+        ]
+    },
+    {
+        icon: "module-ct8-a.png",
+        keywords: [
+            "ct8-a",
+            "ct 8-a",
+            "ct8 a",
+            "ct 8 a",
+            "800-ct8-a"
+        ]
+    },
+    {
+        icon: "module-ct24.png",
+        keywords: [
+            "ct24",
+            "ct 24",
+            "module ct24",
+            "modul ct24"
+        ]
+    },
+    {
+        icon: "module-ct12.png",
+        keywords: [
+            "ct12",
+            "ct 12",
+            "module ct12",
+            "modul ct12"
+        ]
+    },
+    {
+        icon: "module-di14.png",
+        keywords: [
+            "di14",
+            "di 14",
+            "module di14",
+            "modul di14"
+        ]
+    },
+    {
+        icon: "module-96rcm.png",
+        keywords: [
+            "96-rcm",
+            "96rcm",
+            "module 96-rcm",
+            "modul 96-rcm"
+        ]
+    },
+    {
+        icon: "module-96pts.png",
+        keywords: [
+            "96-pts",
+            "96pts",
+            "module 96-pts",
+            "modul 96-pts"
+        ]
+    },
+    {
+        icon: "module-rj45.png",
+        keywords: [
+            "rj45",
+            "rj 45"
+        ]
+    },
+    {
+        icon: "module-con.png",
+        keywords: [
+            "module con",
+            "modul con",
+            "con module",
+            "con modul"
+        ]
+    },
+    {
+        icon: "umg96pql.png",
+        keywords: [
+            "umg 96-pq-l",
+            "umg 96pql",
+            "umg96pql",
+            "96-pq-l",
+            "96pql"
+        ]
+    },
+    {
+        icon: "umg96pa.png",
+        keywords: [
+            "umg 96-pa",
+            "umg 96pa",
+            "umg96pa",
+            "96-pa",
+            "96pa"
+        ]
+    },
+    {
+        icon: "umg96rm.png",
+        keywords: [
+            "umg 96-rm",
+            "umg 96rm",
+            "umg96rm",
+            "96-rm",
+            "96rm"
+        ]
+    },
+    {
+        icon: "umg96s2.png",
+        keywords: [
+            "umg 96-s2",
+            "umg 96s2",
+            "umg96s2",
+            "96-s2",
+            "96s2"
+        ]
+    },
+    {
+        icon: "umg96el.png",
+        keywords: [
+            "umg 96-el",
+            "umg 96el",
+            "umg96el",
+            "96-el",
+            "96el"
+        ]
+    },
+    {
+        icon: "umg800.png",
+        keywords: [
+            "umg 800",
+            "umg800"
+        ]
+    },
+    {
+        icon: "umg801.png",
+        keywords: [
+            "umg 801",
+            "umg801"
+        ]
+    },
+    {
+        icon: "umg605.png",
+        keywords: [
+            "umg 605",
+            "umg605"
+        ]
+    },
+    {
+        icon: "umg604.png",
+        keywords: [
+            "umg 604",
+            "umg604"
+        ]
+    },
+    {
+        icon: "umg512.png",
+        keywords: [
+            "umg 512",
+            "umg512"
+        ]
+    },
+    {
+        icon: "umg509.png",
+        keywords: [
+            "umg 509",
+            "umg509"
+        ]
+    },
+    {
+        icon: "umg103.png",
+        keywords: [
+            "umg 103",
+            "umg103"
+        ]
+    },
+    {
+        icon: "rcm201rogo.png",
+        keywords: [
+            "rcm 201",
+            "rcm201",
+            "201-rogo",
+            "201 rogo"
+        ]
+    },
+    {
+        icon: "rcm202ab.png",
+        keywords: [
+            "rcm 202",
+            "rcm202",
+            "202-ab",
+            "202 ab"
+        ]
+    },
+    {
+        icon: "rogowski.png",
+        keywords: [
+            "rogowski",
+            "rogo"
+        ]
+    },
+    {
+        icon: "rd96.png",
+        keywords: [
+            "rd 96",
+            "rd96"
+        ]
+    },
+    {
+        icon: "b21.png",
+        keywords: [
+            "b21"
+        ]
+    },
+    {
+        icon: "b23.png",
+        keywords: [
+            "b23"
+        ]
+    },
+    {
+        icon: "b24.png",
+        keywords: [
+            "b24"
+        ]
+    },
+    {
+        icon: "energy-meter.png",
+        keywords: [
+            "energiezahler",
+            "energy meter",
+            "stromzahler"
+        ]
+    }
+];
 
 const view =
     document.getElementById(
@@ -33,6 +283,9 @@ async function renderView(
     const articles =
         await articleResponse.json();
 
+    currentArticles =
+        articles;
+
     const customerResponse =
         await fetch(
             "/api/customers"
@@ -51,6 +304,9 @@ async function renderView(
     const nodes =
         await nodesResponse.json();
 
+    currentNodes =
+        nodes;
+
     const nodeArticlesResponse =
         await fetch(
             "/api/projectNodeArticles"
@@ -58,6 +314,16 @@ async function renderView(
 
     const nodeArticles =
         await nodeArticlesResponse.json();
+
+    currentNodeArticles =
+        nodeArticles;
+
+    const nodeTotals =
+        calculateNodeTotals(
+            nodes,
+            nodeArticles,
+            articles
+        );
 
     view.innerHTML = `
 
@@ -159,7 +425,7 @@ async function renderView(
 
                     <div id="project-tree">
 
-                        ${renderNodes(nodes, nodeArticles, articles)}
+                        ${renderNodes(nodes, nodeArticles, articles, nodeTotals)}
 
                     </div>
 
@@ -204,12 +470,214 @@ async function renderView(
     generateHandler(projectId);
     generateNodeHandler(projectId);
     registerNodeButtons(projectId);
-    registerNodeSelection();
-    registerArticleSelection(articles);
+    registerArticleDragSources();
+    registerArticleDropTargets(projectId);
     registerArticleSearch(articles);
-    registerArticleFavorites(articles);
+    registerArticleFavorites(articles, projectId);
     registerNodeToggles(projectId);
-    registerNodeArticleDelete();
+    registerProjectNodeMenus(projectId);
+    registerProjectNodeDragAndDrop(projectId);
+    registerNodeArticleMenus(projectId);
+    registerNodeArticleDragAndDrop(projectId);
+    registerArticleListLayoutSync();
+    syncArticleListHeight();
+}
+
+async function refreshProjectTree(
+    projectId
+) {
+
+    const nodesResponse =
+        await fetch(
+
+            `/api/projectNodes/${projectId}`
+
+        );
+
+    currentNodes =
+        await nodesResponse.json();
+
+    const nodeArticlesResponse =
+        await fetch(
+            "/api/projectNodeArticles"
+        );
+
+    currentNodeArticles =
+        await nodeArticlesResponse.json();
+
+    const nodeTotals =
+        calculateNodeTotals(
+            currentNodes,
+            currentNodeArticles,
+            currentArticles
+        );
+
+    const projectTree =
+        document.getElementById(
+            "project-tree"
+        );
+
+    if (!projectTree) {
+
+        return;
+
+    }
+
+    projectTree.innerHTML =
+        renderNodes(
+            currentNodes,
+            currentNodeArticles,
+            currentArticles,
+            nodeTotals
+        );
+
+    registerNodeButtons(
+        projectId
+    );
+
+    registerArticleDropTargets(projectId);
+
+    registerNodeToggles(
+        projectId
+    );
+
+    registerProjectNodeMenus(
+        projectId
+    );
+
+    registerProjectNodeDragAndDrop(
+        projectId
+    );
+
+    registerNodeArticleMenus(
+        projectId
+    );
+
+    registerNodeArticleDragAndDrop(
+        projectId
+    );
+
+    syncArticleListHeight();
+
+}
+
+function registerArticleListLayoutSync() {
+
+    if (articleLayoutResizeRegistered) {
+
+        return;
+
+    }
+
+    articleLayoutResizeRegistered =
+        true;
+
+    window.addEventListener(
+        "resize",
+        syncArticleListHeight
+    );
+
+}
+
+function syncArticleListHeight() {
+
+    requestAnimationFrame(
+        () => {
+
+            const structureCard =
+                document.querySelector(
+                    ".project-structure-card"
+                );
+
+            const articlesCard =
+                document.querySelector(
+                    ".project-articles-card"
+                );
+
+            const articleList =
+                document.getElementById(
+                    "project-article-list"
+                );
+
+            if (
+                !structureCard
+                ||
+                !articlesCard
+                ||
+                !articleList
+            ) {
+
+                return;
+
+            }
+
+            structureCard.style.minHeight =
+                "";
+
+            articlesCard.style.height =
+                "";
+
+            articleList.style.height =
+                "";
+
+            const structureHeight =
+                structureCard.getBoundingClientRect().height;
+
+            const articlesCardRect =
+                articlesCard.getBoundingClientRect();
+
+            const articleListRect =
+                articleList.getBoundingClientRect();
+
+            const articlesCardStyles =
+                getComputedStyle(
+                    articlesCard
+                );
+
+            const paddingBottom =
+                parseFloat(
+                    articlesCardStyles.paddingBottom
+                )
+                ||
+                0;
+
+            const articleListTopOffset =
+                articleListRect.top
+                -
+                articlesCardRect.top;
+
+            const minimumArticleCardHeight =
+                articleListTopOffset
+                +
+                minimumArticleListHeight
+                +
+                paddingBottom;
+
+            const targetHeight =
+                Math.max(
+                    structureHeight,
+                    minimumArticleCardHeight
+                );
+
+            structureCard.style.minHeight =
+                `${targetHeight}px`;
+
+            articlesCard.style.height =
+                `${targetHeight}px`;
+
+            const availableHeight =
+                targetHeight
+                -
+                articleListTopOffset
+                -
+                paddingBottom;
+
+            articleList.style.height =
+                `${Math.max(availableHeight, minimumArticleListHeight)}px`;
+
+        }
+    );
+
 }
 
 function renderArticleList(
@@ -224,6 +692,7 @@ function renderArticleList(
         <div
             class="project-article"
             data-article-number="${article.articleNumber}"
+            draggable="true"
         >
 
             <div class="project-article-number">
@@ -285,14 +754,18 @@ function renderFavoriteArticles(
 ) {
 
     const favoriteArticleNumbers =
-        getFavoriteArticleNumbers();
+        getFavoriteArticleNumberList();
 
     const favoriteArticles =
-        articles.filter(article =>
-            favoriteArticleNumbers.has(
-                String(article.articleNumber)
+        favoriteArticleNumbers
+            .map(articleNumber =>
+                articles.find(article =>
+                    String(article.articleNumber)
+                    ===
+                    String(articleNumber)
+                )
             )
-        );
+            .filter(Boolean);
 
     if (favoriteArticles.length === 0) {
 
@@ -300,71 +773,129 @@ function renderFavoriteArticles(
 
     }
 
+    const isCollapsed =
+        areArticleFavoritesCollapsed();
+
     return `
 
-        <h3>
+        <button
+            id="project-article-favorites-toggle"
+            type="button"
+            aria-expanded="${isCollapsed ? "false" : "true"}"
+        >
+            <span>
+                ${isCollapsed ? "▶" : "▼"}
+            </span>
+
             Favoriten
-        </h3>
+        </button>
 
-        <div class="project-article-favorites-list">
+        ${isCollapsed ? "" : `
 
-            ${favoriteArticles.map(article => `
+            <div class="project-article-favorites-list">
 
-                <button
-                    class="project-article-favorite"
-                    type="button"
-                    data-article-number="${article.articleNumber}"
-                    title="Artikel hinzufügen"
-                >
+                ${favoriteArticles.map(article => `
 
-                    <span class="project-article-favorite-icon">
-                        <img
-                            src="${getArticleIcon(article)}"
-                            alt=""
-                        >
-                    </span>
+                    <button
+                        class="project-article-favorite"
+                        type="button"
+                        draggable="true"
+                        data-article-number="${article.articleNumber}"
+                        title="Artikel hinzufügen"
+                    >
 
-                    <span class="project-article-favorite-text">
-
-                        <strong>
-                            ${article.articleNumber}
-                        </strong>
-
-                        <span>
-                            ${article.manufacturerType ?? ""}
+                        <span class="project-article-favorite-icon">
+                            <img
+                                src="${getArticleIcon(article)}"
+                                alt=""
+                            >
                         </span>
 
-                    </span>
+                        <span class="project-article-favorite-text">
 
-                </button>
+                            <strong>
+                                ${article.articleNumber}
+                            </strong>
 
-            `).join("")}
+                            <span>
+                                ${article.manufacturerType ?? ""}
+                            </span>
 
-        </div>
+                        </span>
+
+                    </button>
+
+                `).join("")}
+
+            </div>
+
+        `}
 
     `;
 
 }
 
+function areArticleFavoritesCollapsed() {
+
+    return localStorage.getItem(
+        articleFavoritesCollapsedStorageKey
+    )
+    ===
+    "true";
+
+}
+
+function saveArticleFavoritesCollapsed(
+    isCollapsed
+) {
+
+    localStorage.setItem(
+        articleFavoritesCollapsedStorageKey,
+        isCollapsed
+            ? "true"
+            : "false"
+    );
+
+}
+
 function getFavoriteArticleNumbers() {
+
+    return new Set(
+        getFavoriteArticleNumberList()
+    );
+
+}
+
+function getFavoriteArticleNumberList() {
 
     try {
 
-        return new Set(
-            JSON.parse(
+        return JSON.parse(
                 localStorage.getItem(
                     articleFavoritesStorageKey
                 )
                 ||
                 "[]"
-            ).map(String)
-        );
+            ).map(String);
 
     } catch (error) {
 
-        return new Set();
+        return [];
 
     }
+
+}
+
+function saveFavoriteArticleNumberList(
+    favoriteArticleNumbers
+) {
+
+    localStorage.setItem(
+        articleFavoritesStorageKey,
+        JSON.stringify(
+            favoriteArticleNumbers.map(String)
+        )
+    );
 
 }
 
@@ -384,11 +915,11 @@ function saveFavoriteArticleNumbers(
 }
 
 // Render Nodes
-function renderNodes(nodes, nodeArticles, articles) {
-    return renderChildNodes(nodes, nodeArticles, articles, null);
+function renderNodes(nodes, nodeArticles, articles, nodeTotals) {
+    return renderChildNodes(nodes, nodeArticles, articles, nodeTotals, null);
 }
 
-function renderChildNodes(nodes, nodeArticles, articles, parentId) {
+function renderChildNodes(nodes, nodeArticles, articles, nodeTotals, parentId) {
 
     const getArticlesForNode =
         nodeId =>
@@ -397,7 +928,8 @@ function renderChildNodes(nodes, nodeArticles, articles, parentId) {
                     String(article.projectNodeId)
                     ===
                     String(nodeId)
-            );
+            )
+            .sort(compareNodeArticleOrder);
 
     return nodes
         .filter(node =>
@@ -418,9 +950,11 @@ function renderChildNodes(nodes, nodeArticles, articles, parentId) {
                     class="project-node"
                     data-id="${node.id}"
                     data-type="${node.type}"
+                    data-parent-id="${node.parentId ?? ""}"
+                    draggable="true"
                 >
 
-                    <span>
+                    <span class="project-node-main">
 
                     <span
                         class="node-toggle"
@@ -435,7 +969,13 @@ function renderChildNodes(nodes, nodeArticles, articles, parentId) {
 
                         ${getNodeIcon(node.type)}
 
-                        ${node.name}
+                        <span class="project-node-name">
+                            ${node.name}
+                        </span>
+
+                        <span class="project-node-total">
+                            (${formatCurrency(nodeTotals.get(String(node.id)) ?? 0)})
+                        </span>
 
                     </span>
 
@@ -452,6 +992,44 @@ function renderChildNodes(nodes, nodeArticles, articles, parentId) {
                         </button>
 
                     ` : ""}
+
+                    <div class="project-node-menu">
+
+                        <button
+                            class="project-node-menu-button"
+                            type="button"
+                            title="Positionsmenü"
+                            aria-label="Positionsmenü öffnen"
+                        >
+                            ⋮
+                        </button>
+
+                        <div class="project-node-menu-options">
+
+                            <button
+                                type="button"
+                                data-action="position-name"
+                            >
+                                Positionsname
+                            </button>
+
+                            <button
+                                type="button"
+                                data-action="duplicate"
+                            >
+                                Duplizieren
+                            </button>
+
+                            <button
+                                type="button"
+                                data-action="delete"
+                            >
+                                Löschen
+                            </button>
+
+                        </div>
+
+                    </div>
 
                 </div>
 
@@ -478,7 +1056,8 @@ function renderChildNodes(nodes, nodeArticles, articles, parentId) {
                         return renderNodeArticle(
                             node.id,
                             nodeArticle.articleNumber,
-                            fullArticle
+                            fullArticle,
+                            nodeArticle
                         );
 
                     }).join("")}
@@ -487,6 +1066,7 @@ function renderChildNodes(nodes, nodeArticles, articles, parentId) {
                         nodes,
                         nodeArticles,
                         articles,
+                        nodeTotals,
                         node.id
                     )}
 
@@ -501,15 +1081,27 @@ function renderChildNodes(nodes, nodeArticles, articles, parentId) {
 function renderNodeArticle(
     nodeId,
     articleNumber,
-    fullArticle
+    fullArticle,
+    nodeArticle = {}
 ) {
+
+    const quantity =
+        Number(nodeArticle.quantity) || 1;
+
+    const total =
+        getArticleUnitPrice(fullArticle)
+        *
+        quantity;
 
     return `
 
         <div
             class="node-article"
+            data-id="${nodeArticle.id ?? ""}"
             data-node-id="${nodeId}"
             data-article-number="${articleNumber}"
+            data-quantity="${quantity}"
+            draggable="true"
         >
 
             <img
@@ -518,6 +1110,16 @@ function renderNodeArticle(
             >
 
             <div class="node-article-content">
+
+                ${nodeArticle.positionName ? `
+
+                    <div class="node-article-position-name">
+
+                        ${nodeArticle.positionName}
+
+                    </div>
+
+                ` : ""}
 
                 <div class="node-article-header">
 
@@ -529,7 +1131,10 @@ function renderNodeArticle(
 
                     <span class="node-article-price">
 
-                        (${fullArticle?.listPrice ?? ""} €)
+                        ${formatQuantity(quantity)} x
+                        ${formatCurrency(getArticleUnitPrice(fullArticle))}
+                        =
+                        ${formatCurrency(total)}
 
                     </span>
 
@@ -543,9 +1148,503 @@ function renderNodeArticle(
 
             </div>
 
+            <div class="node-article-menu">
+
+                <button
+                    class="node-article-menu-button"
+                    type="button"
+                    title="Positionsmenü"
+                    aria-label="Positionsmenü öffnen"
+                >
+                    ⋮
+                </button>
+
+                <div class="node-article-menu-options">
+
+                    <button
+                        type="button"
+                        data-action="position-name"
+                    >
+                        Positionsname
+                    </button>
+
+                    <button
+                        type="button"
+                        data-action="quantity"
+                    >
+                        Anzahl
+                    </button>
+
+                    <button
+                        type="button"
+                        data-action="duplicate"
+                    >
+                        Duplizieren
+                    </button>
+
+                    <button
+                        type="button"
+                        data-action="delete"
+                    >
+                        Löschen
+                    </button>
+
+                </div>
+
+            </div>
+
         </div>
 
     `;
+
+}
+
+function compareNodeArticleOrder(
+    firstArticle,
+    secondArticle
+) {
+
+    const firstSortOrder =
+        Number.isFinite(
+            Number(firstArticle.sortOrder)
+        )
+            ? Number(firstArticle.sortOrder)
+            : Number(firstArticle.id);
+
+    const secondSortOrder =
+        Number.isFinite(
+            Number(secondArticle.sortOrder)
+        )
+            ? Number(secondArticle.sortOrder)
+            : Number(secondArticle.id);
+
+    return firstSortOrder - secondSortOrder;
+
+}
+
+function calculateNodeTotals(
+    nodes,
+    nodeArticles,
+    articles
+) {
+
+    const articleByNumber =
+        new Map(
+            articles.map(article => [
+                String(article.articleNumber),
+                article
+            ])
+        );
+
+    const childNodesByParent =
+        new Map();
+
+    nodes.forEach(node => {
+
+        const key =
+            String(node.parentId);
+
+        if (!childNodesByParent.has(key)) {
+
+            childNodesByParent.set(
+                key,
+                []
+            );
+
+        }
+
+        childNodesByParent
+            .get(key)
+            .push(node);
+
+    });
+
+    const nodeArticlesByNode =
+        new Map();
+
+    nodeArticles.forEach(nodeArticle => {
+
+        const key =
+            String(nodeArticle.projectNodeId);
+
+        if (!nodeArticlesByNode.has(key)) {
+
+            nodeArticlesByNode.set(
+                key,
+                []
+            );
+
+        }
+
+        nodeArticlesByNode
+            .get(key)
+            .push(nodeArticle);
+
+    });
+
+    const totals =
+        new Map();
+
+    const calculateNodeTotal =
+        node => {
+
+            const nodeId =
+                String(node.id);
+
+            const ownTotal =
+                (
+                    nodeArticlesByNode.get(nodeId)
+                    ||
+                    []
+                ).reduce(
+                    (sum, nodeArticle) => {
+
+                        const article =
+                            articleByNumber.get(
+                                String(nodeArticle.articleNumber)
+                            );
+
+                        return sum
+                            +
+                            getNodeArticleTotal(
+                                nodeArticle,
+                                article
+                            );
+
+                    },
+                    0
+                );
+
+            const childTotal =
+                (
+                    childNodesByParent.get(nodeId)
+                    ||
+                    []
+                ).reduce(
+                    (sum, childNode) =>
+                        sum
+                        +
+                        calculateNodeTotal(childNode),
+                    0
+                );
+
+            const total =
+                ownTotal
+                +
+                childTotal;
+
+            totals.set(
+                nodeId,
+                total
+            );
+
+            return total;
+
+        };
+
+    nodes
+        .filter(node =>
+            node.parentId === null
+        )
+        .forEach(calculateNodeTotal);
+
+    return totals;
+
+}
+
+function getNodeArticleTotal(
+    nodeArticle,
+    article
+) {
+
+    return getArticleUnitPrice(article)
+        *
+        (Number(nodeArticle.quantity) || 1);
+
+}
+
+function getArticleUnitPrice(
+    article = {}
+) {
+
+    const price =
+        Number(article.listPrice);
+
+    return Number.isFinite(price)
+        ? price
+        : 0;
+
+}
+
+function formatCurrency(
+    value
+) {
+
+    return `${Number(value || 0).toLocaleString("de-DE", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    })} €`;
+
+}
+
+function formatQuantity(
+    value
+) {
+
+    return Number(value || 1).toLocaleString("de-DE", {
+        maximumFractionDigits: 2
+    });
+
+}
+
+function updateProjectNodeTotals() {
+
+    const totals =
+        calculateNodeTotals(
+            currentNodes,
+            currentNodeArticles,
+            currentArticles
+        );
+
+    document
+        .querySelectorAll(
+            ".project-node"
+        )
+        .forEach(node => {
+
+            const total =
+                totals.get(
+                    String(node.dataset.id)
+                )
+                ??
+                0;
+
+            const totalElement =
+                node.querySelector(
+                    ".project-node-total"
+                );
+
+            if (totalElement) {
+
+                totalElement.textContent =
+                    `(${formatCurrency(total)})`;
+
+            }
+
+        });
+
+}
+
+function getCurrentArticleByNumber(
+    articleNumber
+) {
+
+    return currentArticles.find(
+        article =>
+            String(article.articleNumber)
+            ===
+            String(articleNumber)
+    );
+
+}
+
+function upsertCurrentNodeArticle(
+    nodeArticle
+) {
+
+    const index =
+        currentNodeArticles.findIndex(
+            item =>
+                String(item.id)
+                ===
+                String(nodeArticle.id)
+        );
+
+    if (index === -1) {
+
+        currentNodeArticles.unshift(
+            nodeArticle
+        );
+
+        return;
+
+    }
+
+    currentNodeArticles[index] =
+        nodeArticle;
+
+}
+
+function removeCurrentNodeArticle(
+    positionId
+) {
+
+    currentNodeArticles =
+        currentNodeArticles.filter(
+            nodeArticle =>
+                String(nodeArticle.id)
+                !==
+                String(positionId)
+        );
+
+}
+
+function updateCurrentNode(
+    updatedNode
+) {
+
+    const index =
+        currentNodes.findIndex(
+            node =>
+                String(node.id)
+                ===
+                String(updatedNode.id)
+        );
+
+    if (index !== -1) {
+
+        currentNodes[index] =
+            updatedNode;
+
+    }
+
+}
+
+function openProjectModal({
+    title,
+    label,
+    type = "text",
+    value = "",
+    min,
+    step
+}) {
+
+    return new Promise(resolve => {
+
+        const modal =
+            document.createElement(
+                "div"
+            );
+
+        modal.className =
+            "project-modal-backdrop";
+
+        modal.innerHTML = `
+
+            <form class="project-modal">
+
+                <h3>
+                    ${title}
+                </h3>
+
+                <label>
+                    ${label}
+                </label>
+
+                <input
+                    class="project-modal-input"
+                    type="${type}"
+                    value="${escapeAttribute(value)}"
+                    ${min !== undefined ? `min="${min}"` : ""}
+                    ${step !== undefined ? `step="${step}"` : ""}
+                >
+
+                <div class="project-modal-actions">
+
+                    <button
+                        type="button"
+                        data-action="cancel"
+                    >
+                        Abbrechen
+                    </button>
+
+                    <button
+                        type="submit"
+                    >
+                        Speichern
+                    </button>
+
+                </div>
+
+            </form>
+
+        `;
+
+        const close =
+            result => {
+
+                modal.remove();
+
+                resolve(
+                    result
+                );
+
+            };
+
+        modal.addEventListener(
+            "mousedown",
+            event => {
+
+                if (event.target === modal) {
+
+                    close(null);
+
+                }
+
+            }
+        );
+
+        modal
+            .querySelector(
+                "[data-action=\"cancel\"]"
+            )
+            .addEventListener(
+                "click",
+                () => close(null)
+            );
+
+        modal
+            .querySelector(
+                "form"
+            )
+            .addEventListener(
+                "submit",
+                event => {
+
+                    event.preventDefault();
+
+                    close(
+                        modal.querySelector(
+                            ".project-modal-input"
+                        ).value
+                    );
+
+                }
+            );
+
+        document.body.appendChild(
+            modal
+        );
+
+        modal
+            .querySelector(
+                ".project-modal-input"
+            )
+            .select();
+
+    });
+
+}
+
+function escapeAttribute(
+    value
+) {
+
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("\"", "&quot;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
 
 }
 
@@ -561,40 +1660,30 @@ function generateNodeHandler(
             "click",
             async () => {
 
-                await fetch(
+                const name =
+                    await openProjectModal({
+                        title: "Gebäude hinzufügen",
+                        label: "Positionsname",
+                        value: "Neues Gebäude"
+                    });
 
-                    "/api/projectNodes",
+                if (name === null) {
 
-                    {
+                    return;
 
-                        method: "POST",
+                }
 
-                        headers: {
+                await createProjectNode({
+                    projectId,
+                    parentId: null,
+                    type: "building",
+                    name:
+                        name.trim()
+                        ||
+                        "Neues Gebäude"
+                });
 
-                            "Content-Type":
-                                "application/json"
-
-                        },
-
-                        body: JSON.stringify({
-
-                            projectId,
-
-                            parentId: null,
-
-                            type:
-                                "building",
-
-                            name:
-                                "Neues Gebäude"
-
-                        })
-
-                    }
-
-                );
-
-                renderView(
+                await refreshProjectTree(
                     projectId
                 );
 
@@ -668,40 +1757,30 @@ function registerNodeButtons(
 
                     }
 
-                    await fetch(
+                    const name =
+                        await openProjectModal({
+                            title: `${newName} hinzufügen`,
+                            label: "Positionsname",
+                            value: newName
+                        });
 
-                        "/api/projectNodes",
+                    if (name === null) {
 
-                        {
+                        return;
 
-                            method: "POST",
+                    }
 
-                            headers: {
+                    await createProjectNode({
+                        projectId,
+                        parentId,
+                        type: newType,
+                        name:
+                            name.trim()
+                            ||
+                            newName
+                    });
 
-                                "Content-Type":
-                                    "application/json"
-
-                            },
-
-                            body: JSON.stringify({
-
-                                projectId,
-
-                                parentId,
-
-                                type:
-                                    newType,
-
-                                name:
-                                    newName
-
-                            })
-
-                        }
-
-                    );
-
-                    renderView(
+                    await refreshProjectTree(
                         projectId
                     );
 
@@ -709,6 +1788,46 @@ function registerNodeButtons(
             );
 
         });
+
+}
+
+async function createProjectNode({
+    projectId,
+    parentId,
+    type,
+    name
+}) {
+
+    const response =
+        await fetch(
+
+            "/api/projectNodes",
+
+            {
+
+                method: "POST",
+
+                headers: {
+
+                    "Content-Type":
+                        "application/json"
+
+                },
+
+                body: JSON.stringify({
+
+                    projectId,
+                    parentId,
+                    type,
+                    name
+
+                })
+
+            }
+
+        );
+
+    return await response.json();
 
 }
 
@@ -862,36 +1981,204 @@ function getNextNodeType(
 }
 
 
-function registerNodeSelection() {
+function registerArticleDragSources() {
 
     document
         .querySelectorAll(
-            ".project-node"
+            ".project-article"
+        )
+        .forEach(articleElement => {
+
+            if (
+                articleElement.dataset.articleDragRegistered
+                ===
+                "true"
+            ) {
+
+                return;
+
+            }
+
+            articleElement.dataset.articleDragRegistered =
+                "true";
+
+            articleElement.addEventListener(
+                "dragstart",
+                event => {
+
+                    if (
+                        event.target.closest(
+                            ".article-favorite-toggle"
+                        )
+                    ) {
+
+                        event.preventDefault();
+                        return;
+
+                    }
+
+                    articleElement.classList.add(
+                        "dragging"
+                    );
+
+                    draggedArticleNumber =
+                        articleElement.dataset.articleNumber;
+
+                    event.dataTransfer.effectAllowed =
+                        "copy";
+
+                    event.dataTransfer.setData(
+                        "application/x-project-article-number",
+                        articleElement.dataset.articleNumber
+                    );
+
+                    event.dataTransfer.setData(
+                        "text/plain",
+                        articleElement.dataset.articleNumber
+                    );
+
+                }
+            );
+
+            articleElement.addEventListener(
+                "dragend",
+                () => {
+
+                    articleElement.classList.remove(
+                        "dragging"
+                    );
+
+                    clearArticleDropIndicators();
+
+                    draggedArticleNumber =
+                        null;
+
+                }
+
+            );
+
+        });
+
+}
+
+function registerArticleDropTargets(
+    projectId
+) {
+
+    document
+        .querySelectorAll(
+            ".project-node[data-type=\"meter\"]"
         )
         .forEach(node => {
 
-            node.addEventListener(
-                "click",
-                () => {
+            const dropTarget =
+                node.closest(
+                    ".project-node-wrapper"
+                );
 
-                    document
-                        .querySelectorAll(
-                            ".project-node"
-                        )
-                        .forEach(item => {
+            if (!dropTarget) {
 
-                            item.classList.remove(
-                                "selected"
-                            );
+                return;
 
-                        });
+            }
+
+            if (
+                dropTarget.dataset.articleDropRegistered
+                ===
+                "true"
+            ) {
+
+                return;
+
+            }
+
+            dropTarget.dataset.articleDropRegistered =
+                "true";
+
+            dropTarget.addEventListener(
+                "dragover",
+                event => {
+
+                    const articleNumber =
+                        getDraggedArticleNumber(
+                            event
+                        );
+
+                    if (!articleNumber) {
+
+                        return;
+
+                    }
+
+                    event.preventDefault();
+
+                    event.dataTransfer.dropEffect =
+                        "copy";
 
                     node.classList.add(
-                        "selected"
+                        "article-drop-over"
                     );
 
-                    selectedNodeId =
-                        node.dataset.id;
+                }
+            );
+
+            dropTarget.addEventListener(
+                "dragleave",
+                event => {
+
+                    if (
+                        dropTarget.contains(
+                            event.relatedTarget
+                        )
+                    ) {
+
+                        return;
+
+                    }
+
+                    node.classList.remove(
+                        "article-drop-over"
+                    );
+
+                }
+            );
+
+            dropTarget.addEventListener(
+                "drop",
+                async event => {
+
+                    const articleNumber =
+                        getDraggedArticleNumber(
+                            event
+                        );
+
+                    if (!articleNumber) {
+
+                        return;
+
+                    }
+
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    node.classList.remove(
+                        "article-drop-over"
+                    );
+
+                    const fullArticle =
+                        getCurrentArticleByNumber(
+                            articleNumber
+                        );
+
+                    await addArticleToNode(
+                        node.dataset.id,
+                        articleNumber,
+                        fullArticle,
+                        projectId
+                    );
+
+                    draggedArticleNumber =
+                        null;
 
                 }
             );
@@ -900,60 +2187,15 @@ function registerNodeSelection() {
 
 }
 
+function getDraggedArticleNumber(
+    event
+) {
 
-function registerArticleSelection(articles) {
-
-    document
-        .querySelectorAll(
-            ".project-article"
-        )
-        .forEach(articleElement => {
-
-            articleElement.addEventListener(
-                "click",
-                async event => {
-
-                    if (
-                        event.target.closest(
-                            ".article-favorite-toggle"
-                        )
-                    ) {
-
-                        return;
-
-                    }
-
-                    if (!selectedNodeId) {
-
-                        alert(
-                            "Bitte zuerst eine Messstelle auswählen."
-                        );
-
-                        return;
-
-                    }
-
-                    const articleNumber =
-                        articleElement.dataset.articleNumber;
-
-                    const fullArticle =
-                        articles.find(
-                            item =>
-                                item.articleNumber
-                                ===
-                                articleNumber
-                        );
-
-                    await addArticleToSelectedNode(
-                        articleNumber,
-                        fullArticle
-                    );
-
-                }
-
-            );
-
-        });
+    return draggedArticleNumber
+    ||
+    event.dataTransfer.getData(
+        "application/x-project-article-number"
+    );
 
 }
 
@@ -976,8 +2218,12 @@ function registerArticleSearch(
         "input",
         () => {
 
-            const searchText =
-                search.value.trim().toLowerCase();
+            const searchTerms =
+                normalizeSearchText(
+                    search.value
+                )
+                .split(" ")
+                .filter(Boolean);
 
             document
                 .querySelectorAll(
@@ -992,19 +2238,24 @@ function registerArticleSearch(
                             String(articleElement.dataset.articleNumber)
                         );
 
-                    const haystack = `
-                        ${article?.articleNumber ?? ""}
-                        ${article?.manufacturerType ?? ""}
-                        ${article?.description ?? ""}
-                        ${article?.discountGroup ?? ""}
-                    `.toLowerCase();
-
-                    articleElement.hidden =
-                        searchText !== ""
-                        &&
-                        !haystack.includes(
-                            searchText
+                    const haystack =
+                        getArticleSearchText(
+                            article
                         );
+
+                    const matches =
+                        searchTerms.length === 0
+                        ||
+                        searchTerms.every(term =>
+                            haystack.includes(
+                                term
+                            )
+                        );
+
+                    articleElement.style.display =
+                        matches
+                            ? ""
+                            : "none";
 
                 });
 
@@ -1013,22 +2264,60 @@ function registerArticleSearch(
 
 }
 
-function registerArticleFavorites(
-    articles
+function getArticleSearchText(
+    article = {}
 ) {
 
-    registerArticleFavoriteButtons(
-        articles
-    );
-
-    registerFavoriteArticleSelection(
-        articles
+    return normalizeSearchText(
+        Object
+            .values(article)
+            .filter(value =>
+                value !== null
+                &&
+                value !== undefined
+            )
+            .join(" ")
     );
 
 }
 
+function normalizeSearchText(
+    value
+) {
+
+    return String(value ?? "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+}
+
+function registerArticleFavorites(
+    articles,
+    projectId
+) {
+
+    registerArticleFavoriteButtons(
+        articles,
+        projectId
+    );
+
+    registerArticleFavoritesToggle(
+        articles,
+        projectId
+    );
+
+    registerFavoriteArticleDragAndDrop();
+
+    syncArticleListHeight();
+
+}
+
 function registerArticleFavoriteButtons(
-    articles
+    articles,
+    projectId
 ) {
 
     document
@@ -1081,7 +2370,8 @@ function registerArticleFavoriteButtons(
                     );
 
                     renderArticleFavoritesPanel(
-                        articles
+                        articles,
+                        projectId
                     );
 
                 }
@@ -1124,7 +2414,8 @@ function syncArticleFavoriteButtons(
 }
 
 function renderArticleFavoritesPanel(
-    articles
+    articles,
+    projectId
 ) {
 
     const favorites =
@@ -1143,66 +2434,183 @@ function renderArticleFavoritesPanel(
             articles
         );
 
-    registerFavoriteArticleSelection(
-        articles
+    registerArticleFavoritesToggle(
+        articles,
+        projectId
+    );
+
+    registerFavoriteArticleDragAndDrop();
+
+    syncArticleListHeight();
+
+}
+
+function registerArticleFavoritesToggle(
+    articles,
+    projectId
+) {
+
+    const toggle =
+        document.getElementById(
+            "project-article-favorites-toggle"
+        );
+
+    if (!toggle) {
+
+        return;
+
+    }
+
+    toggle.addEventListener(
+        "click",
+        () => {
+
+            saveArticleFavoritesCollapsed(
+                !areArticleFavoritesCollapsed()
+            );
+
+            renderArticleFavoritesPanel(
+                articles,
+                projectId
+            );
+
+            syncArticleListHeight();
+
+        }
     );
 
 }
 
-function registerFavoriteArticleSelection(
-    articles
-) {
+function registerFavoriteArticleDragAndDrop() {
 
     document
         .querySelectorAll(
             ".project-article-favorite"
         )
-        .forEach(article => {
+        .forEach(favorite => {
 
-            article.addEventListener(
-                "click",
-                async event => {
+            if (
+                favorite.dataset.favoriteDragRegistered
+                ===
+                "true"
+            ) {
+
+                return;
+
+            }
+
+            favorite.dataset.favoriteDragRegistered =
+                "true";
+
+            favorite.addEventListener(
+                "dragstart",
+                event => {
 
                     event.stopPropagation();
 
-                    if (!selectedNodeId) {
-
-                        alert(
-                            "Bitte zuerst eine Messstelle auswählen."
-                        );
-
-                        return;
-
-                    }
-
-                    const articleNumber =
-                        article.dataset.articleNumber;
-
-                    const articleListEntry =
-                        document.querySelector(
-                            `.project-article[data-article-number="${articleNumber}"]`
-                        );
-
-                    if (articleListEntry) {
-
-                        articleListEntry.click();
-
-                        return;
-
-                    }
-
-                    const fullArticle =
-                        articles.find(
-                            item =>
-                                String(item.articleNumber)
-                                ===
-                                String(articleNumber)
-                        );
-
-                    await addArticleToSelectedNode(
-                        articleNumber,
-                        fullArticle
+                    favorite.classList.add(
+                        "dragging"
                     );
+
+                    draggedArticleNumber =
+                        favorite.dataset.articleNumber;
+
+                    event.dataTransfer.effectAllowed =
+                        "copyMove";
+
+                    event.dataTransfer.setData(
+                        "application/x-project-article-number",
+                        favorite.dataset.articleNumber
+                    );
+
+                    event.dataTransfer.setData(
+                        "text/plain",
+                        favorite.dataset.articleNumber
+                    );
+
+                }
+            );
+
+            favorite.addEventListener(
+                "dragend",
+                () => {
+
+                    favorite.classList.remove(
+                        "dragging"
+                    );
+
+                    clearArticleDropIndicators();
+
+                    draggedArticleNumber =
+                        null;
+
+                    favorite.dataset.wasDragged =
+                        "true";
+
+                    saveFavoriteOrderFromDom();
+
+                    window.setTimeout(
+                        () => {
+
+                            favorite.dataset.wasDragged =
+                                "false";
+
+                        },
+                        150
+                    );
+
+                }
+            );
+
+            favorite.addEventListener(
+                "dragover",
+                event => {
+
+                    const draggedFavorite =
+                        document.querySelector(
+                            ".project-article-favorite.dragging"
+                        );
+
+                    if (
+                        !draggedFavorite
+                        ||
+                        draggedFavorite === favorite
+                    ) {
+
+                        return;
+
+                    }
+
+                    event.preventDefault();
+
+                    const favoriteRect =
+                        favorite.getBoundingClientRect();
+
+                    const insertAfter =
+                        event.clientX
+                        >
+                        favoriteRect.left
+                        +
+                        favoriteRect.width / 2;
+
+                    insertElementBeforeIfChanged(
+                        favorite.parentElement,
+                        draggedFavorite,
+                        insertAfter
+                            ? favorite.nextSibling
+                            : favorite
+                    );
+
+                }
+            );
+
+            favorite.addEventListener(
+                "drop",
+                event => {
+
+                    event.preventDefault();
+
+                    saveFavoriteOrderFromDom();
 
                 }
             );
@@ -1211,37 +2619,102 @@ function registerFavoriteArticleSelection(
 
 }
 
-async function addArticleToSelectedNode(
-    articleNumber,
-    fullArticle
+function saveFavoriteOrderFromDom() {
+
+    saveFavoriteArticleNumberList(
+        Array.from(
+            document.querySelectorAll(
+                ".project-article-favorite"
+            )
+        ).map(favorite =>
+            favorite.dataset.articleNumber
+        )
+    );
+
+}
+
+function insertElementBeforeIfChanged(
+    parentElement,
+    element,
+    referenceElement
 ) {
 
-    await fetch(
+    if (
+        !parentElement
+        ||
+        element === referenceElement
+        ||
+        element.nextSibling === referenceElement
+    ) {
 
-        "/api/projectNodeArticles",
+        return;
 
-        {
+    }
 
-            method: "POST",
+    parentElement.insertBefore(
+        element,
+        referenceElement
+    );
 
-            headers: {
+}
 
-                "Content-Type":
-                    "application/json"
+function clearArticleDropIndicators() {
 
-            },
+    document
+        .querySelectorAll(
+            ".project-node.article-drop-over"
+        )
+        .forEach(node => {
 
-            body: JSON.stringify({
+            node.classList.remove(
+                "article-drop-over"
+            );
 
-                projectNodeId:
-                    selectedNodeId,
+        });
 
-                articleNumber
+}
 
-            })
+async function addArticleToNode(
+    nodeId,
+    articleNumber,
+    fullArticle,
+    projectId
+) {
 
-        }
+    const response =
+        await fetch(
 
+            "/api/projectNodeArticles",
+
+            {
+
+                method: "POST",
+
+                headers: {
+
+                    "Content-Type":
+                        "application/json"
+
+                },
+
+                body: JSON.stringify({
+
+                    projectNodeId:
+                        nodeId,
+
+                    articleNumber
+
+                })
+
+            }
+
+        );
+
+    const nodeArticle =
+        await response.json();
+
+    upsertCurrentNodeArticle(
+        nodeArticle
     );
 
     console.log(
@@ -1252,32 +2725,97 @@ async function addArticleToSelectedNode(
 
         "zu Node",
 
-        selectedNodeId
+        nodeId
 
     );
 
-    const selectedNode =
+    const targetNode =
         document.querySelector(
-            `.project-node[data-id="${selectedNodeId}"]`
+            `.project-node[data-id="${nodeId}"]`
         );
 
+    if (!targetNode) {
+
+        return;
+
+    }
+
     const children =
-        selectedNode.parentElement.querySelector(
+        targetNode.parentElement.querySelector(
             ".project-node-children"
         );
 
-    children.insertAdjacentHTML(
+    if (!children) {
 
-        "afterbegin",
+        return;
 
-        renderNodeArticle(
-            selectedNodeId,
-            articleNumber,
-            fullArticle
-        )
+    }
+
+    collapsedNodes.delete(
+        String(nodeId)
     );
 
-    registerNodeArticleDelete();
+    children.style.display =
+        "block";
+
+    const toggle =
+        targetNode.querySelector(
+            ".node-toggle"
+        );
+
+    if (toggle) {
+
+        toggle.textContent =
+            "▼";
+
+    }
+
+    const childNodeWrapper =
+        children.querySelector(
+            ":scope > .project-node-wrapper"
+        );
+
+    if (childNodeWrapper) {
+
+        childNodeWrapper.insertAdjacentHTML(
+
+                "beforebegin",
+
+                renderNodeArticle(
+                nodeId,
+                articleNumber,
+                fullArticle,
+                nodeArticle
+            )
+        );
+
+    } else {
+
+        children.insertAdjacentHTML(
+
+                "beforeend",
+
+            renderNodeArticle(
+                nodeId,
+                articleNumber,
+                fullArticle,
+                nodeArticle
+            )
+        );
+
+    }
+
+    registerNodeArticleMenus(
+        projectId
+    );
+
+    registerNodeArticleDragAndDrop(
+        projectId
+    );
+
+    updateProjectNodeTotals();
+
+    syncArticleListHeight();
 
 }
 
@@ -1338,6 +2876,8 @@ function registerNodeToggles(
                         ? "▼"
                         : "▶";
 
+                syncArticleListHeight();
+
             }
         );
 
@@ -1349,50 +2889,27 @@ function getArticleIcon(
     article = {}
 ) {
 
-    const text = `
+    const text =
+        getArticleSearchText(
+            article
+        );
 
-        ${article.manufacturerType ?? ""}
-        ${article.description ?? ""}
-
-    `.toLowerCase();
-
-    if (
-        text.includes(
-            "b21"
-        )
-    ) {
-
-        return "/icons/b21.png";
-
-    }
-
-    if (
-        text.includes(
-            "b23"
-        )
-    ) {
-
-        return "/icons/b23.png";
-
-    }
+    const matchingRule =
+        articleIconRules.find(rule =>
+            rule.keywords.some(keyword =>
+                text.includes(
+                    normalizeSearchText(
+                        keyword
+                    )
+                )
+            )
+        );
 
     if (
-        text.includes(
-            "b24"
-        )
+        matchingRule
     ) {
 
-        return "/icons/b24.png";
-
-    }
-
-    if (
-        text.includes(
-            "umg 800"
-        )
-    ) {
-
-        return "/icons/umg800.png";
+        return `/icons/${matchingRule.icon}`;
 
     }
 
@@ -1400,16 +2917,18 @@ function getArticleIcon(
 
 }
 
-function registerNodeArticleDelete() {
+function registerProjectNodeDragAndDrop(
+    projectId
+) {
 
     document
         .querySelectorAll(
-            ".node-article"
+            ".project-node"
         )
-        .forEach(article => {
+        .forEach(node => {
 
             if (
-                article.dataset.deleteRegistered
+                node.dataset.nodeDragRegistered
                 ===
                 "true"
             ) {
@@ -1418,32 +2937,162 @@ function registerNodeArticleDelete() {
 
             }
 
-            article.dataset.deleteRegistered =
+            node.dataset.nodeDragRegistered =
                 "true";
 
-            article.addEventListener(
-                "click",
-                async event => {
+            node.addEventListener(
+                "dragstart",
+                event => {
 
-                    event.stopPropagation();
+                    if (
+                        event.target.closest(
+                            "button, .node-toggle, .project-node-menu"
+                        )
+                    ) {
 
-                    const nodeId =
-                        article.dataset.nodeId;
+                        event.preventDefault();
 
-                    const articleNumber =
-                        article.dataset.articleNumber;
+                        return;
 
-                    await fetch(
+                    }
 
-                        `/api/projectNodeArticles/${nodeId}/${articleNumber}`,
+                    closeProjectMenus();
 
-                        {
-                            method: "DELETE"
-                        }
+                    node
+                        .closest(
+                            ".project-node-wrapper"
+                        )
+                        .classList.add(
+                            "node-dragging"
+                        );
 
+                    event.dataTransfer.effectAllowed =
+                        "move";
+
+                    event.dataTransfer.setData(
+                        "application/json",
+                        JSON.stringify({
+                            id:
+                                node.dataset.id,
+                            type:
+                                node.dataset.type
+                        })
                     );
 
-                    article.remove();
+                }
+            );
+
+            node.addEventListener(
+                "dragend",
+                () => {
+
+                    document
+                        .querySelectorAll(
+                            ".project-node-wrapper.node-dragging, .project-node.node-drag-over"
+                        )
+                        .forEach(element => {
+
+                            element.classList.remove(
+                                "node-dragging",
+                                "node-drag-over"
+                            );
+
+                        });
+
+                }
+            );
+
+            node.addEventListener(
+                "dragover",
+                event => {
+
+                    const draggedWrapper =
+                        document.querySelector(
+                            ".project-node-wrapper.node-dragging"
+                        );
+
+                    if (!draggedWrapper) {
+
+                        return;
+
+                    }
+
+                    const draggedNode =
+                        draggedWrapper.querySelector(
+                            ".project-node"
+                        );
+
+                    const targetWrapper =
+                        node.closest(
+                            ".project-node-wrapper"
+                        );
+
+                    if (
+                        !draggedNode
+                        ||
+                        !canDropProjectNode(
+                            draggedNode,
+                            node
+                        )
+                    ) {
+
+                        return;
+
+                    }
+
+                    event.preventDefault();
+
+                    node.classList.add(
+                        "node-drag-over"
+                    );
+
+                    moveProjectNodeInDom(
+                        draggedWrapper,
+                        targetWrapper,
+                        draggedNode,
+                        node,
+                        event
+                    );
+
+                }
+            );
+
+            node.addEventListener(
+                "dragleave",
+                () => {
+
+                    node.classList.remove(
+                        "node-drag-over"
+                    );
+
+                }
+            );
+
+            node.addEventListener(
+                "drop",
+                event => {
+
+                    event.preventDefault();
+
+                    node.classList.remove(
+                        "node-drag-over"
+                    );
+
+                    const draggedWrapper =
+                        document.querySelector(
+                            ".project-node-wrapper.node-dragging"
+                        );
+
+                    if (!draggedWrapper) {
+
+                        return;
+
+                    }
+
+                    saveProjectNodePosition(
+                        draggedWrapper,
+                        projectId
+                    );
 
                 }
             );
@@ -1451,6 +3100,1267 @@ function registerNodeArticleDelete() {
         });
 
 }
+
+function canDropProjectNode(
+    draggedNode,
+    targetNode
+) {
+
+    if (
+        draggedNode.dataset.id
+        ===
+        targetNode.dataset.id
+    ) {
+
+        return false;
+
+    }
+
+    const draggedWrapper =
+        draggedNode.closest(
+            ".project-node-wrapper"
+        );
+
+    const targetWrapper =
+        targetNode.closest(
+            ".project-node-wrapper"
+        );
+
+    if (
+        draggedWrapper.contains(
+            targetWrapper
+        )
+    ) {
+
+        return false;
+
+    }
+
+    if (
+        draggedNode.dataset.type
+        ===
+        targetNode.dataset.type
+    ) {
+
+        return true;
+
+    }
+
+    return getValidParentType(
+        draggedNode.dataset.type
+    )
+    ===
+    targetNode.dataset.type;
+
+}
+
+function moveProjectNodeInDom(
+    draggedWrapper,
+    targetWrapper,
+    draggedNode,
+    targetNode,
+    event
+) {
+
+    if (
+        draggedNode.dataset.type
+        ===
+        targetNode.dataset.type
+    ) {
+
+        const targetRect =
+            targetNode.getBoundingClientRect();
+
+        const insertAfter =
+            event.clientY
+            >
+            targetRect.top
+            +
+            targetRect.height / 2;
+
+        targetWrapper.parentElement.insertBefore(
+            draggedWrapper,
+            insertAfter
+                ? targetWrapper.nextSibling
+                : targetWrapper
+        );
+
+        return;
+
+    }
+
+    const targetChildren =
+        targetWrapper.querySelector(
+            ":scope > .project-node-children"
+        );
+
+    if (targetChildren) {
+
+        targetChildren.appendChild(
+            draggedWrapper
+        );
+
+    }
+
+}
+
+function getValidParentType(
+    type
+) {
+
+    switch(type) {
+
+        case "building":
+            return null;
+
+        case "panel":
+            return "building";
+
+        case "field":
+            return "panel";
+
+        case "meter":
+            return "field";
+
+        default:
+            return null;
+
+    }
+
+}
+
+function getProjectNodeParentIdFromDom(
+    nodeWrapper
+) {
+
+    const parentWrapper =
+        nodeWrapper
+            .parentElement
+            .closest(
+                ".project-node-wrapper"
+            );
+
+    return parentWrapper
+        ? parentWrapper.querySelector(
+            ":scope > .project-node"
+        ).dataset.id
+        : null;
+
+}
+
+function saveProjectNodePosition(
+    nodeWrapper,
+    projectId
+) {
+
+    const node =
+        nodeWrapper.querySelector(
+            ":scope > .project-node"
+        );
+
+    const parentId =
+        getProjectNodeParentIdFromDom(
+            nodeWrapper
+        );
+
+    const siblings =
+        Array.from(
+            nodeWrapper.parentElement.querySelectorAll(
+                ":scope > .project-node-wrapper"
+            )
+        ).map(wrapper =>
+            wrapper.querySelector(
+                ":scope > .project-node"
+            ).dataset.id
+        );
+
+    const currentNode =
+        currentNodes.find(item =>
+            String(item.id)
+            ===
+            String(node.dataset.id)
+        );
+
+    if (currentNode) {
+
+        currentNode.parentId =
+            parentId;
+
+        currentNode.sortOrder =
+            siblings.indexOf(
+                node.dataset.id
+            );
+
+    }
+
+    siblings.forEach((siblingId, index) => {
+
+        const sibling =
+            currentNodes.find(item =>
+                String(item.id)
+                ===
+                String(siblingId)
+            );
+
+        if (sibling) {
+
+            sibling.parentId =
+                parentId;
+
+            sibling.sortOrder =
+                index;
+
+        }
+
+    });
+
+    fetch(
+
+        `/api/projectNodes/${node.dataset.id}/move`,
+
+        {
+
+            method: "PATCH",
+
+            headers: {
+
+                "Content-Type":
+                    "application/json"
+
+            },
+
+            body: JSON.stringify({
+                parentId,
+                siblings
+            })
+
+        }
+
+    ).catch(() => {
+
+        refreshProjectTree(
+            projectId
+        );
+
+    });
+
+    updateProjectNodeTotals();
+
+    syncArticleListHeight();
+
+}
+
+function registerProjectNodeMenus(
+    projectId
+) {
+
+    document
+        .querySelectorAll(
+            ".project-node"
+        )
+        .forEach(node => {
+
+            if (
+                node.dataset.nodeMenuRegistered
+                ===
+                "true"
+            ) {
+
+                return;
+
+            }
+
+            node.dataset.nodeMenuRegistered =
+                "true";
+
+            const menuButton =
+                node.querySelector(
+                    ".project-node-menu-button"
+                );
+
+            const menuOptions =
+                node.querySelector(
+                    ".project-node-menu-options"
+                );
+
+            if (
+                !menuButton
+                ||
+                !menuOptions
+            ) {
+
+                return;
+
+            }
+
+            menuButton.addEventListener(
+                "click",
+                event => {
+
+                    event.stopPropagation();
+
+                    closeProjectMenus(
+                        menuOptions
+                    );
+
+                    menuOptions.classList.toggle(
+                        "open"
+                    );
+
+                }
+            );
+
+            menuOptions.addEventListener(
+                "click",
+                async event => {
+
+                    event.stopPropagation();
+
+                    const actionButton =
+                        event.target.closest(
+                            "button"
+                        );
+
+                    if (!actionButton) {
+
+                        return;
+
+                    }
+
+                    menuOptions.classList.remove(
+                        "open"
+                    );
+
+                    const nodeId =
+                        node.dataset.id;
+
+                    const action =
+                        actionButton.dataset.action;
+
+                    if (action === "position-name") {
+
+                        const currentName =
+                            node
+                                .querySelector(
+                                    ".project-node-name"
+                                )
+                                ?.textContent
+                                .trim()
+                            ||
+                            "";
+
+                        const name =
+                            await openProjectModal({
+                                title: "Positionsname",
+                                label: "Positionsname",
+                                value: currentName
+                            });
+
+                        if (name === null) {
+
+                            return;
+
+                        }
+
+                        const updatedNode =
+                            await updateProjectNode(
+                                nodeId,
+                                {
+                                    name:
+                                        name.trim()
+                                }
+                            );
+
+                        updateCurrentNode(
+                            updatedNode
+                        );
+
+                        const nameElement =
+                            node.querySelector(
+                                ".project-node-name"
+                            );
+
+                        if (nameElement) {
+
+                            nameElement.textContent =
+                                updatedNode.name;
+
+                        }
+
+                        return;
+
+                    }
+
+                    if (action === "duplicate") {
+
+                        await waitForPendingNodeArticleOrders();
+
+                        await fetch(
+
+                            `/api/projectNodes/${nodeId}/duplicate`,
+
+                            {
+                                method: "POST"
+                            }
+
+                        );
+
+                        await refreshProjectTree(
+                            projectId
+                        );
+
+                        return;
+
+                    }
+
+                    if (action === "delete") {
+
+                        await fetch(
+
+                            `/api/projectNodes/${nodeId}`,
+
+                            {
+                                method: "DELETE"
+                            }
+
+                        );
+
+                        await refreshProjectTree(
+                            projectId
+                        );
+
+                    }
+
+                }
+            );
+
+        });
+
+}
+
+function closeProjectMenus(
+    exceptMenu = null
+) {
+
+    document
+        .querySelectorAll(
+            ".node-article-menu-options.open, .project-node-menu-options.open"
+        )
+        .forEach(openMenu => {
+
+            if (openMenu !== exceptMenu) {
+
+                openMenu.classList.remove(
+                    "open"
+                );
+
+            }
+
+        });
+
+}
+
+function registerNodeArticleMenus(
+    projectId
+) {
+
+    document
+        .querySelectorAll(
+            ".node-article"
+        )
+        .forEach(article => {
+
+            if (
+                article.dataset.menuRegistered
+                ===
+                "true"
+            ) {
+
+                return;
+
+            }
+
+            article.dataset.menuRegistered =
+                "true";
+
+            const menuButton =
+                article.querySelector(
+                    ".node-article-menu-button"
+                );
+
+            const menuOptions =
+                article.querySelector(
+                    ".node-article-menu-options"
+                );
+
+            if (
+                !menuButton
+                ||
+                !menuOptions
+            ) {
+
+                return;
+
+            }
+
+            menuButton.addEventListener(
+                "click",
+                event => {
+
+                    event.stopPropagation();
+
+                    closeProjectMenus(
+                        menuOptions
+                    );
+
+                    menuOptions.classList.toggle(
+                        "open"
+                    );
+
+                }
+            );
+
+            menuOptions.addEventListener(
+                "click",
+                async event => {
+
+                    event.stopPropagation();
+
+                    const actionButton =
+                        event.target.closest(
+                            "button"
+                        );
+
+                    if (!actionButton) {
+
+                        return;
+
+                    }
+
+                    menuOptions.classList.remove(
+                        "open"
+                    );
+
+                    const positionId =
+                        article.dataset.id;
+
+                    if (!positionId) {
+
+                        return;
+
+                    }
+
+                    const action =
+                        actionButton.dataset.action;
+
+                    if (action === "position-name") {
+
+                        const currentName =
+                            article
+                                .querySelector(
+                                    ".node-article-position-name"
+                                )
+                                ?.textContent
+                                .trim()
+                            ||
+                            "";
+
+                        const positionName =
+                            await openProjectModal({
+                                title: "Positionsname",
+                                label: "Positionsname",
+                                value: currentName
+                            });
+
+                        if (positionName === null) {
+
+                            return;
+
+                        }
+
+                        const updatedNodeArticle =
+                            await updateNodeArticlePosition(
+                                positionId,
+                                {
+                                    positionName:
+                                        positionName.trim()
+                                }
+                            );
+
+                        updateNodeArticleElement(
+                            article,
+                            updatedNodeArticle,
+                            projectId
+                        );
+
+                        return;
+
+                    }
+
+                    if (action === "quantity") {
+
+                        const currentQuantity =
+                            article.dataset.quantity
+                            ||
+                            "1";
+
+                        const quantity =
+                            await openProjectModal({
+                                title: "Anzahl",
+                                label: "Anzahl",
+                                type: "number",
+                                value: currentQuantity,
+                                min: "1",
+                                step: "1"
+                            });
+
+                        if (quantity === null) {
+
+                            return;
+
+                        }
+
+                        const normalizedQuantity =
+                            Number(
+                                quantity.replace(
+                                    ",",
+                                    "."
+                                )
+                            );
+
+                        if (
+                            !Number.isFinite(
+                                normalizedQuantity
+                            )
+                            ||
+                            !Number.isInteger(
+                                normalizedQuantity
+                            )
+                            ||
+                            normalizedQuantity <= 0
+                        ) {
+
+                            alert(
+                                "Bitte eine ganze Anzahl größer 0 eingeben."
+                            );
+
+                            return;
+
+                        }
+
+                        const updatedNodeArticle =
+                            await updateNodeArticlePosition(
+                                positionId,
+                                {
+                                    quantity:
+                                        normalizedQuantity
+                                }
+                            );
+
+                        updateNodeArticleElement(
+                            article,
+                            updatedNodeArticle,
+                            projectId
+                        );
+
+                        return;
+
+                    }
+
+                    if (action === "duplicate") {
+
+                        await duplicateNodeArticle(
+                            article,
+                            projectId
+                        );
+
+                        return;
+
+                    }
+
+                    if (action === "delete") {
+
+                        await fetch(
+
+                            `/api/projectNodeArticles/${positionId}`,
+
+                            {
+                                method: "DELETE"
+                            }
+
+                        );
+
+                        removeCurrentNodeArticle(
+                            positionId
+                        );
+
+                        article.remove();
+
+                        updateProjectNodeTotals();
+
+                        syncArticleListHeight();
+
+                    }
+
+                }
+            );
+
+        });
+
+}
+
+function registerNodeArticleDragAndDrop(
+    projectId
+) {
+
+    document
+        .querySelectorAll(
+            ".node-article"
+        )
+        .forEach(article => {
+
+            if (
+                article.dataset.dragRegistered
+                ===
+                "true"
+            ) {
+
+                return;
+
+            }
+
+            article.dataset.dragRegistered =
+                "true";
+
+            article.addEventListener(
+                "dragstart",
+                event => {
+
+                    closeProjectMenus();
+
+                    article.classList.add(
+                        "dragging"
+                    );
+
+                    article.dataset.originalOrder =
+                        getNodeArticleOrderSignature(
+                            article.dataset.nodeId
+                        );
+
+                    event.dataTransfer.effectAllowed =
+                        "move";
+
+                    event.dataTransfer.setData(
+                        "text/plain",
+                        JSON.stringify({
+                            id:
+                                article.dataset.id,
+                            nodeId:
+                                article.dataset.nodeId
+                        })
+                    );
+
+                }
+            );
+
+            article.addEventListener(
+                "dragend",
+                () => {
+
+                    const nodeId =
+                        article.dataset.nodeId;
+
+                    const originalOrder =
+                        article.dataset.originalOrder
+                        ||
+                        "";
+
+                    article.classList.remove(
+                        "dragging"
+                    );
+
+                    document
+                        .querySelectorAll(
+                            ".node-article.drag-over"
+                        )
+                        .forEach(item => {
+
+                            item.classList.remove(
+                                "drag-over"
+                            );
+
+                        });
+
+                    delete article.dataset.originalOrder;
+
+                    if (
+                        originalOrder
+                        &&
+                        originalOrder
+                        !==
+                        getNodeArticleOrderSignature(
+                            nodeId
+                        )
+                    ) {
+
+                        saveNodeArticleOrder(
+                            nodeId
+                        );
+
+                    }
+
+                }
+            );
+
+            article.addEventListener(
+                "dragover",
+                event => {
+
+                    const draggedArticle =
+                        document.querySelector(
+                            ".node-article.dragging"
+                        );
+
+                    if (
+                        !draggedArticle
+                        ||
+                        draggedArticle === article
+                        ||
+                        draggedArticle.dataset.nodeId
+                        !==
+                        article.dataset.nodeId
+                    ) {
+
+                        return;
+
+                    }
+
+                    event.preventDefault();
+
+                    event.dataTransfer.dropEffect =
+                        "move";
+
+                    article.classList.add(
+                        "drag-over"
+                    );
+
+                    const articleRect =
+                        article.getBoundingClientRect();
+
+                    const insertAfter =
+                        event.clientY
+                        >
+                        articleRect.top
+                        +
+                        articleRect.height / 2;
+
+                    insertElementBeforeIfChanged(
+                        article.parentElement,
+                        draggedArticle,
+                        insertAfter
+                            ? article.nextSibling
+                            : article
+                    );
+
+                }
+            );
+
+            article.addEventListener(
+                "dragleave",
+                () => {
+
+                    article.classList.remove(
+                        "drag-over"
+                    );
+
+                }
+            );
+
+            article.addEventListener(
+                "drop",
+                event => {
+
+                    const draggedArticle =
+                        document.querySelector(
+                            ".node-article.dragging"
+                        );
+
+                    if (!draggedArticle) {
+
+                        return;
+
+                    }
+
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    article.classList.remove(
+                        "drag-over"
+                    );
+
+                    syncArticleListHeight();
+
+                }
+            );
+
+        });
+
+}
+
+function saveNodeArticleOrder(
+    nodeId
+) {
+
+    const orderedArticles =
+        Array.from(
+            document.querySelectorAll(
+                `.node-article[data-node-id="${nodeId}"]`
+            )
+        );
+
+    const positions =
+        orderedArticles.map((article, index) => ({
+
+            id:
+                article.dataset.id,
+
+            sortOrder:
+                index
+
+        }));
+
+    currentNodeArticles =
+        currentNodeArticles.map(nodeArticle => {
+
+            const position =
+                positions.find(
+                    item =>
+                        String(item.id)
+                        ===
+                        String(nodeArticle.id)
+                );
+
+            if (!position) {
+
+                return nodeArticle;
+
+            }
+
+            return {
+                ...nodeArticle,
+                sortOrder:
+                    position.sortOrder
+            };
+
+        });
+
+    const request =
+        fetch(
+
+            `/api/projectNodeArticles/reorder/${nodeId}`,
+
+            {
+
+                method: "PATCH",
+
+                headers: {
+
+                    "Content-Type":
+                        "application/json"
+
+                },
+
+                body: JSON.stringify({
+                    positions
+                })
+
+            }
+
+        )
+            .then(response => {
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        "Artikelreihenfolge konnte nicht gespeichert werden."
+                    );
+
+                }
+
+                return response.json();
+
+            })
+            .catch(error => {
+
+                console.error(
+                    error
+                );
+
+            });
+
+    pendingNodeArticleOrderRequests.add(
+        request
+    );
+
+    request.finally(() => {
+
+        pendingNodeArticleOrderRequests.delete(
+            request
+        );
+
+    });
+
+    return request;
+
+}
+
+function getNodeArticleOrderSignature(
+    nodeId
+) {
+
+    return Array
+        .from(
+            document.querySelectorAll(
+                `.node-article[data-node-id="${nodeId}"]`
+            )
+        )
+        .map(article =>
+            article.dataset.id
+        )
+        .join(",");
+
+}
+
+async function waitForPendingNodeArticleOrders() {
+
+    if (
+        pendingNodeArticleOrderRequests.size === 0
+    ) {
+
+        return;
+
+    }
+
+    await Promise.all(
+        pendingNodeArticleOrderRequests
+    );
+
+}
+
+async function updateNodeArticlePosition(
+    positionId,
+    data
+) {
+
+    const response =
+        await fetch(
+
+            `/api/projectNodeArticles/${positionId}`,
+
+            {
+
+                method: "PATCH",
+
+                headers: {
+
+                    "Content-Type":
+                        "application/json"
+
+                },
+
+                body: JSON.stringify(
+                    data
+                )
+
+            }
+
+        );
+
+    return await response.json();
+
+}
+
+async function updateProjectNode(
+    nodeId,
+    data
+) {
+
+    const response =
+        await fetch(
+
+            `/api/projectNodes/${nodeId}`,
+
+            {
+
+                method: "PATCH",
+
+                headers: {
+
+                    "Content-Type":
+                        "application/json"
+
+                },
+
+                body: JSON.stringify(
+                    data
+                )
+
+            }
+
+        );
+
+    return await response.json();
+
+}
+
+async function duplicateNodeArticle(
+    articleElement,
+    projectId
+) {
+
+    const sourceNodeArticle =
+        currentNodeArticles.find(
+            nodeArticle =>
+                String(nodeArticle.id)
+                ===
+                String(articleElement.dataset.id)
+        );
+
+    if (!sourceNodeArticle) {
+
+        return;
+
+    }
+
+    const response =
+        await fetch(
+
+            "/api/projectNodeArticles",
+
+            {
+
+                method: "POST",
+
+                headers: {
+
+                    "Content-Type":
+                        "application/json"
+
+                },
+
+                body: JSON.stringify({
+
+                    projectNodeId:
+                        sourceNodeArticle.projectNodeId,
+
+                    articleNumber:
+                        sourceNodeArticle.articleNumber,
+
+                    quantity:
+                        sourceNodeArticle.quantity ?? 1,
+
+                    positionName:
+                        sourceNodeArticle.positionName ?? null
+
+                })
+
+            }
+
+        );
+
+    const duplicatedNodeArticle =
+        await response.json();
+
+    upsertCurrentNodeArticle(
+        duplicatedNodeArticle
+    );
+
+    const fullArticle =
+        getCurrentArticleByNumber(
+            duplicatedNodeArticle.articleNumber
+        );
+
+    articleElement.insertAdjacentHTML(
+
+        "beforebegin",
+
+        renderNodeArticle(
+            duplicatedNodeArticle.projectNodeId,
+            duplicatedNodeArticle.articleNumber,
+            fullArticle,
+            duplicatedNodeArticle
+        )
+
+    );
+
+    registerNodeArticleMenus(
+        projectId
+    );
+
+    registerNodeArticleDragAndDrop(
+        projectId
+    );
+
+    updateProjectNodeTotals();
+
+    syncArticleListHeight();
+
+}
+
+function updateNodeArticleElement(
+    articleElement,
+    nodeArticle,
+    projectId
+) {
+
+    upsertCurrentNodeArticle(
+        nodeArticle
+    );
+
+    const fullArticle =
+        getCurrentArticleByNumber(
+            nodeArticle.articleNumber
+        );
+
+    articleElement.outerHTML =
+        renderNodeArticle(
+            nodeArticle.projectNodeId,
+            nodeArticle.articleNumber,
+            fullArticle,
+            nodeArticle
+        );
+
+    const updatedArticleElement =
+        document.querySelector(
+            `.node-article[data-id="${nodeArticle.id}"]`
+        );
+
+    if (updatedArticleElement) {
+
+        registerNodeArticleMenus(
+            projectId
+        );
+
+        registerNodeArticleDragAndDrop(
+            projectId
+        );
+
+    }
+
+    updateProjectNodeTotals();
+
+    syncArticleListHeight();
+
+}
+
+document.addEventListener(
+    "click",
+    () => {
+
+        closeProjectMenus();
+
+    }
+);
 
 export {
     renderView

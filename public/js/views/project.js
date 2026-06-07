@@ -5,6 +5,8 @@ import * as utils from "../utils/icons.js";
 
 let selectedNodeId = null;
 let collapsedNodes = new Set();
+const articleFavoritesStorageKey =
+    "projectBuilder.articleFavorites";
 
 const view =
     document.getElementById(
@@ -174,57 +176,19 @@ async function renderView(
                         placeholder="Artikel suchen..."
                     >
 
+                    <div
+                        id="project-article-favorites"
+                    >
+
+                        ${renderFavoriteArticles(articles)}
+
+                    </div>
+
                 <div
                     id="project-article-list"
                 >
 
-                    ${articles.map(article => `
-
-                        <div
-                            class="project-article"
-                            data-article-number="${article.articleNumber}"
-                        >
-
-                            <div class="project-article-number">
-
-                                ${article.articleNumber}
-
-                            </div>
-
-                            <div class="project-article-name">
-
-                                ${article.manufacturerType ?? ""}
-
-                            </div>
-
-                            <div class="project-article-price">
-
-                                ${article.listPrice ?? ""} €
-
-                            </div>
-
-                            <div class="project-article-pg">
-
-                                ${article.discountGroup ?? ""}
-
-                            </div>
-
-                            <div class="project-article-icon">
-                                <img
-                                    src="${getArticleIcon(article)}"
-                                    alt=""
-                                >
-                            </div>
-
-                            <div class="project-article-description">
-
-                                ${article.description ?? ""}
-
-                            </div>
-
-                        </div>
-
-                    `).join("")}
+                    ${renderArticleList(articles)}
 
                 </div>
 
@@ -242,8 +206,181 @@ async function renderView(
     registerNodeButtons(projectId);
     registerNodeSelection();
     registerArticleSelection(articles);
+    registerArticleSearch(articles);
+    registerArticleFavorites(articles);
     registerNodeToggles(projectId);
     registerNodeArticleDelete();
+}
+
+function renderArticleList(
+    articles
+) {
+
+    const favoriteArticleNumbers =
+        getFavoriteArticleNumbers();
+
+    return articles.map(article => `
+
+        <div
+            class="project-article"
+            data-article-number="${article.articleNumber}"
+        >
+
+            <div class="project-article-number">
+
+                ${article.articleNumber}
+
+            </div>
+
+            <div class="project-article-name">
+
+                ${article.manufacturerType ?? ""}
+
+            </div>
+
+            <div class="project-article-price">
+
+                ${article.listPrice ?? ""} €
+
+            </div>
+
+            <div class="project-article-pg">
+
+                ${article.discountGroup ?? ""}
+
+            </div>
+
+            <div class="project-article-icon">
+                <button
+                    class="article-favorite-toggle ${favoriteArticleNumbers.has(String(article.articleNumber)) ? "active" : ""}"
+                    type="button"
+                    title="Favorit"
+                    aria-label="Favorit umschalten"
+                    aria-pressed="${favoriteArticleNumbers.has(String(article.articleNumber)) ? "true" : "false"}"
+                    data-article-number="${article.articleNumber}"
+                >
+                    ${favoriteArticleNumbers.has(String(article.articleNumber)) ? "★" : "☆"}
+                </button>
+
+                <img
+                    src="${getArticleIcon(article)}"
+                    alt=""
+                >
+            </div>
+
+            <div class="project-article-description">
+
+                ${article.description ?? ""}
+
+            </div>
+
+        </div>
+
+    `).join("");
+
+}
+
+function renderFavoriteArticles(
+    articles
+) {
+
+    const favoriteArticleNumbers =
+        getFavoriteArticleNumbers();
+
+    const favoriteArticles =
+        articles.filter(article =>
+            favoriteArticleNumbers.has(
+                String(article.articleNumber)
+            )
+        );
+
+    if (favoriteArticles.length === 0) {
+
+        return "";
+
+    }
+
+    return `
+
+        <h3>
+            Favoriten
+        </h3>
+
+        <div class="project-article-favorites-list">
+
+            ${favoriteArticles.map(article => `
+
+                <button
+                    class="project-article-favorite"
+                    type="button"
+                    data-article-number="${article.articleNumber}"
+                    title="Artikel hinzufügen"
+                >
+
+                    <span class="project-article-favorite-icon">
+                        <img
+                            src="${getArticleIcon(article)}"
+                            alt=""
+                        >
+                    </span>
+
+                    <span class="project-article-favorite-text">
+
+                        <strong>
+                            ${article.articleNumber}
+                        </strong>
+
+                        <span>
+                            ${article.manufacturerType ?? ""}
+                        </span>
+
+                    </span>
+
+                </button>
+
+            `).join("")}
+
+        </div>
+
+    `;
+
+}
+
+function getFavoriteArticleNumbers() {
+
+    try {
+
+        return new Set(
+            JSON.parse(
+                localStorage.getItem(
+                    articleFavoritesStorageKey
+                )
+                ||
+                "[]"
+            ).map(String)
+        );
+
+    } catch (error) {
+
+        return new Set();
+
+    }
+
+}
+
+function saveFavoriteArticleNumbers(
+    favoriteArticleNumbers
+) {
+
+    localStorage.setItem(
+        articleFavoritesStorageKey,
+        JSON.stringify(
+            Array.from(
+                favoriteArticleNumbers
+            )
+        )
+    );
+
 }
 
 // Render Nodes
@@ -338,48 +475,11 @@ function renderChildNodes(nodes, nodeArticles, articles, parentId) {
                                     ===
                                     nodeArticle.articleNumber
                             );
-                        return `
-
-                            <div
-                                class="node-article"
-                                data-node-id="${node.id}"
-                                data-article-number="${nodeArticle.articleNumber}"
-                            >
-
-                                <img
-                                    src="${getArticleIcon(fullArticle)}"
-                                    alt=""
-                                >
-
-                                <div class="node-article-content">
-
-                                    <div class="node-article-header">
-
-                                        <span class="node-article-number">
-
-                                            ${nodeArticle.articleNumber}
-
-                                        </span>
-
-                                        <span class="node-article-price">
-
-                                            (${fullArticle?.listPrice ?? ""} €)
-
-                                        </span>
-
-                                    </div>
-
-                                    <div class="node-article-name">
-
-                                        ${fullArticle?.manufacturerType ?? ""}
-
-                                    </div>
-
-                                </div>
-
-                            </div>
-
-                        `;
+                        return renderNodeArticle(
+                            node.id,
+                            nodeArticle.articleNumber,
+                            fullArticle
+                        );
 
                     }).join("")}
 
@@ -395,6 +495,57 @@ function renderChildNodes(nodes, nodeArticles, articles, parentId) {
             </div>
 
         `).join("");
+
+}
+
+function renderNodeArticle(
+    nodeId,
+    articleNumber,
+    fullArticle
+) {
+
+    return `
+
+        <div
+            class="node-article"
+            data-node-id="${nodeId}"
+            data-article-number="${articleNumber}"
+        >
+
+            <img
+                src="${getArticleIcon(fullArticle)}"
+                alt=""
+            >
+
+            <div class="node-article-content">
+
+                <div class="node-article-header">
+
+                    <span class="node-article-number">
+
+                        ${articleNumber}
+
+                    </span>
+
+                    <span class="node-article-price">
+
+                        (${fullArticle?.listPrice ?? ""} €)
+
+                    </span>
+
+                </div>
+
+                <div class="node-article-name">
+
+                    ${fullArticle?.manufacturerType ?? ""}
+
+                </div>
+
+            </div>
+
+        </div>
+
+    `;
 
 }
 
@@ -756,11 +907,263 @@ function registerArticleSelection(articles) {
         .querySelectorAll(
             ".project-article"
         )
+        .forEach(articleElement => {
+
+            articleElement.addEventListener(
+                "click",
+                async event => {
+
+                    if (
+                        event.target.closest(
+                            ".article-favorite-toggle"
+                        )
+                    ) {
+
+                        return;
+
+                    }
+
+                    if (!selectedNodeId) {
+
+                        alert(
+                            "Bitte zuerst eine Messstelle auswählen."
+                        );
+
+                        return;
+
+                    }
+
+                    const articleNumber =
+                        articleElement.dataset.articleNumber;
+
+                    const fullArticle =
+                        articles.find(
+                            item =>
+                                item.articleNumber
+                                ===
+                                articleNumber
+                        );
+
+                    await addArticleToSelectedNode(
+                        articleNumber,
+                        fullArticle
+                    );
+
+                }
+
+            );
+
+        });
+
+}
+
+function registerArticleSearch(
+    articles
+) {
+
+    const search =
+        document.getElementById(
+            "project-article-search"
+        );
+
+    if (!search) {
+
+        return;
+
+    }
+
+    search.addEventListener(
+        "input",
+        () => {
+
+            const searchText =
+                search.value.trim().toLowerCase();
+
+            document
+                .querySelectorAll(
+                    ".project-article"
+                )
+                .forEach(articleElement => {
+
+                    const article =
+                        articles.find(item =>
+                            String(item.articleNumber)
+                            ===
+                            String(articleElement.dataset.articleNumber)
+                        );
+
+                    const haystack = `
+                        ${article?.articleNumber ?? ""}
+                        ${article?.manufacturerType ?? ""}
+                        ${article?.description ?? ""}
+                        ${article?.discountGroup ?? ""}
+                    `.toLowerCase();
+
+                    articleElement.hidden =
+                        searchText !== ""
+                        &&
+                        !haystack.includes(
+                            searchText
+                        );
+
+                });
+
+        }
+    );
+
+}
+
+function registerArticleFavorites(
+    articles
+) {
+
+    registerArticleFavoriteButtons(
+        articles
+    );
+
+    registerFavoriteArticleSelection(
+        articles
+    );
+
+}
+
+function registerArticleFavoriteButtons(
+    articles
+) {
+
+    document
+        .querySelectorAll(
+            ".article-favorite-toggle"
+        )
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                event => {
+
+                    event.stopPropagation();
+
+                    const articleNumber =
+                        String(
+                            button.dataset.articleNumber
+                        );
+
+                    const favoriteArticleNumbers =
+                        getFavoriteArticleNumbers();
+
+                    if (
+                        favoriteArticleNumbers.has(
+                            articleNumber
+                        )
+                    ) {
+
+                        favoriteArticleNumbers.delete(
+                            articleNumber
+                        );
+
+                    } else {
+
+                        favoriteArticleNumbers.add(
+                            articleNumber
+                        );
+
+                    }
+
+                    saveFavoriteArticleNumbers(
+                        favoriteArticleNumbers
+                    );
+
+                    syncArticleFavoriteButtons(
+                        articleNumber,
+                        favoriteArticleNumbers.has(
+                            articleNumber
+                        )
+                    );
+
+                    renderArticleFavoritesPanel(
+                        articles
+                    );
+
+                }
+            );
+
+        });
+
+}
+
+function syncArticleFavoriteButtons(
+    articleNumber,
+    isFavorite
+) {
+
+    document
+        .querySelectorAll(
+            `.article-favorite-toggle[data-article-number="${articleNumber}"]`
+        )
+        .forEach(button => {
+
+            button.classList.toggle(
+                "active",
+                isFavorite
+            );
+
+            button.setAttribute(
+                "aria-pressed",
+                isFavorite
+                    ? "true"
+                    : "false"
+            );
+
+            button.textContent =
+                isFavorite
+                    ? "★"
+                    : "☆";
+
+        });
+
+}
+
+function renderArticleFavoritesPanel(
+    articles
+) {
+
+    const favorites =
+        document.getElementById(
+            "project-article-favorites"
+        );
+
+    if (!favorites) {
+
+        return;
+
+    }
+
+    favorites.innerHTML =
+        renderFavoriteArticles(
+            articles
+        );
+
+    registerFavoriteArticleSelection(
+        articles
+    );
+
+}
+
+function registerFavoriteArticleSelection(
+    articles
+) {
+
+    document
+        .querySelectorAll(
+            ".project-article-favorite"
+        )
         .forEach(article => {
 
             article.addEventListener(
                 "click",
-                async () => {
+                async event => {
+
+                    event.stopPropagation();
 
                     if (!selectedNodeId) {
 
@@ -775,97 +1178,106 @@ function registerArticleSelection(articles) {
                     const articleNumber =
                         article.dataset.articleNumber;
 
-                    await fetch(
+                    const articleListEntry =
+                        document.querySelector(
+                            `.project-article[data-article-number="${articleNumber}"]`
+                        );
 
-                        "/api/projectNodeArticles",
+                    if (articleListEntry) {
 
-                        {
+                        articleListEntry.click();
 
-                            method: "POST",
+                        return;
 
-                            headers: {
-
-                                "Content-Type":
-                                    "application/json"
-
-                            },
-
-                            body: JSON.stringify({
-
-                                projectNodeId:
-                                    selectedNodeId,
-
-                                articleNumber
-
-                            })
-
-                        }
-
-                    );
-
-                    console.log(
-
-                        "Artikel hinzugefügt",
-
-                        articleNumber,
-
-                        "zu Node",
-
-                        selectedNodeId
-
-                    );
+                    }
 
                     const fullArticle =
                         articles.find(
                             item =>
-                                item.articleNumber
+                                String(item.articleNumber)
                                 ===
-                                articleNumber
+                                String(articleNumber)
                         );
 
-                    const selectedNode =
-                        document.querySelector(
-                            `.project-node[data-id="${selectedNodeId}"]`
-                        );
-
-                    const children =
-                        selectedNode.parentElement.querySelector(
-                            ".project-node-children"
-                        );
-
-                        children.insertAdjacentHTML(
-
-                            "afterbegin",
-
-                            `
-
-                                <div
-                                    class="node-article"
-                                    data-node-id="${selectedNodeId}"
-                                    data-article-number="${articleNumber}"
-                                >
-
-                                    <img
-                                        src="${getArticleIcon(fullArticle)}"
-                                        alt=""
-                                    >
-
-                                    <span>
-
-                                        ${articleNumber}
-
-                                    </span>
-
-                                </div>
-
-                            `
-                        );
+                    await addArticleToSelectedNode(
+                        articleNumber,
+                        fullArticle
+                    );
 
                 }
-
             );
 
         });
+
+}
+
+async function addArticleToSelectedNode(
+    articleNumber,
+    fullArticle
+) {
+
+    await fetch(
+
+        "/api/projectNodeArticles",
+
+        {
+
+            method: "POST",
+
+            headers: {
+
+                "Content-Type":
+                    "application/json"
+
+            },
+
+            body: JSON.stringify({
+
+                projectNodeId:
+                    selectedNodeId,
+
+                articleNumber
+
+            })
+
+        }
+
+    );
+
+    console.log(
+
+        "Artikel hinzugefügt",
+
+        articleNumber,
+
+        "zu Node",
+
+        selectedNodeId
+
+    );
+
+    const selectedNode =
+        document.querySelector(
+            `.project-node[data-id="${selectedNodeId}"]`
+        );
+
+    const children =
+        selectedNode.parentElement.querySelector(
+            ".project-node-children"
+        );
+
+    children.insertAdjacentHTML(
+
+        "afterbegin",
+
+        renderNodeArticle(
+            selectedNodeId,
+            articleNumber,
+            fullArticle
+        )
+    );
+
+    registerNodeArticleDelete();
 
 }
 
@@ -934,7 +1346,7 @@ function registerNodeToggles(
 }
 
 function getArticleIcon(
-    article
+    article = {}
 ) {
 
     const text = `
@@ -995,6 +1407,19 @@ function registerNodeArticleDelete() {
             ".node-article"
         )
         .forEach(article => {
+
+            if (
+                article.dataset.deleteRegistered
+                ===
+                "true"
+            ) {
+
+                return;
+
+            }
+
+            article.dataset.deleteRegistered =
+                "true";
 
             article.addEventListener(
                 "click",

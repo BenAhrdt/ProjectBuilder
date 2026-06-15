@@ -254,6 +254,98 @@ router.post(
 
         }
 
+        const copySuffix =
+            String(
+                req.body?.copySuffix
+                ||
+                "Kopie"
+            ).trim()
+            ||
+            "Kopie";
+
+        const escapeRegExp =
+            value =>
+                String(value).replace(
+                    /[.*+?^${}()|[\]\\]/g,
+                    "\\$&"
+                );
+
+        const copyNamePattern =
+            new RegExp(
+                `\\s+${escapeRegExp(copySuffix)}(?:\\s+\\d+)?$`
+            );
+
+        const getSiblingNames =
+            database.projectNodes.prepare(`
+
+                SELECT name
+
+                FROM projectNodes
+
+                WHERE projectId = @projectId
+                AND (
+                    parentId = @parentId
+                    OR (
+                        parentId IS NULL
+                        AND @parentId IS NULL
+                    )
+                )
+
+            `);
+
+        const getCopyName =
+            node => {
+
+                const baseName =
+                    String(node.name ?? "")
+                        .replace(
+                            copyNamePattern,
+                            ""
+                        )
+                        .trim()
+                    ||
+                    String(node.name ?? "").trim()
+                    ||
+                    copySuffix;
+
+                const siblingNames =
+                    new Set(
+                        getSiblingNames
+                            .all({
+                                projectId:
+                                    node.projectId,
+
+                                parentId:
+                                    node.parentId
+                            })
+                            .map(sibling =>
+                                String(sibling.name ?? "")
+                            )
+                    );
+
+                let copyName =
+                    `${baseName} ${copySuffix}`;
+
+                let copyNumber =
+                    2;
+
+                while (
+                    siblingNames.has(
+                        copyName
+                    )
+                ) {
+
+                    copyName =
+                        `${baseName} ${copySuffix} ${copyNumber}`;
+
+                    copyNumber += 1;
+
+                }
+
+                return copyName;
+
+            };
+
         const insertNode =
             database.projectNodes.prepare(`
 
@@ -359,7 +451,9 @@ router.post(
 
                         name:
                             isRoot
-                                ? `${node.name} Kopie`
+                                ? getCopyName(
+                                    node
+                                )
                                 : node.name,
 
                         sortOrder:

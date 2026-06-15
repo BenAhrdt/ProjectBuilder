@@ -343,7 +343,7 @@ async function renderView(
             <div class="project-card">
 
                 <h2>
-                    Projektdaten
+                    ${i18n.t("project.projectData")}
                 </h2>
 
                <div class="project-form">
@@ -366,7 +366,7 @@ async function renderView(
                         <div class="project-form-row">
 
                             <label>
-                                Kunde:
+                                ${i18n.t("project.customer")}:
                             </label>
 
                                 <select id="project-customer">
@@ -375,7 +375,7 @@ async function renderView(
                                         value=""
                                         ${!project.customerId ? "selected" : ""}
                                     >
-                                        Kunde auswählen
+                                        ${i18n.t("project.selectCustomer")}
                                     </option>
 
                                     ${customers.map(customer => `
@@ -414,13 +414,22 @@ async function renderView(
                 <div class="project-structure-card">
 
                     <h2>
-                        Projektstruktur
+                        ${i18n.t("project.projectStructure")}
                     </h2>
 
                     <button
                         id="add-building"
+                        type="button"
+                        title="${i18n.t("project.addBuilding")}"
+                        aria-label="${i18n.t("project.addBuilding")}"
                     >
-                        + Gebäude
+                        <span class="add-building-icon">
+                            ${utils.icons.building}
+                        </span>
+
+                        <span>
+                            ${i18n.t("project.addBuilding")}
+                        </span>
                     </button>
 
                     <div id="project-tree">
@@ -434,12 +443,12 @@ async function renderView(
                 <div class="project-articles-card">
 
                     <h2>
-                        Artikel
+                        ${i18n.t("project.articles")}
                     </h2>
 
                     <input
                         id="project-article-search"
-                        placeholder="Artikel suchen..."
+                        placeholder="${i18n.t("project.searchArticles")}..."
                     >
 
                     <div
@@ -723,8 +732,8 @@ function renderArticleList(
                 <button
                     class="article-favorite-toggle ${favoriteArticleNumbers.has(String(article.articleNumber)) ? "active" : ""}"
                     type="button"
-                    title="Favorit"
-                    aria-label="Favorit umschalten"
+                    title="${i18n.t("project.favorite")}"
+                    aria-label="${i18n.t("project.toggleFavorite")}"
                     aria-pressed="${favoriteArticleNumbers.has(String(article.articleNumber)) ? "true" : "false"}"
                     data-article-number="${article.articleNumber}"
                 >
@@ -787,7 +796,7 @@ function renderFavoriteArticles(
                 ${isCollapsed ? "▶" : "▼"}
             </span>
 
-            Favoriten
+            ${i18n.t("project.favorites")}
         </button>
 
         ${isCollapsed ? "" : `
@@ -801,7 +810,7 @@ function renderFavoriteArticles(
                         type="button"
                         draggable="true"
                         data-article-number="${article.articleNumber}"
-                        title="Artikel hinzufügen"
+                        title="${i18n.t("project.addArticle")}"
                     >
 
                         <span class="project-article-favorite-icon">
@@ -942,7 +951,19 @@ function renderChildNodes(nodes, nodeArticles, articles, nodeTotals, parentId) {
             )
         )
 
-        .map(node => `
+        .map(node => {
+
+            const nextNodeType =
+                getNextNodeType(node.type);
+
+            const addNodeLabel =
+                nextNodeType
+                    ? getAddNodeLabel(
+                        nextNodeType.type
+                    )
+                    : "";
+
+            return `
 
             <div class="project-node-wrapper">
 
@@ -961,7 +982,7 @@ function renderChildNodes(nodes, nodeArticles, articles, nodeTotals, parentId) {
                         data-id="${node.id}"
                     >
 
-                        ${collapsedNodes.has(node.id)
+                        ${isNodeCollapsed(node.id)
                             ? "▶"
                             : "▼"}
 
@@ -979,12 +1000,15 @@ function renderChildNodes(nodes, nodeArticles, articles, nodeTotals, parentId) {
 
                     </span>
 
-                    ${getNextNodeType(node.type) ? `
+                    ${nextNodeType ? `
 
                         <button
                             class="node-add"
+                            type="button"
                             data-id="${node.id}"
                             data-type="${node.type}"
+                            title="${addNodeLabel}"
+                            aria-label="${addNodeLabel}"
                         >
 
                             +
@@ -998,8 +1022,8 @@ function renderChildNodes(nodes, nodeArticles, articles, nodeTotals, parentId) {
                         <button
                             class="project-node-menu-button"
                             type="button"
-                            title="Positionsmenü"
-                            aria-label="Positionsmenü öffnen"
+                            title="${i18n.t("project.positionMenu")}"
+                            aria-label="${i18n.t("project.openPositionMenu")}"
                         >
                             ⋮
                         </button>
@@ -1010,21 +1034,21 @@ function renderChildNodes(nodes, nodeArticles, articles, nodeTotals, parentId) {
                                 type="button"
                                 data-action="position-name"
                             >
-                                Positionsname
+                                ${i18n.t("project.positionName")}
                             </button>
 
                             <button
                                 type="button"
                                 data-action="duplicate"
                             >
-                                Duplizieren
+                                ${i18n.t("project.duplicate")}
                             </button>
 
                             <button
                                 type="button"
                                 data-action="delete"
                             >
-                                Löschen
+                                ${i18n.t("project.delete")}
                             </button>
 
                         </div>
@@ -1038,7 +1062,7 @@ function renderChildNodes(nodes, nodeArticles, articles, nodeTotals, parentId) {
                     style="
                         display:
                         ${
-                            collapsedNodes.has(node.id)
+                            isNodeCollapsed(node.id)
                                 ? "none"
                                 : "block"
                         };
@@ -1074,7 +1098,9 @@ function renderChildNodes(nodes, nodeArticles, articles, nodeTotals, parentId) {
 
             </div>
 
-        `).join("");
+        `;
+
+        }).join("");
 
 }
 
@@ -1153,8 +1179,8 @@ function renderNodeArticle(
                 <button
                     class="node-article-menu-button"
                     type="button"
-                    title="Positionsmenü"
-                    aria-label="Positionsmenü öffnen"
+                    title="${i18n.t("project.positionMenu")}"
+                    aria-label="${i18n.t("project.openPositionMenu")}"
                 >
                     ⋮
                 </button>
@@ -1165,28 +1191,28 @@ function renderNodeArticle(
                         type="button"
                         data-action="position-name"
                     >
-                        Positionsname
+                        ${i18n.t("project.positionName")}
                     </button>
 
                     <button
                         type="button"
                         data-action="quantity"
                     >
-                        Anzahl
+                        ${i18n.t("project.quantity")}
                     </button>
 
                     <button
                         type="button"
                         data-action="duplicate"
                     >
-                        Duplizieren
+                        ${i18n.t("project.duplicate")}
                     </button>
 
                     <button
                         type="button"
                         data-action="delete"
                     >
-                        Löschen
+                        ${i18n.t("project.delete")}
                     </button>
 
                 </div>
@@ -1555,13 +1581,13 @@ function openProjectModal({
                         type="button"
                         data-action="cancel"
                     >
-                        Abbrechen
+                        ${i18n.t("project.cancel")}
                     </button>
 
                     <button
                         type="submit"
                     >
-                        Speichern
+                        ${i18n.t("project.save")}
                     </button>
 
                 </div>
@@ -1648,6 +1674,34 @@ function escapeAttribute(
 
 }
 
+function getNodeIdKey(
+    nodeId
+) {
+
+    return String(nodeId);
+
+}
+
+function isNodeCollapsed(
+    nodeId
+) {
+
+    return collapsedNodes.has(
+        getNodeIdKey(nodeId)
+    );
+
+}
+
+function getAddNodeLabel(
+    type
+) {
+
+    return i18n.t(
+        `project.addNode.${type}`
+    );
+
+}
+
 function generateNodeHandler(
     projectId
 ) {
@@ -1662,9 +1716,9 @@ function generateNodeHandler(
 
                 const name =
                     await openProjectModal({
-                        title: "Gebäude hinzufügen",
-                        label: "Positionsname",
-                        value: "Neues Gebäude"
+                        title: i18n.t("project.addBuilding"),
+                        label: i18n.t("project.positionName"),
+                        value: i18n.t("project.newBuilding")
                     });
 
                 if (name === null) {
@@ -1680,7 +1734,7 @@ function generateNodeHandler(
                     name:
                         name.trim()
                         ||
-                        "Neues Gebäude"
+                        i18n.t("project.newBuilding")
                 });
 
                 await refreshProjectTree(
@@ -1713,54 +1767,29 @@ function registerNodeButtons(
                     const parentType =
                         button.dataset.type;
 
-                    let newType =
-                        null;
+                    const nextNodeType =
+                        getNextNodeType(
+                            parentType
+                        );
 
-                    let newName =
-                        null;
+                    if (!nextNodeType) {
 
-                    switch(parentType) {
-
-                        case "building":
-
-                            newType =
-                                "panel";
-
-                            newName =
-                                "Neue Verteilung";
-
-                            break;
-
-                        case "panel":
-
-                            newType =
-                                "field";
-
-                            newName =
-                                "Neues Feld";
-
-                            break;
-
-                        case "field":
-
-                            newType =
-                                "meter";
-
-                            newName =
-                                "Neue Messstelle";
-
-                            break;
-
-                        default:
-
-                            return;
+                        return;
 
                     }
 
+                    const newType =
+                        nextNodeType.type;
+
+                    const newName =
+                        nextNodeType.name;
+
                     const name =
                         await openProjectModal({
-                            title: `${newName} hinzufügen`,
-                            label: "Positionsname",
+                            title: getAddNodeLabel(
+                                newType
+                            ),
+                            label: i18n.t("project.positionName"),
                             value: newName
                         });
 
@@ -1948,7 +1977,7 @@ function getNextNodeType(
 
                 type: "panel",
 
-                name: "Neue Verteilung"
+                name: i18n.t("project.newPanel")
 
             };
 
@@ -1958,7 +1987,7 @@ function getNextNodeType(
 
                 type: "field",
 
-                name: "Neues Feld"
+                name: i18n.t("project.newField")
 
             };
 
@@ -1968,7 +1997,7 @@ function getNextNodeType(
 
                 type: "meter",
 
-                name: "Neue Messstelle"
+                name: i18n.t("project.newMeter")
 
             };
 
@@ -2866,10 +2895,29 @@ function registerNodeToggles(
                 const isHidden =
                     children.style.display === "none";
 
+                const nodeId =
+                    getNodeIdKey(
+                        toggle.dataset.id
+                    );
+
                 children.style.display =
                     isHidden
                         ? "block"
                         : "none";
+
+                if (isHidden) {
+
+                    collapsedNodes.delete(
+                        nodeId
+                    );
+
+                } else {
+
+                    collapsedNodes.add(
+                        nodeId
+                    );
+
+                }
 
                 toggle.textContent =
                     isHidden
@@ -3451,8 +3499,8 @@ function registerProjectNodeMenus(
 
                         const name =
                             await openProjectModal({
-                                title: "Positionsname",
-                                label: "Positionsname",
+                                title: i18n.t("project.positionName"),
+                                label: i18n.t("project.positionName"),
                                 value: currentName
                             });
 
@@ -3500,7 +3548,19 @@ function registerProjectNodeMenus(
                             `/api/projectNodes/${nodeId}/duplicate`,
 
                             {
-                                method: "POST"
+                                method: "POST",
+
+                                headers: {
+
+                                    "Content-Type":
+                                        "application/json"
+
+                                },
+
+                                body: JSON.stringify({
+                                    copySuffix:
+                                        i18n.t("project.copySuffix")
+                                })
                             }
 
                         );
@@ -3667,8 +3727,8 @@ function registerNodeArticleMenus(
 
                         const positionName =
                             await openProjectModal({
-                                title: "Positionsname",
-                                label: "Positionsname",
+                                title: i18n.t("project.positionName"),
+                                label: i18n.t("project.positionName"),
                                 value: currentName
                             });
 
@@ -3706,8 +3766,8 @@ function registerNodeArticleMenus(
 
                         const quantity =
                             await openProjectModal({
-                                title: "Anzahl",
-                                label: "Anzahl",
+                                title: i18n.t("project.quantity"),
+                                label: i18n.t("project.quantity"),
                                 type: "number",
                                 value: currentQuantity,
                                 min: "1",
@@ -3741,7 +3801,7 @@ function registerNodeArticleMenus(
                         ) {
 
                             alert(
-                                "Bitte eine ganze Anzahl größer 0 eingeben."
+                                i18n.t("project.quantityValidation")
                             );
 
                             return;

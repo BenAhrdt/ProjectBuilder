@@ -147,50 +147,32 @@ router.patch(
         const parentId =
             req.body.parentId ?? null;
 
-        database.projectNodes.prepare(`
-
-            UPDATE projectNodes
-
-            SET
-                parentId = @parentId,
-                sortOrder = @sortOrder
-
-            WHERE id = @id
-
-        `).run({
-
-            id:
-                req.params.id,
-
-            parentId,
-
-            sortOrder:
-                req.body.sortOrder ?? current.sortOrder ?? 0
-
-        });
-
         const updateSortOrder =
             database.projectNodes.prepare(`
 
                 UPDATE projectNodes
 
-                SET sortOrder = @sortOrder
+                SET
+                    parentId = @parentId,
+                    sortOrder = @sortOrder
 
                 WHERE id = @id
 
             `);
 
-        if (Array.isArray(req.body.siblings)) {
+        const transaction =
+            database.projectNodes.transaction(() => {
 
-            const transaction =
-                database.projectNodes.transaction(siblings => {
+                if (Array.isArray(req.body.siblings)) {
 
-                    siblings.forEach((nodeId, index) => {
+                    req.body.siblings.forEach((nodeId, index) => {
 
                         updateSortOrder.run({
 
                             id:
                                 nodeId,
+
+                            parentId,
 
                             sortOrder:
                                 index
@@ -199,13 +181,25 @@ router.patch(
 
                     });
 
+                    return;
+
+                }
+
+                updateSortOrder.run({
+
+                    id:
+                        req.params.id,
+
+                    parentId,
+
+                    sortOrder:
+                        req.body.sortOrder ?? current.sortOrder ?? 0
+
                 });
 
-            transaction(
-                req.body.siblings
-            );
+            });
 
-        }
+        transaction();
 
         const updated =
             database.projectNodes.prepare(`

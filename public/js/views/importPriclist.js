@@ -18,6 +18,21 @@ function renderView() {
                 </div>
             </div>
         </div>
+        <label id="preserve-price-option">
+            <input
+                id="preserve-existing-prices-from-zero"
+                type="checkbox"
+                checked
+            >
+            0 € / Auf Anfrage überschreibt keine vorhandenen Preise
+        </label>
+        <label id="clear-articles-option">
+            <input
+                id="clear-existing-articles-before-import"
+                type="checkbox"
+            >
+            Vorhandene Artikel vor dem Import löschen
+        </label>
         <div id="import-status-header">Status:</div>
         <div id="import-status">Bereit</div>
         <input type="file" id="price-list-file" accept=".xlsx,.xls" hidden>
@@ -43,6 +58,16 @@ function generateHandler() {
     const importStatus =
         document.getElementById(
             "import-status"
+        );
+
+    const preserveExistingPricesFromZero =
+        document.getElementById(
+            "preserve-existing-prices-from-zero"
+        );
+
+    const clearExistingArticlesBeforeImport =
+        document.getElementById(
+            "clear-existing-articles-before-import"
         );
 
     // --------------------------------------------------
@@ -86,6 +111,20 @@ function generateHandler() {
                 file
             );
 
+            formData.append(
+                "preserveExistingPricesFromZero",
+                preserveExistingPricesFromZero.checked
+                    ? "true"
+                    : "false"
+            );
+
+            formData.append(
+                "clearExistingArticlesBeforeImport",
+                clearExistingArticlesBeforeImport.checked
+                    ? "true"
+                    : "false"
+            );
+
             // --------------------------------------------------
             // Upload
             // --------------------------------------------------
@@ -124,12 +163,28 @@ function generateHandler() {
                             </p>`;
             }
 
+            if ((result.deletedExistingArticles ?? 0) !== 0) {
+                importStatus.innerHTML += `
+                            <p>
+                                Vorher gelöscht:
+                                ${result.deletedExistingArticles}
+                            </p>`;
+            }
+
             if (result.updated !== 0) {
                 importStatus.innerHTML += `
                             <p>
                                 Aktualisiert:
                                 ${result.updated}
                              </p>`;
+            }
+
+            if ((result.preservedPrices ?? 0) !== 0) {
+                importStatus.innerHTML += `
+                            <p>
+                                Preise beibehalten:
+                                ${result.preservedPrices}
+                            </p>`;
             }
 
             if (result.skipped.length !== 0) {

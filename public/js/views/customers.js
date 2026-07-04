@@ -282,7 +282,12 @@ function generateHandler() {
         }
     );
 
-    // Kunden öffnen
+    attachCustomerRowHandlers();
+
+}
+
+function attachCustomerRowHandlers() {
+
     document
         .querySelectorAll(
             ".customer-row"
@@ -339,6 +344,8 @@ function renderCustomers(customers) {
             </tr>
 
         `).join("");
+
+    attachCustomerRowHandlers();
 
 }
 

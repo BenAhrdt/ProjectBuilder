@@ -1,4 +1,9 @@
 import * as i18n from "../utils/i18n.js";
+import * as router from "../router.js";
+import {
+    showAlert,
+    showConfirm
+} from "../utils/modal.js";
 
 await i18n.loadLanguage("de");
 
@@ -39,9 +44,22 @@ async function renderView(
 
             <div class="customer-card">
 
-                <h2>
-                    ${i18n.t("customer.customerData")}:
-                </h2>
+                <div class="customer-card-header">
+
+                    <h2>
+                        ${i18n.t("customer.customerData")}:
+                    </h2>
+
+                    <button
+                        id="delete-customer"
+                        type="button"
+                        title="Kunde löschen"
+                        aria-label="Kunde löschen"
+                    >
+                        Kunde löschen
+                    </button>
+
+                </div>
 
                 <div class="customer-form">
 
@@ -111,6 +129,7 @@ async function renderView(
 
     `;
     generateHandler(customerId);
+    registerCustomerDelete(customerId, customer);
 
 }
 
@@ -162,8 +181,6 @@ function generateHandler(customerId) {
             "input, textarea"
         );
 
-    let saveTimeout;
-
     inputs.forEach(input => {
 
         input.addEventListener(
@@ -209,6 +226,80 @@ function generateHandler(customerId) {
         );
 
     });
+
+}
+
+function registerCustomerDelete(
+    customerId,
+    customer
+) {
+
+    const deleteButton =
+        document.getElementById(
+            "delete-customer"
+        );
+
+    if (!deleteButton) {
+
+        return;
+
+    }
+
+    deleteButton.addEventListener(
+        "click",
+        async () => {
+
+            const confirmed =
+                await showConfirm(
+                    `Kunde "${customer.name ?? ""}" wirklich löschen? Zugeordnete Projekte bleiben erhalten.`,
+                    {
+                        title: "Kunde löschen",
+                        confirmText: "Löschen",
+                        danger: true
+                    }
+                );
+
+            if (!confirmed) {
+
+                return;
+
+            }
+
+            clearTimeout(
+                saveTimeout
+            );
+
+            const response =
+                await fetch(
+                    `/api/customers/${customerId}`,
+                    {
+                        method: "DELETE"
+                    }
+                );
+
+            const result =
+                await response.json();
+
+            if (
+                !response.ok
+                || !result.success
+            ) {
+
+                await showAlert(
+                    result.error
+                    || "Kunde konnte nicht gelöscht werden."
+                );
+
+                return;
+
+            }
+
+            router.navigate(
+                "/customers"
+            );
+
+        }
+    );
 
 }
 

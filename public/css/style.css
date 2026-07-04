@@ -1,3 +1,163 @@
+/* --------------------------------------------------
+   App Modal
+-------------------------------------------------- */
+
+.app-modal-overlay {
+
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 1000;
+
+    display: grid;
+
+    place-items: center;
+
+    padding: 24px;
+
+    background: rgba(0, 0, 0, 0.28);
+
+}
+
+.app-modal {
+
+    width: min(460px, 100%);
+
+    border-radius: 8px;
+
+    background: white;
+
+    box-shadow:
+        0 18px 60px rgba(0, 0, 0, 0.22);
+
+    overflow: hidden;
+
+}
+
+.app-modal-header {
+
+    padding: 18px 20px 8px;
+
+}
+
+.app-modal-header h2 {
+
+    margin: 0;
+
+    font-size: 20px;
+
+}
+
+.app-modal-body {
+
+    padding: 4px 20px 18px;
+
+}
+
+.app-modal-message {
+
+    display: grid;
+
+    gap: 8px;
+
+    color: #333;
+
+    line-height: 1.45;
+
+}
+
+.app-modal-message p {
+
+    margin: 0;
+
+}
+
+.app-modal-input {
+
+    width: 100%;
+
+    box-sizing: border-box;
+
+    margin-top: 8px;
+
+    padding: 11px 12px;
+
+    border: 1px solid #d0d0d0;
+
+    border-radius: 8px;
+
+    font-size: 14px;
+
+}
+
+.app-modal-input:focus {
+
+    border-color: #4c8bf5;
+
+    outline: none;
+
+    box-shadow:
+        0 0 0 3px rgba(76,139,245,0.15);
+
+}
+
+.app-modal-actions {
+
+    display: flex;
+
+    justify-content: flex-end;
+
+    gap: 10px;
+
+    padding: 14px 20px 18px;
+
+    border-top: 1px solid #ececec;
+
+    background: #fafafa;
+
+}
+
+.app-modal-actions button {
+
+    padding: 9px 14px;
+
+    border-radius: 8px;
+
+    cursor: pointer;
+
+    font-weight: 700;
+
+}
+
+.app-modal-cancel {
+
+    border: 1px solid #d0d0d0;
+
+    background: white;
+
+    color: #444;
+
+}
+
+.app-modal-confirm {
+
+    border: 1px solid #3f7ee8;
+
+    background: #4c8bf5;
+
+    color: white;
+
+}
+
+.app-modal-danger {
+
+    border-color: #d92d20;
+
+    background: #d92d20;
+
+}
+
 :root {
 
     /* --------------------------------------------------

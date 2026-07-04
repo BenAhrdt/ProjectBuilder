@@ -2,6 +2,10 @@ import * as i18n from "../utils/i18n.js";
 await i18n.loadLanguage("de");
 
 import * as router from "../router.js";
+import {
+    showAlert,
+    showConfirm
+} from "../utils/modal.js";
 
 const view =
     document.getElementById("view");
@@ -73,6 +77,19 @@ async function renderView() {
                 + ${i18n.t("projects.addProject")}
 
             </button>
+
+            <button id="import-project-button">
+
+                ${i18n.t("projects.importProject")}
+
+            </button>
+
+            <input
+                id="import-project-file"
+                type="file"
+                accept=".xlsx,.xls"
+                hidden
+            >
 
         </div>
 
@@ -302,8 +319,56 @@ function generateHandler() {
     );
 
     // --------------------------------------------------
-    // Projekt öffnen
+    // Projekt importieren
     // --------------------------------------------------
+
+    const importProjectButton =
+        document.getElementById(
+            "import-project-button"
+        );
+
+    const importProjectFile =
+        document.getElementById(
+            "import-project-file"
+        );
+
+    importProjectButton.addEventListener(
+        "click",
+        () => {
+
+            importProjectFile.value =
+                "";
+
+            importProjectFile.click();
+
+        }
+    );
+
+    importProjectFile.addEventListener(
+        "change",
+        async () => {
+
+            const file =
+                importProjectFile.files?.[0];
+
+            if (!file) {
+
+                return;
+
+            }
+
+            await importProjectFromFile(
+                file
+            );
+
+        }
+    );
+
+    attachProjectRowHandlers();
+
+}
+
+function attachProjectRowHandlers() {
 
     document
         .querySelectorAll(
@@ -326,6 +391,123 @@ function generateHandler() {
             );
 
         });
+
+}
+
+async function importProjectFromFile(
+    file
+) {
+
+    const previewForm =
+        new FormData();
+
+    previewForm.append(
+        "file",
+        file
+    );
+
+    const previewResponse =
+        await fetch(
+            "/api/projects/import/preview",
+            {
+                method: "POST",
+                body:
+                    previewForm
+            }
+        );
+
+    const preview =
+        await previewResponse.json();
+
+    if (
+        !previewResponse.ok
+        ||
+        !preview.ok
+    ) {
+
+        await showAlert(
+            preview.error
+            ||
+            i18n.t("projects.importFailed")
+        );
+
+        return;
+
+    }
+
+    if (preview.missingArticleNumbers.length > 0) {
+
+        await showAlert(
+            `${i18n.t("projects.importMissingArticles")}:\n${preview.missingArticleNumbers.join(", ")}`
+        );
+
+        return;
+
+    }
+
+    const confirmed =
+        await showConfirm(
+            [
+                i18n.t("projects.importPreview"),
+                "",
+                `${i18n.t("projects.projectname")}: ${preview.projectName}`,
+                `${i18n.t("projects.importNodeCount")}: ${preview.nodeCount}`,
+                `${i18n.t("projects.importPositionCount")}: ${preview.positionCount}`,
+                "",
+                i18n.t("projects.importConfirm")
+            ].join("\n"),
+            {
+                title: i18n.t("projects.importPreview"),
+                confirmText: "Importieren"
+            }
+        );
+
+    if (!confirmed) {
+
+        return;
+
+    }
+
+    const importForm =
+        new FormData();
+
+    importForm.append(
+        "file",
+        file
+    );
+
+    const importResponse =
+        await fetch(
+            "/api/projects/import",
+            {
+                method: "POST",
+                body:
+                    importForm
+            }
+        );
+
+    const result =
+        await importResponse.json();
+
+    if (
+        !importResponse.ok
+        ||
+        !result.ok
+    ) {
+
+        await showAlert(
+            result.error
+            ||
+            i18n.t("projects.importFailed")
+        );
+
+        return;
+
+    }
+
+    router.navigate(
+        `/project/${result.project.id}`
+    );
 
 }
 
@@ -353,12 +535,18 @@ function renderProjects(projects) {
                 </td>
 
                 <td>
+                    ${project.customerName ?? ""}
+                </td>
+
+                <td>
                     ${project.description ?? ""}
                 </td>
 
             </tr>
 
         `).join("");
+
+    attachProjectRowHandlers();
 
 }
 

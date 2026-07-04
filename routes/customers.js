@@ -236,4 +236,75 @@ router.put(
     }
 );
 
+
+// --------------------------------------------------
+// Löschen
+// --------------------------------------------------
+
+router.delete(
+    "/:id",
+    (req, res) => {
+
+        const customer =
+            database.customers.prepare(`
+
+                SELECT *
+
+                FROM customers
+
+                WHERE id = ?
+
+            `).get(
+                req.params.id
+            );
+
+        if (!customer) {
+
+            res.status(404).json({
+                success: false,
+                error: "Kunde nicht gefunden"
+            });
+
+            return;
+
+        }
+
+        const deleteCustomer =
+            database.customers.transaction(customerId => {
+
+                database.projects.prepare(`
+
+                    UPDATE projects
+
+                    SET customerId = NULL
+
+                    WHERE customerId = ?
+
+                `).run(
+                    customerId
+                );
+
+                database.customers.prepare(`
+
+                    DELETE FROM customers
+
+                    WHERE id = ?
+
+                `).run(
+                    customerId
+                );
+
+            });
+
+        deleteCustomer(
+            req.params.id
+        );
+
+        res.json({
+            success: true
+        });
+
+    }
+);
+
 export default router;

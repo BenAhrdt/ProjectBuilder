@@ -2,12 +2,18 @@ import * as i18n from "../utils/i18n.js";
 await i18n.loadLanguage("de");
 
 import * as utils from "../utils/icons.js";
+import * as router from "../router.js";
+import {
+    showAlert,
+    showConfirm
+} from "../utils/modal.js";
 
 let collapsedNodes = new Set();
 let currentNodes = [];
 let currentArticles = [];
 let currentNodeArticles = [];
-let articleLayoutResizeRegistered = false;
+let currentProject = null;
+let currentProjectCustomer = null;
 let draggedArticleNumber = null;
 const pendingNodeArticleOrderRequests =
     new Set();
@@ -15,9 +21,36 @@ const articleFavoritesStorageKey =
     "projectBuilder.articleFavorites";
 const articleFavoritesCollapsedStorageKey =
     "projectBuilder.articleFavoritesCollapsed";
-const minimumArticleListHeight =
-    420;
+const projectDescriptionCollapsedStorageKey =
+    "projectBuilder.projectDescriptionCollapsed";
 const articleIconRules = [
+    {
+        icon: "hdr1te.png",
+        keywords: [
+            "1605015",
+            "hdr 24v 1te",
+            "hdr 24v (1te)",
+            "hutschienennetzteil hdr 24v (1te)"
+        ]
+    },
+    {
+        icon: "hdr4te.png",
+        keywords: [
+            "1605014",
+            "hdr 24v 4te",
+            "hdr 24v (4te)",
+            "hutschienennetzteil hdr 24v"
+        ]
+    },
+    {
+        icon: "ml301te.png",
+        keywords: [
+            "1605012",
+            "ml30",
+            "ml30 1te",
+            "ml30-1te"
+        ]
+    },
     {
         icon: "module-ct8-lp.png",
         keywords: [
@@ -226,6 +259,7 @@ const articleIconRules = [
     {
         icon: "rd96.png",
         keywords: [
+            "5231212",
             "rd 96",
             "rd96"
         ]
@@ -267,6 +301,10 @@ async function renderView(
     projectId
 ) {
 
+    loadCollapsedNodes(
+        projectId
+    );
+
     const response =
         await fetch(
             `/api/projects/${projectId}`
@@ -274,6 +312,9 @@ async function renderView(
 
     const project =
         await response.json();
+
+    currentProject =
+        project;
 
     const articleResponse =
         await fetch(
@@ -293,6 +334,11 @@ async function renderView(
 
     const customers =
         await customerResponse.json();
+
+    currentProjectCustomer =
+        await loadProjectCustomer(
+            project.customerId
+        );
 
     const nodesResponse =
         await fetch(
@@ -325,6 +371,20 @@ async function renderView(
             articles
         );
 
+    const projectTotals =
+        calculateProjectTotals(
+            nodeArticles,
+            articles,
+            currentProjectCustomer,
+            project
+        );
+
+    const isDescriptionOpen =
+        isProjectDescriptionOpen(
+            projectId,
+            project
+        );
+
     view.innerHTML = `
 
         <div class="view-header">
@@ -342,9 +402,41 @@ async function renderView(
 
             <div class="project-card">
 
-                <h2>
-                    ${i18n.t("project.projectData")}
-                </h2>
+                <div class="project-card-header">
+
+                    <h2>
+                        ${i18n.t("project.projectData")}
+                    </h2>
+
+                    <div class="project-card-header-actions">
+
+                        <button
+                            id="export-project-excel"
+                            type="button"
+                            title="${i18n.t("project.exportExcel")}"
+                            aria-label="${i18n.t("project.exportExcel")}"
+                        >
+                            <span class="export-project-icon">
+                                ${utils.icons.excel}
+                            </span>
+
+                            <span>
+                                ${i18n.t("project.exportExcel")}
+                            </span>
+                        </button>
+
+                        <button
+                            id="delete-project"
+                            type="button"
+                            title="Projekt löschen"
+                            aria-label="Projekt löschen"
+                        >
+                            Projekt löschen
+                        </button>
+
+                    </div>
+
+                </div>
 
                <div class="project-form">
 
@@ -391,19 +483,42 @@ async function renderView(
 
                         </div>
 
+                        <div class="project-form-row">
+
+                            <label>
+                                ${i18n.t("project.projectDiscount")}:
+                            </label>
+
+                            <div class="project-discount-input-wrapper">
+                                <input
+                                    id="project-discount"
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    step="1"
+                                    value="${project.projectDiscount ?? 0}"
+                                >
+                                <span>%</span>
+                            </div>
+
+                        </div>
+
                     </div>
 
-                    <div class="project-description-wrapper">
+                    <details
+                        class="project-description-details"
+                        ${isDescriptionOpen ? "open" : ""}
+                    >
 
-                        <label>
+                        <summary>
                             ${i18n.t("project.description")}:
-                        </label>
+                        </summary>
 
                         <textarea
                             id="project-description"
                         >${project.description ?? ""}</textarea>
 
-                    </div>
+                    </details>
 
                 </div>
 
@@ -417,20 +532,50 @@ async function renderView(
                         ${i18n.t("project.projectStructure")}
                     </h2>
 
-                    <button
-                        id="add-building"
-                        type="button"
-                        title="${i18n.t("project.addBuilding")}"
-                        aria-label="${i18n.t("project.addBuilding")}"
+                    <div
+                        id="project-price-summary"
+                        class="project-price-summary"
                     >
-                        <span class="add-building-icon">
-                            ${utils.icons.building}
-                        </span>
 
-                        <span>
-                            ${i18n.t("project.addBuilding")}
-                        </span>
-                    </button>
+                        ${renderProjectPriceSummary(projectTotals)}
+
+                    </div>
+
+                    <div class="project-root-actions">
+
+                        <button
+                            id="add-building"
+                            class="project-root-action"
+                            type="button"
+                            title="${i18n.t("project.addBuilding")}"
+                            aria-label="${i18n.t("project.addBuilding")}"
+                        >
+                            <span class="project-root-action-icon">
+                                ${utils.icons.building}
+                            </span>
+
+                            <span>
+                                ${i18n.t("project.addBuilding")}
+                            </span>
+                        </button>
+
+                        <button
+                            id="add-general-position"
+                            class="project-root-action"
+                            type="button"
+                            title="${i18n.t("project.addGeneralPosition")}"
+                            aria-label="${i18n.t("project.addGeneralPosition")}"
+                        >
+                            <span class="project-root-action-icon">
+                                ${utils.icons.generalPosition}
+                            </span>
+
+                            <span>
+                                ${i18n.t("project.addGeneralPosition")}
+                            </span>
+                        </button>
+
+                    </div>
 
                     <div id="project-tree">
 
@@ -446,11 +591,6 @@ async function renderView(
                         ${i18n.t("project.articles")}
                     </h2>
 
-                    <input
-                        id="project-article-search"
-                        placeholder="${i18n.t("project.searchArticles")}..."
-                    >
-
                     <div
                         id="project-article-favorites"
                     >
@@ -458,6 +598,11 @@ async function renderView(
                         ${renderFavoriteArticles(articles)}
 
                     </div>
+
+                    <input
+                        id="project-article-search"
+                        placeholder="${i18n.t("project.searchArticles")}..."
+                    >
 
                 <div
                     id="project-article-list"
@@ -477,6 +622,9 @@ async function renderView(
     `;
 
     generateHandler(projectId);
+    registerProjectExport(projectId);
+    registerProjectDelete(projectId, project);
+    registerProjectDescriptionPersistence(projectId);
     generateNodeHandler(projectId);
     registerNodeButtons(projectId);
     registerArticleDragSources();
@@ -513,6 +661,9 @@ async function refreshProjectTree(
 
     currentNodeArticles =
         await nodeArticlesResponse.json();
+
+    currentProjectCustomer =
+        await loadSelectedProjectCustomer();
 
     const nodeTotals =
         calculateNodeTotals(
@@ -566,126 +717,53 @@ async function refreshProjectTree(
         projectId
     );
 
+    updateProjectPriceSummary();
+
     syncArticleListHeight();
+
+}
+
+async function loadProjectCustomer(
+    customerId
+) {
+
+    if (!customerId) {
+
+        return null;
+
+    }
+
+    const response =
+        await fetch(
+            `/api/customers/${customerId}`
+        );
+
+    return await response.json();
+
+}
+
+async function loadSelectedProjectCustomer() {
+
+    const customerSelect =
+        document.getElementById(
+            "project-customer"
+        );
+
+    return await loadProjectCustomer(
+        customerSelect?.value
+    );
 
 }
 
 function registerArticleListLayoutSync() {
 
-    if (articleLayoutResizeRegistered) {
-
-        return;
-
-    }
-
-    articleLayoutResizeRegistered =
-        true;
-
-    window.addEventListener(
-        "resize",
-        syncArticleListHeight
-    );
+    // CSS now keeps the editor panels sized and scrollable.
 
 }
 
 function syncArticleListHeight() {
 
-    requestAnimationFrame(
-        () => {
-
-            const structureCard =
-                document.querySelector(
-                    ".project-structure-card"
-                );
-
-            const articlesCard =
-                document.querySelector(
-                    ".project-articles-card"
-                );
-
-            const articleList =
-                document.getElementById(
-                    "project-article-list"
-                );
-
-            if (
-                !structureCard
-                ||
-                !articlesCard
-                ||
-                !articleList
-            ) {
-
-                return;
-
-            }
-
-            structureCard.style.minHeight =
-                "";
-
-            articlesCard.style.height =
-                "";
-
-            articleList.style.height =
-                "";
-
-            const structureHeight =
-                structureCard.getBoundingClientRect().height;
-
-            const articlesCardRect =
-                articlesCard.getBoundingClientRect();
-
-            const articleListRect =
-                articleList.getBoundingClientRect();
-
-            const articlesCardStyles =
-                getComputedStyle(
-                    articlesCard
-                );
-
-            const paddingBottom =
-                parseFloat(
-                    articlesCardStyles.paddingBottom
-                )
-                ||
-                0;
-
-            const articleListTopOffset =
-                articleListRect.top
-                -
-                articlesCardRect.top;
-
-            const minimumArticleCardHeight =
-                articleListTopOffset
-                +
-                minimumArticleListHeight
-                +
-                paddingBottom;
-
-            const targetHeight =
-                Math.max(
-                    structureHeight,
-                    minimumArticleCardHeight
-                );
-
-            structureCard.style.minHeight =
-                `${targetHeight}px`;
-
-            articlesCard.style.height =
-                `${targetHeight}px`;
-
-            const availableHeight =
-                targetHeight
-                -
-                articleListTopOffset
-                -
-                paddingBottom;
-
-            articleList.style.height =
-                `${Math.max(availableHeight, minimumArticleListHeight)}px`;
-
-        }
-    );
+    // Kept for existing render/drop call sites; layout is CSS-driven.
 
 }
 
@@ -950,6 +1028,7 @@ function renderChildNodes(nodes, nodeArticles, articles, nodeTotals, parentId) {
                 node.parentId === null
             )
         )
+        .sort(compareProjectNodeOrder)
 
         .map(node => {
 
@@ -1101,6 +1180,35 @@ function renderChildNodes(nodes, nodeArticles, articles, nodeTotals, parentId) {
         `;
 
         }).join("");
+
+}
+
+function compareProjectNodeOrder(
+    first,
+    second
+) {
+
+    const firstSortOrder =
+        Number.isFinite(
+            Number(first.sortOrder)
+        )
+            ? Number(first.sortOrder)
+            : Number(first.id);
+
+    const secondSortOrder =
+        Number.isFinite(
+            Number(second.sortOrder)
+        )
+            ? Number(second.sortOrder)
+            : Number(second.id);
+
+    if (firstSortOrder !== secondSortOrder) {
+
+        return firstSortOrder - secondSortOrder;
+
+    }
+
+    return Number(first.id) - Number(second.id);
 
 }
 
@@ -1378,6 +1486,220 @@ function calculateNodeTotals(
 
 }
 
+function calculateProjectTotals(
+    nodeArticles,
+    articles,
+    customer,
+    project = {}
+) {
+
+    const articleByNumber =
+        new Map(
+            articles.map(article => [
+                String(article.articleNumber),
+                article
+            ])
+        );
+
+    const totals =
+        nodeArticles.reduce(
+        (totals, nodeArticle) => {
+
+            const article =
+                articleByNumber.get(
+                    String(nodeArticle.articleNumber)
+                );
+
+            const quantity =
+                Number(nodeArticle.quantity)
+                ||
+                1;
+
+            const listUnitPrice =
+                getArticleUnitPrice(article);
+
+            const discountPercent =
+                getArticleDiscountPercent(
+                    article,
+                    customer
+                );
+
+            const listTotal =
+                listUnitPrice
+                *
+                quantity;
+
+            const discountedTotal =
+                listTotal
+                *
+                (1 - (discountPercent / 100));
+
+            totals.listPrice +=
+                listTotal;
+
+            totals.discount +=
+                listTotal
+                -
+                discountedTotal;
+
+            totals.discountedPrice +=
+                discountedTotal;
+
+            return totals;
+
+        },
+        {
+            listPrice: 0,
+            discount: 0,
+            projectDiscount: 0,
+            discountedPrice: 0
+        }
+    );
+
+    const projectDiscountPercent =
+        normalizeDiscountPercent(
+            project?.projectDiscount
+        );
+
+    totals.projectDiscount =
+        totals.discountedPrice
+        *
+        (projectDiscountPercent / 100);
+
+    totals.discountedPrice -=
+        totals.projectDiscount;
+
+    return totals;
+
+}
+
+function renderProjectPriceSummary(
+    totals
+) {
+
+    return `
+
+        <div class="project-price-summary-item">
+
+            <span>
+                ${i18n.t("project.listPrice")}
+            </span>
+
+            <strong>
+                ${formatCurrency(totals.listPrice)}
+            </strong>
+
+        </div>
+
+        <div class="project-price-summary-item">
+
+            <span>
+                ${i18n.t("project.discount")}
+            </span>
+
+            <strong>
+                ${formatCurrency(totals.discount)}
+            </strong>
+
+        </div>
+
+        <div class="project-price-summary-item">
+
+            <span>
+                ${i18n.t("project.projectDiscount")}
+            </span>
+
+            <strong>
+                ${formatCurrency(totals.projectDiscount ?? 0)}
+            </strong>
+
+        </div>
+
+        <div class="project-price-summary-item project-price-summary-total">
+
+            <span>
+                ${i18n.t("project.discountedPrice")}
+            </span>
+
+            <strong>
+                ${formatCurrency(totals.discountedPrice)}
+            </strong>
+
+        </div>
+
+    `;
+
+}
+
+function updateProjectPriceSummary() {
+
+    const summary =
+        document.getElementById(
+            "project-price-summary"
+        );
+
+    if (!summary) {
+
+        return;
+
+    }
+
+    summary.innerHTML =
+        renderProjectPriceSummary(
+            calculateProjectTotals(
+                currentNodeArticles,
+                currentArticles,
+                currentProjectCustomer,
+                currentProject
+            )
+        );
+
+}
+
+function getArticleDiscountPercent(
+    article = {},
+    customer = {}
+) {
+
+    const discountGroup =
+        String(article?.discountGroup ?? "")
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, "");
+
+    const discountKey =
+        discountGroup.match(/^pg\d+$/)
+            ? discountGroup
+            : `pg${discountGroup.match(/\d+/)?.[0] ?? ""}`;
+
+    const discount =
+        Number(customer?.[discountKey]);
+
+    return Number.isFinite(discount)
+        ? Math.min(
+            Math.max(discount, 0),
+            100
+        )
+        : 0;
+
+}
+
+function normalizeDiscountPercent(
+    value
+) {
+
+    const discount =
+        Number(value);
+
+    return Number.isFinite(discount)
+        ? Math.min(
+            Math.max(discount, 0),
+            100
+        )
+        : 0;
+
+}
+
 function getNodeArticleTotal(
     nodeArticle,
     article
@@ -1458,6 +1780,8 @@ function updateProjectNodeTotals() {
             }
 
         });
+
+    updateProjectPriceSummary();
 
 }
 
@@ -1692,6 +2016,130 @@ function isNodeCollapsed(
 
 }
 
+function getCollapsedNodesStorageKey(
+    projectId
+) {
+
+    return `projectBuilder.collapsedNodes.${projectId}`;
+
+}
+
+function loadCollapsedNodes(
+    projectId
+) {
+
+    try {
+
+        collapsedNodes =
+            new Set(
+                JSON.parse(
+                    localStorage.getItem(
+                        getCollapsedNodesStorageKey(
+                            projectId
+                        )
+                    )
+                    ||
+                    "[]"
+                ).map(String)
+            );
+
+    } catch (error) {
+
+        collapsedNodes =
+            new Set();
+
+    }
+
+}
+
+function saveCollapsedNodes(
+    projectId
+) {
+
+    localStorage.setItem(
+        getCollapsedNodesStorageKey(
+            projectId
+        ),
+        JSON.stringify(
+            Array.from(
+                collapsedNodes
+            )
+        )
+    );
+
+}
+
+function getProjectDescriptionCollapsedStorageKey(
+    projectId
+) {
+
+    return `${projectDescriptionCollapsedStorageKey}.${projectId}`;
+
+}
+
+function isProjectDescriptionOpen(
+    projectId,
+    project
+) {
+
+    const storedValue =
+        localStorage.getItem(
+            getProjectDescriptionCollapsedStorageKey(
+                projectId
+            )
+        );
+
+    if (storedValue === "true") {
+
+        return false;
+
+    }
+
+    if (storedValue === "false") {
+
+        return true;
+
+    }
+
+    return Boolean(
+        project.description
+    );
+
+}
+
+function registerProjectDescriptionPersistence(
+    projectId
+) {
+
+    const descriptionDetails =
+        document.querySelector(
+            ".project-description-details"
+        );
+
+    if (!descriptionDetails) {
+
+        return;
+
+    }
+
+    descriptionDetails.addEventListener(
+        "toggle",
+        () => {
+
+            localStorage.setItem(
+                getProjectDescriptionCollapsedStorageKey(
+                    projectId
+                ),
+                descriptionDetails.open
+                    ? "false"
+                    : "true"
+            );
+
+        }
+    );
+
+}
+
 function getAddNodeLabel(
     type
 ) {
@@ -1706,43 +2154,67 @@ function generateNodeHandler(
     projectId
 ) {
 
-    document
-        .getElementById(
-            "add-building"
-        )
-        .addEventListener(
-            "click",
-            async () => {
+    const registerRootNodeButton =
+        ({
+            buttonId,
+            type,
+            title,
+            defaultName
+        }) => {
 
-                const name =
-                    await openProjectModal({
-                        title: i18n.t("project.addBuilding"),
-                        label: i18n.t("project.positionName"),
-                        value: i18n.t("project.newBuilding")
-                    });
+            document
+                .getElementById(
+                    buttonId
+                )
+                .addEventListener(
+                    "click",
+                    async () => {
 
-                if (name === null) {
+                        const name =
+                            await openProjectModal({
+                                title,
+                                label: i18n.t("project.positionName"),
+                                value: defaultName
+                            });
 
-                    return;
+                        if (name === null) {
 
-                }
+                            return;
 
-                await createProjectNode({
-                    projectId,
-                    parentId: null,
-                    type: "building",
-                    name:
-                        name.trim()
-                        ||
-                        i18n.t("project.newBuilding")
-                });
+                        }
 
-                await refreshProjectTree(
-                    projectId
+                        await createProjectNode({
+                            projectId,
+                            parentId: null,
+                            type,
+                            name:
+                                name.trim()
+                                ||
+                                defaultName
+                        });
+
+                        await refreshProjectTree(
+                            projectId
+                        );
+
+                    }
                 );
 
-            }
-        );
+        };
+
+    registerRootNodeButton({
+        buttonId: "add-building",
+        type: "building",
+        title: i18n.t("project.addBuilding"),
+        defaultName: i18n.t("project.newBuilding")
+    });
+
+    registerRootNodeButton({
+        buttonId: "add-general-position",
+        type: "generalPosition",
+        title: i18n.t("project.addGeneralPosition"),
+        defaultName: i18n.t("project.newGeneralPosition")
+    });
 
 }
 
@@ -1874,9 +2346,96 @@ function generateHandler(
 
     inputs.forEach(input => {
 
+        if (input.id === "project-discount") {
+
+            input.addEventListener(
+                "keydown",
+                event => {
+
+                    if (
+                        event.key !== "ArrowUp"
+                        &&
+                        event.key !== "ArrowDown"
+                    ) {
+
+                        return;
+
+                    }
+
+                    event.preventDefault();
+
+                    const currentValue =
+                        Number(input.value);
+
+                    const nextValue =
+                        event.key === "ArrowUp"
+                            ? Math.ceil(
+                                Number.isFinite(currentValue)
+                                    ? currentValue
+                                    : 0
+                            )
+                            : Math.floor(
+                                Number.isFinite(currentValue)
+                                    ? currentValue
+                                    : 0
+                            );
+
+                    const adjustedValue =
+                        event.key === "ArrowUp"
+                            && nextValue === currentValue
+                                ? nextValue + 1
+                                : event.key === "ArrowDown"
+                                    && nextValue === currentValue
+                                        ? nextValue - 1
+                                        : nextValue;
+
+                    input.value =
+                        Math.min(
+                            Math.max(adjustedValue, 0),
+                            100
+                        );
+
+                    input.dispatchEvent(
+                        new Event(
+                            "input",
+                            {
+                                bubbles: true
+                            }
+                        )
+                    );
+
+                }
+            );
+
+        }
+
         input.addEventListener(
             "input",
             () => {
+
+                if (input.id === "project-discount") {
+
+                    if (Number(input.value) > 100) {
+
+                        input.value = 100;
+
+                    }
+
+                    if (Number(input.value) < 0) {
+
+                        input.value = 0;
+
+                    }
+
+                    currentProject = {
+                        ...(currentProject ?? {}),
+                        projectDiscount:
+                            input.value
+                    };
+
+                    updateProjectPriceSummary();
+
+                }
 
                 clearTimeout(
                     saveTimeout
@@ -1892,6 +2451,142 @@ function generateHandler(
         );
 
     });
+
+    const customerSelect =
+        document.getElementById(
+            "project-customer"
+        );
+
+    customerSelect?.addEventListener(
+        "change",
+        async () => {
+
+            clearTimeout(
+                saveTimeout
+            );
+
+            await saveProject(
+                projectId
+            );
+
+            currentProjectCustomer =
+                await loadProjectCustomer(
+                    customerSelect.value
+                );
+
+            updateProjectPriceSummary();
+
+        }
+    );
+
+}
+
+function registerProjectExport(
+    projectId
+) {
+
+    const exportButton =
+        document.getElementById(
+            "export-project-excel"
+        );
+
+    if (!exportButton) {
+
+        return;
+
+    }
+
+    exportButton.addEventListener(
+        "click",
+        async () => {
+
+            clearTimeout(
+                saveTimeout
+            );
+
+            await saveProject(
+                projectId
+            );
+
+            window.location.href =
+                `/api/projects/${projectId}/export.xlsx`;
+
+        }
+    );
+
+}
+
+function registerProjectDelete(
+    projectId,
+    project
+) {
+
+    const deleteButton =
+        document.getElementById(
+            "delete-project"
+        );
+
+    if (!deleteButton) {
+
+        return;
+
+    }
+
+    deleteButton.addEventListener(
+        "click",
+        async () => {
+
+            const confirmed =
+                await showConfirm(
+                    `Projekt "${project.name ?? ""}" wirklich löschen?`,
+                    {
+                        title: "Projekt löschen",
+                        confirmText: "Löschen",
+                        danger: true
+                    }
+                );
+
+            if (!confirmed) {
+
+                return;
+
+            }
+
+            clearTimeout(
+                saveTimeout
+            );
+
+            const response =
+                await fetch(
+                    `/api/projects/${projectId}`,
+                    {
+                        method: "DELETE"
+                    }
+                );
+
+            const result =
+                await response.json();
+
+            if (
+                !response.ok
+                || !result.success
+            ) {
+
+                await showAlert(
+                    result.error
+                    || "Projekt konnte nicht gelöscht werden."
+                );
+
+                return;
+
+            }
+
+            router.navigate(
+                "/projects"
+            );
+
+        }
+    );
 
 }
 
@@ -1926,6 +2621,11 @@ async function saveProject(
                         "project-customer"
                     ).value || null,
 
+                projectDiscount:
+                    document.getElementById(
+                        "project-discount"
+                    ).value || 0,
+
                 description:
                     document.getElementById(
                         "project-description"
@@ -1948,6 +2648,9 @@ function getNodeIcon(
 
         case "building":
             return utils.icons.building;
+
+        case "generalPosition":
+            return utils.icons.generalPosition;
 
         case "panel":
             return utils.icons.panel;
@@ -2096,7 +2799,7 @@ function registerArticleDropTargets(
 
     document
         .querySelectorAll(
-            ".project-node[data-type=\"meter\"]"
+            ".project-node[data-type=\"meter\"], .project-node[data-type=\"generalPosition\"]"
         )
         .forEach(node => {
 
@@ -2124,8 +2827,7 @@ function registerArticleDropTargets(
             dropTarget.dataset.articleDropRegistered =
                 "true";
 
-            dropTarget.addEventListener(
-                "dragover",
+            const handleArticleDragOver =
                 event => {
 
                     const articleNumber =
@@ -2140,6 +2842,7 @@ function registerArticleDropTargets(
                     }
 
                     event.preventDefault();
+                    event.stopPropagation();
 
                     event.dataTransfer.dropEffect =
                         "copy";
@@ -2148,8 +2851,7 @@ function registerArticleDropTargets(
                         "article-drop-over"
                     );
 
-                }
-            );
+                };
 
             dropTarget.addEventListener(
                 "dragleave",
@@ -2172,8 +2874,7 @@ function registerArticleDropTargets(
                 }
             );
 
-            dropTarget.addEventListener(
-                "drop",
+            const handleArticleDrop =
                 async event => {
 
                     const articleNumber =
@@ -2209,7 +2910,18 @@ function registerArticleDropTargets(
                     draggedArticleNumber =
                         null;
 
-                }
+                };
+
+            dropTarget.addEventListener(
+                "dragover",
+                handleArticleDragOver,
+                true
+            );
+
+            dropTarget.addEventListener(
+                "drop",
+                handleArticleDrop,
+                true
             );
 
         });
@@ -2247,12 +2959,10 @@ function registerArticleSearch(
         "input",
         () => {
 
-            const searchTerms =
+            const searchQuery =
                 normalizeSearchText(
                     search.value
-                )
-                .split(" ")
-                .filter(Boolean);
+                );
 
             document
                 .querySelectorAll(
@@ -2273,12 +2983,10 @@ function registerArticleSearch(
                         );
 
                     const matches =
-                        searchTerms.length === 0
+                        searchQuery.length === 0
                         ||
-                        searchTerms.every(term =>
-                            haystack.includes(
-                                term
-                            )
+                        haystack.includes(
+                            searchQuery
                         );
 
                     articleElement.style.display =
@@ -2703,6 +3411,18 @@ function clearArticleDropIndicators() {
 
 }
 
+function markNodeArticleDropTarget(
+    node
+) {
+
+    clearArticleDropIndicators();
+
+    node.classList.add(
+        "article-drop-over"
+    );
+
+}
+
 async function addArticleToNode(
     nodeId,
     articleNumber,
@@ -2924,6 +3644,10 @@ function registerNodeToggles(
                         ? "▼"
                         : "▶";
 
+                saveCollapsedNodes(
+                    projectId
+                );
+
                 syncArticleListHeight();
 
             }
@@ -2937,12 +3661,95 @@ function getArticleIcon(
     article = {}
 ) {
 
+    if (
+        isDlArticle(
+            article
+        )
+    ) {
+
+        return "/icons/dl.png";
+
+    }
+
+    if (
+        isCtArticle(
+            article
+        )
+    ) {
+
+        return "/icons/ct-.png";
+
+    }
+
+    if (
+        isGridVisArticle(
+            article
+        )
+    ) {
+
+        return "/icons/gridvis.png";
+
+    }
+
+    if (
+        isRio3Article(
+            article
+        )
+    ) {
+
+        return "/icons/rio3.png";
+
+    }
+
+    if (
+        isRd96Article(
+            article
+        )
+    ) {
+
+        return "/icons/rd96.png";
+
+    }
+
+    const primaryText =
+        normalizeSearchText(
+            [
+                article.articleNumber,
+                article.manufacturerType
+            ]
+                .filter(value =>
+                    value !== null
+                    &&
+                    value !== undefined
+                )
+                .join(" ")
+        );
+
+    const matchingPrimaryRule =
+        articleIconRules.find(rule =>
+            rule.keywords.some(keyword =>
+                primaryText.includes(
+                    normalizeSearchText(
+                        keyword
+                    )
+                )
+            )
+        );
+
+    if (
+        matchingPrimaryRule
+    ) {
+
+        return `/icons/${matchingPrimaryRule.icon}`;
+
+    }
+
     const text =
         getArticleSearchText(
             article
         );
 
-    const matchingRule =
+    const matchingFallbackRule =
         articleIconRules.find(rule =>
             rule.keywords.some(keyword =>
                 text.includes(
@@ -2954,14 +3761,79 @@ function getArticleIcon(
         );
 
     if (
-        matchingRule
+        matchingFallbackRule
     ) {
 
-        return `/icons/${matchingRule.icon}`;
+        return `/icons/${matchingFallbackRule.icon}`;
 
     }
 
     return "/icons/article.png";
+
+}
+
+function isDlArticle(
+    article = {}
+) {
+
+    return String(article.articleNumber ?? "")
+        .trim()
+        .toLowerCase()
+        .startsWith("dl");
+
+}
+
+function isCtArticle(
+    article = {}
+) {
+
+    return [
+        article.articleNumber,
+        article.manufacturerType
+    ].some(value =>
+        String(value ?? "")
+            .trim()
+            .toLowerCase()
+            .startsWith("ct-")
+    );
+
+}
+
+function isGridVisArticle(
+    article = {}
+) {
+
+    return String(article.manufacturerType ?? "")
+        .trim()
+        .toLowerCase()
+        .includes("gridvis");
+
+}
+
+function isRio3Article(
+    article = {}
+) {
+
+    return [
+        article.articleNumber,
+        article.manufacturerType
+    ].some(value =>
+        String(value ?? "")
+            .trim()
+            .toLowerCase()
+            .startsWith("roi 3")
+    );
+
+}
+
+function isRd96Article(
+    article = {}
+) {
+
+    return String(article.articleNumber ?? "")
+        .trim()
+        ===
+        "5231212";
 
 }
 
@@ -3006,13 +3878,19 @@ function registerProjectNodeDragAndDrop(
 
                     closeProjectMenus();
 
-                    node
-                        .closest(
+                    const wrapper =
+                        node.closest(
                             ".project-node-wrapper"
-                        )
-                        .classList.add(
-                            "node-dragging"
                         );
+
+                    node.dataset.originalNodePosition =
+                        getProjectNodePositionSignature(
+                            wrapper
+                        );
+
+                    wrapper.classList.add(
+                        "node-dragging"
+                    );
 
                     event.dataTransfer.effectAllowed =
                         "move";
@@ -3032,7 +3910,38 @@ function registerProjectNodeDragAndDrop(
 
             node.addEventListener(
                 "dragend",
-                () => {
+                async () => {
+
+                    const wrapper =
+                        node.closest(
+                            ".project-node-wrapper"
+                        );
+
+                    const originalPosition =
+                        node.dataset.originalNodePosition
+                        ||
+                        "";
+
+                    delete node.dataset.originalNodePosition;
+
+                    if (
+                        wrapper
+                        &&
+                        originalPosition
+                        &&
+                        originalPosition
+                        !==
+                        getProjectNodePositionSignature(
+                            wrapper
+                        )
+                    ) {
+
+                        await saveProjectNodePosition(
+                            wrapper,
+                            projectId
+                        );
+
+                    }
 
                     document
                         .querySelectorAll(
@@ -3121,25 +4030,10 @@ function registerProjectNodeDragAndDrop(
                 event => {
 
                     event.preventDefault();
+                    event.stopPropagation();
 
                     node.classList.remove(
                         "node-drag-over"
-                    );
-
-                    const draggedWrapper =
-                        document.querySelector(
-                            ".project-node-wrapper.node-dragging"
-                        );
-
-                    if (!draggedWrapper) {
-
-                        return;
-
-                    }
-
-                    saveProjectNodePosition(
-                        draggedWrapper,
-                        projectId
                     );
 
                 }
@@ -3261,6 +4155,9 @@ function getValidParentType(
         case "building":
             return null;
 
+        case "generalPosition":
+            return null;
+
         case "panel":
             return "building";
 
@@ -3296,7 +4193,42 @@ function getProjectNodeParentIdFromDom(
 
 }
 
-function saveProjectNodePosition(
+function getProjectNodePositionSignature(
+    nodeWrapper
+) {
+
+    if (!nodeWrapper) {
+
+        return "";
+
+    }
+
+    const parentId =
+        getProjectNodeParentIdFromDom(
+            nodeWrapper
+        )
+        ??
+        "";
+
+    const siblings =
+        Array.from(
+            nodeWrapper.parentElement.querySelectorAll(
+                ":scope > .project-node-wrapper"
+            )
+        ).map(wrapper =>
+            wrapper.querySelector(
+                ":scope > .project-node"
+            ).dataset.id
+        );
+
+    return JSON.stringify({
+        parentId,
+        siblings
+    });
+
+}
+
+async function saveProjectNodePosition(
     nodeWrapper,
     projectId
 ) {
@@ -3322,6 +4254,11 @@ function saveProjectNodePosition(
             ).dataset.id
         );
 
+    const sortOrder =
+        siblings.indexOf(
+            node.dataset.id
+        );
+
     const currentNode =
         currentNodes.find(item =>
             String(item.id)
@@ -3335,9 +4272,7 @@ function saveProjectNodePosition(
             parentId;
 
         currentNode.sortOrder =
-            siblings.indexOf(
-                node.dataset.id
-            );
+            sortOrder;
 
     }
 
@@ -3362,35 +4297,62 @@ function saveProjectNodePosition(
 
     });
 
-    fetch(
+    try {
 
-        `/api/projectNodes/${node.dataset.id}/move`,
+        const response =
+            await fetch(
 
-        {
+                `/api/projectNodes/${node.dataset.id}/move`,
 
-            method: "PATCH",
+                {
 
-            headers: {
+                    method: "PATCH",
 
-                "Content-Type":
-                    "application/json"
+                    keepalive: true,
 
-            },
+                    headers: {
 
-            body: JSON.stringify({
-                parentId,
-                siblings
-            })
+                        "Content-Type":
+                            "application/json"
+
+                    },
+
+                    body: JSON.stringify({
+                        parentId,
+                        sortOrder,
+                        siblings
+                    })
+
+                }
+
+            );
+
+        if (!response.ok) {
+
+            throw new Error(
+                "Position konnte nicht gespeichert werden."
+            );
 
         }
 
-    ).catch(() => {
+        const updatedNode =
+            await response.json();
+
+        updateCurrentNode(
+            updatedNode
+        );
+
+    } catch (error) {
+
+        console.error(
+            error
+        );
 
         refreshProjectTree(
             projectId
         );
 
-    });
+    }
 
     updateProjectNodeTotals();
 
@@ -3800,7 +4762,7 @@ function registerNodeArticleMenus(
                             normalizedQuantity <= 0
                         ) {
 
-                            alert(
+                            await showAlert(
                                 i18n.t("project.quantityValidation")
                             );
 
@@ -3896,15 +4858,21 @@ function registerNodeArticleDragAndDrop(
                 "dragstart",
                 event => {
 
+                    const nodeId =
+                        article.dataset.nodeId;
+
                     closeProjectMenus();
 
                     article.classList.add(
                         "dragging"
                     );
 
+                    article.dataset.originalNodeId =
+                        nodeId;
+
                     article.dataset.originalOrder =
                         getNodeArticleOrderSignature(
-                            article.dataset.nodeId
+                            nodeId
                         );
 
                     event.dataTransfer.effectAllowed =
@@ -3925,15 +4893,25 @@ function registerNodeArticleDragAndDrop(
 
             article.addEventListener(
                 "dragend",
-                () => {
+                async () => {
 
                     const nodeId =
                         article.dataset.nodeId;
+
+                    const originalNodeId =
+                        article.dataset.originalNodeId
+                        ||
+                        nodeId;
 
                     const originalOrder =
                         article.dataset.originalOrder
                         ||
                         "";
+
+                    const wasDropHandled =
+                        article.dataset.dropHandled
+                        ===
+                        "true";
 
                     article.classList.remove(
                         "dragging"
@@ -3951,7 +4929,51 @@ function registerNodeArticleDragAndDrop(
 
                         });
 
+                    clearArticleDropIndicators();
+
+                    delete article.dataset.dropHandled;
                     delete article.dataset.originalOrder;
+                    delete article.dataset.originalNodeId;
+
+                    if (wasDropHandled) {
+
+                        return;
+
+                    }
+
+                    if (
+                        originalNodeId
+                        !==
+                        nodeId
+                    ) {
+
+                        await updateNodeArticlePosition(
+                            article.dataset.id,
+                            {
+                                projectNodeId:
+                                    nodeId,
+                                sortOrder:
+                                    getNodeArticleIndex(
+                                        article
+                                    )
+                            }
+                        );
+
+                        await Promise.all([
+                            saveNodeArticleOrder(
+                                originalNodeId
+                            ),
+                            saveNodeArticleOrder(
+                                nodeId
+                            )
+                        ]);
+
+                        updateProjectNodeTotals();
+                        syncArticleListHeight();
+
+                        return;
+
+                    }
 
                     if (
                         originalOrder
@@ -3963,7 +4985,7 @@ function registerNodeArticleDragAndDrop(
                         )
                     ) {
 
-                        saveNodeArticleOrder(
+                        await saveNodeArticleOrder(
                             nodeId
                         );
 
@@ -3985,17 +5007,22 @@ function registerNodeArticleDragAndDrop(
                         !draggedArticle
                         ||
                         draggedArticle === article
-                        ||
-                        draggedArticle.dataset.nodeId
-                        !==
-                        article.dataset.nodeId
                     ) {
 
                         return;
 
                     }
 
+                    const targetNodeId =
+                        article.dataset.nodeId;
+
+                    const originalNodeId =
+                        draggedArticle.dataset.originalNodeId
+                        ||
+                        draggedArticle.dataset.nodeId;
+
                     event.preventDefault();
+                    event.stopPropagation();
 
                     event.dataTransfer.dropEffect =
                         "move";
@@ -4003,6 +5030,16 @@ function registerNodeArticleDragAndDrop(
                     article.classList.add(
                         "drag-over"
                     );
+
+                    if (
+                        originalNodeId
+                        !==
+                        targetNodeId
+                    ) {
+
+                        return;
+
+                    }
 
                     const articleRect =
                         article.getBoundingClientRect();
@@ -4013,6 +5050,9 @@ function registerNodeArticleDragAndDrop(
                         articleRect.top
                         +
                         articleRect.height / 2;
+
+                    draggedArticle.dataset.nodeId =
+                        targetNodeId;
 
                     insertElementBeforeIfChanged(
                         article.parentElement,
@@ -4064,6 +5104,313 @@ function registerNodeArticleDragAndDrop(
             );
 
         });
+
+    registerNodeArticleDropTargets(
+        projectId
+    );
+
+}
+
+function registerNodeArticleDropTargets(
+    projectId
+) {
+
+    document
+        .querySelectorAll(
+            ".project-node[data-type=\"meter\"], .project-node[data-type=\"generalPosition\"]"
+        )
+        .forEach(node => {
+
+            const dropTarget =
+                node.closest(
+                    ".project-node-wrapper"
+                );
+
+            if (!dropTarget) {
+
+                return;
+
+            }
+
+            if (
+                dropTarget.dataset.nodeArticleDropRegistered
+                ===
+                "true"
+            ) {
+
+                return;
+
+            }
+
+            dropTarget.dataset.nodeArticleDropRegistered =
+                "true";
+
+            dropTarget.addEventListener(
+                "dragover",
+                event => {
+
+                    const draggedArticle =
+                        document.querySelector(
+                            ".node-article.dragging"
+                        );
+
+                    if (!draggedArticle) {
+
+                        return;
+
+                    }
+
+                    if (
+                        event.target.closest(
+                            ".project-node-wrapper"
+                        )
+                        !==
+                        dropTarget
+                    ) {
+
+                        return;
+
+                    }
+
+                    if (
+                        (
+                            draggedArticle.dataset.originalNodeId
+                            ||
+                            draggedArticle.dataset.nodeId
+                        )
+                        ===
+                        node.dataset.id
+                        &&
+                        event.target.closest(
+                            ".node-article"
+                        )
+                    ) {
+
+                        return;
+
+                    }
+
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    event.dataTransfer.dropEffect =
+                        "move";
+
+                    markNodeArticleDropTarget(
+                        node
+                    );
+
+                },
+                true
+            );
+
+            dropTarget.addEventListener(
+                "dragleave",
+                event => {
+
+                    if (
+                        dropTarget.contains(
+                            event.relatedTarget
+                        )
+                    ) {
+
+                        return;
+
+                    }
+
+                    node.classList.remove(
+                        "article-drop-over"
+                    );
+
+                }
+            );
+
+            dropTarget.addEventListener(
+                "drop",
+                async event => {
+
+                    const draggedArticle =
+                        document.querySelector(
+                            ".node-article.dragging"
+                        );
+
+                    if (!draggedArticle) {
+
+                        return;
+
+                    }
+
+                    if (
+                        event.target.closest(
+                            ".project-node-wrapper"
+                        )
+                        !==
+                        dropTarget
+                    ) {
+
+                        return;
+
+                    }
+
+                    if (
+                        (
+                            draggedArticle.dataset.originalNodeId
+                            ||
+                            draggedArticle.dataset.nodeId
+                        )
+                        ===
+                        node.dataset.id
+                        &&
+                        event.target.closest(
+                            ".node-article"
+                        )
+                    ) {
+
+                        return;
+
+                    }
+
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    node.classList.remove(
+                        "article-drop-over"
+                    );
+
+                    await moveNodeArticleToNodeAndSave(
+                        draggedArticle,
+                        node.dataset.id,
+                        projectId
+                    );
+
+                    syncArticleListHeight();
+
+                },
+                true
+            );
+
+        });
+
+}
+
+function moveNodeArticleElementToNode(
+    article,
+    nodeId
+) {
+
+    const targetNode =
+        document.querySelector(
+            `.project-node[data-id="${nodeId}"]`
+        );
+
+    if (!targetNode) {
+
+        return;
+
+    }
+
+    const children =
+        targetNode
+            .closest(
+                ".project-node-wrapper"
+            )
+            ?.querySelector(
+                ":scope > .project-node-children"
+            );
+
+    if (!children) {
+
+        return;
+
+    }
+
+    article.dataset.nodeId =
+        nodeId;
+
+    const childNodeWrapper =
+        children.querySelector(
+            ":scope > .project-node-wrapper"
+        );
+
+    insertElementBeforeIfChanged(
+        children,
+        article,
+        childNodeWrapper
+    );
+
+}
+
+async function moveNodeArticleToNodeAndSave(
+    article,
+    targetNodeId,
+    projectId
+) {
+
+    const originalNodeId =
+        article.dataset.originalNodeId
+        ||
+        article.dataset.nodeId;
+
+    moveNodeArticleElementToNode(
+        article,
+        targetNodeId
+    );
+
+    if (
+        originalNodeId
+        ===
+        targetNodeId
+    ) {
+
+        return;
+
+    }
+
+    article.dataset.dropHandled =
+        "true";
+
+    await updateNodeArticlePosition(
+        article.dataset.id,
+        {
+            projectNodeId:
+                targetNodeId,
+            sortOrder:
+                getNodeArticleIndex(
+                    article
+                )
+        }
+    );
+
+    await Promise.all([
+        saveNodeArticleOrder(
+            originalNodeId
+        ),
+        saveNodeArticleOrder(
+            targetNodeId
+        )
+    ]);
+
+    updateProjectNodeTotals();
+
+    await refreshProjectTree(
+        projectId
+    );
+
+}
+
+function getNodeArticleIndex(
+    article
+) {
+
+    return Array
+        .from(
+            document.querySelectorAll(
+                `.node-article[data-node-id="${article.dataset.nodeId}"]`
+            )
+        )
+        .indexOf(
+            article
+        );
 
 }
 
@@ -4236,7 +5583,22 @@ async function updateNodeArticlePosition(
 
         );
 
-    return await response.json();
+    if (!response.ok) {
+
+        throw new Error(
+            "Artikelposition konnte nicht gespeichert werden."
+        );
+
+    }
+
+    const updatedNodeArticle =
+        await response.json();
+
+    upsertCurrentNodeArticle(
+        updatedNodeArticle
+    );
+
+    return updatedNodeArticle;
 
 }
 

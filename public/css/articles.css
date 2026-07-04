@@ -6,6 +6,186 @@
     margin-left: 50px;
     width: 200px;
 }
+
+#add-article-button {
+
+    margin-left: 20px;
+
+    padding: 10px 14px;
+
+    border: 0;
+
+    border-radius: 8px;
+
+    background: #4c8bf5;
+
+    color: white;
+
+    cursor: pointer;
+
+    font-weight: 700;
+
+}
+
+#add-article-button:hover {
+
+    background: #3a76dd;
+
+}
+
+.hidden {
+
+    display: none;
+
+}
+
+.article-form {
+
+    display: grid;
+
+    grid-template-columns:
+        160px
+        minmax(220px, 1fr)
+        120px
+        130px
+        auto
+        auto;
+
+    gap: 12px;
+
+    padding: 16px;
+
+    border-bottom: 1px solid #e0e0e0;
+
+    background: #f7f7f7;
+
+}
+
+.article-form input,
+.article-form textarea {
+
+    padding: 10px 12px;
+
+    border: 1px solid #dcdcdc;
+
+    border-radius: 8px;
+
+    font-size: 14px;
+
+    box-sizing: border-box;
+
+}
+
+.article-form textarea {
+
+    grid-column: 1 / 5;
+
+    min-height: 74px;
+
+    resize: vertical;
+
+}
+
+#save-manual-article-button,
+#cancel-manual-article-button {
+
+    align-self: start;
+
+    padding: 10px 14px;
+
+    border: 0;
+
+    border-radius: 8px;
+
+    background: #1f7a3a;
+
+    color: white;
+
+    cursor: pointer;
+
+    font-weight: 700;
+
+}
+
+#save-manual-article-button:hover {
+
+    background: #17612d;
+
+}
+
+#cancel-manual-article-button {
+
+    background: white;
+
+    color: #555;
+
+    border: 1px solid #d0d0d0;
+
+}
+
+#cancel-manual-article-button:hover {
+
+    background: #f0f0f0;
+
+}
+
+.article-delete-button {
+
+    padding: 4px 8px;
+
+    border: 1px solid #f1b8b8;
+
+    border-radius: 6px;
+
+    background: #fff5f5;
+
+    color: #b42318;
+
+    cursor: pointer;
+
+    font-size: 12px;
+
+    font-weight: 600;
+
+}
+
+.article-delete-button:hover {
+
+    border-color: #d92d20;
+
+    background: #ffe7e7;
+
+}
+
+.article-number-actions {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+}
+
+@media (max-width: 1100px) {
+
+    .article-form {
+
+        grid-template-columns:
+            1fr
+            1fr;
+
+    }
+
+    .article-form textarea,
+    #save-manual-article-button,
+    #cancel-manual-article-button {
+
+        grid-column: 1 / -1;
+
+    }
+
+}
 /* --------------------------------------------------
    Content
 -------------------------------------------------- */
@@ -115,6 +295,42 @@
 .articles-table tbody tr:hover {
 
     background: #fafafa;
+
+}
+
+.article-price-editor {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+}
+
+.article-price-edit-button {
+
+    padding: 4px 8px;
+
+    border: 1px solid #c8d7f5;
+
+    border-radius: 6px;
+
+    background: #eef4ff;
+
+    color: #2f64c8;
+
+    font-size: 12px;
+
+    font-weight: 600;
+
+    cursor: pointer;
+
+}
+
+.article-price-edit-button:hover {
+
+    background: #dfeaff;
 
 }
 

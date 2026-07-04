@@ -110,6 +110,12 @@
 
 }
 
+.project-row {
+
+    cursor: pointer;
+
+}
+
 /* --------------------------------------------------
    Zebra
 -------------------------------------------------- */
@@ -352,6 +358,35 @@
 
 #add-project-button:hover {
     background: #3a76dd;
+}
+
+#import-project-button {
+
+    margin-left: 10px;
+
+    padding:
+        10px 14px;
+
+    border: 1px solid #bfd8c8;
+
+    border-radius: 8px;
+
+    background: white;
+
+    color: #1f5e38;
+
+    font-weight: 600;
+
+    cursor: pointer;
+
+}
+
+#import-project-button:hover {
+
+    border-color: #2f9e44;
+
+    background: #f5fbf7;
+
 }
 
 #project-customer {

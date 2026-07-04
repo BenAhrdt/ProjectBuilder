@@ -17,6 +17,61 @@
 
 }
 
+.customer-card-header {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 16px;
+
+    margin-bottom: 24px;
+
+}
+
+.customer-card-header h2 {
+
+    margin: 0;
+
+}
+
+#delete-customer {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    padding: 9px 13px;
+
+    border: 1px solid #f1b8b8;
+
+    border-radius: 8px;
+
+    background: white;
+
+    color: #b42318;
+
+    cursor: pointer;
+
+    font-size: 14px;
+
+    font-weight: 700;
+
+    box-shadow:
+        0 1px 2px rgba(180,35,24,0.08);
+
+}
+
+#delete-customer:hover {
+
+    border-color: #d92d20;
+
+    background: #fff5f5;
+
+}
+
 .customer-form {
 
     display: flex;

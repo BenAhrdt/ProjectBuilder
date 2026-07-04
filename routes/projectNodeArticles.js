@@ -197,11 +197,50 @@ router.patch(
                 ? current.quantity
                 : Number(req.body.quantity);
 
+        const nextProjectNodeId =
+            req.body.projectNodeId === undefined
+                ? current.projectNodeId
+                : Number(req.body.projectNodeId);
+
+        if (
+            !Number.isFinite(nextProjectNodeId)
+            ||
+            nextProjectNodeId <= 0
+        ) {
+
+            res.status(400).json({
+                error: "Ungültige Zielposition"
+            });
+
+            return;
+
+        }
+
+        const nextSortOrder =
+            req.body.sortOrder === undefined
+                ? (
+                    nextProjectNodeId === current.projectNodeId
+                        ? current.sortOrder
+                        : database.projectNodeArticles.prepare(`
+
+                            SELECT COALESCE(MAX(sortOrder), -1) + 1 AS sortOrder
+
+                            FROM projectNodeArticles
+
+                            WHERE projectNodeId = ?
+
+                        `).get(
+                            nextProjectNodeId
+                        ).sortOrder
+                )
+                : Number(req.body.sortOrder);
+
         database.projectNodeArticles.prepare(`
 
             UPDATE projectNodeArticles
 
             SET
+                projectNodeId = @projectNodeId,
                 quantity = @quantity,
                 positionName = @positionName,
                 sortOrder = @sortOrder
@@ -211,6 +250,9 @@ router.patch(
         `).run({
 
             id,
+
+            projectNodeId:
+                nextProjectNodeId,
 
             quantity:
                 Number.isFinite(quantity)
@@ -225,9 +267,9 @@ router.patch(
                     : req.body.positionName || null,
 
             sortOrder:
-                req.body.sortOrder === undefined
-                    ? current.sortOrder
-                    : Number(req.body.sortOrder)
+                Number.isFinite(nextSortOrder)
+                    ? nextSortOrder
+                    : current.sortOrder
 
         });
 

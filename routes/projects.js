@@ -984,7 +984,7 @@ function buildProjectExportData(
     const positions =
         [];
 
-    orderedNodes.forEach(node => {
+    orderedNodes.forEach((node, nodeOrder) => {
 
         (
             nodeArticlesByNode.get(
@@ -1036,6 +1036,9 @@ function buildProjectExportData(
                     nodeArticle.id,
                 nodeId:
                     node.id,
+                nodeOrder,
+                positionOrder:
+                    positions.length,
                 sortOrder:
                     nodeArticle.sortOrder ?? 0,
                 articleNumber:
@@ -1635,7 +1638,7 @@ function buildProjectWorkbook(
 
     const commercialSheet =
         buildCommercialSummarySheet(
-            exportData.positions
+            exportData
         );
 
     const structureSheet =
@@ -1785,7 +1788,7 @@ async function buildProjectWorkbookBuffer(
 
     buildExcelCommercialSummarySheet(
         workbook,
-        exportData.positions,
+        exportData,
         imageCache
     );
 
@@ -2342,9 +2345,15 @@ function buildExcelPrintableStructureSheet(
 
 function buildExcelCommercialSummarySheet(
     workbook,
-    positions,
+    exportData,
     imageCache
 ) {
+
+    const {
+        project,
+        totals,
+        positions
+    } = exportData;
 
     const sheet =
         workbook.addWorksheet(
@@ -2360,7 +2369,7 @@ function buildExcelCommercialSummarySheet(
             }
         );
 
-    sheet.columns = [
+    const columns = [
         {
             header: "Artikelnummer",
             key: "articleNumber",
@@ -2433,8 +2442,99 @@ function buildExcelCommercialSummarySheet(
         }
     ];
 
+    sheet.columns =
+        columns.map(column => ({
+            key: column.key,
+            width: column.width
+        }));
+
+    sheet.mergeCells(
+        1,
+        1,
+        1,
+        columns.length
+    );
+    sheet.getCell("A1").value =
+        "Kaufmännische Übersicht";
+    sheet.getCell("A1").font = {
+        bold: true,
+        size: 18,
+        color: {
+            argb: "FF1F3552"
+        }
+    };
+
+    sheet.addRow([
+        "Projekt",
+        project.name ?? "",
+        "",
+        "Kunde",
+        project.customerName ?? ""
+    ]);
+    sheet.mergeCells("B2:C2");
+    sheet.mergeCells(
+        2,
+        5,
+        2,
+        columns.length
+    );
+    sheet.addRow([
+        "Kundennummer",
+        project.customerNumber ?? "",
+        "",
+        "Ort",
+        project.customerCity ?? ""
+    ]);
+    sheet.mergeCells("B3:C3");
+    sheet.mergeCells(
+        3,
+        5,
+        3,
+        columns.length
+    );
+    sheet.addRow([]);
+    const totalsRow =
+        sheet.addRow([
+            "Listenpreis gesamt",
+            roundCurrency(totals.listPrice),
+            "Rabatt gesamt",
+            roundCurrency(totals.discount),
+            "Rabattierter Preis gesamt",
+            "",
+            "",
+            roundCurrency(totals.discountedPrice)
+        ]);
+    sheet.mergeCells(
+        totalsRow.number,
+        5,
+        totalsRow.number,
+        7
+    );
+
+    if (hasProjectDiscount(totals)) {
+
+        sheet.addRow([
+            "Projektrabatt",
+            roundCurrency(totals.projectDiscount),
+            "",
+            "",
+            "",
+            ""
+        ]);
+
+    }
+
+    sheet.addRow([]);
+
+    const headerRow =
+        sheet.addRow(
+            columns.map(column =>
+                column.header
+            )
+        );
+
     styleExcelHeaderRow(
-        sheet.getRow(1)
+        headerRow
     );
 
     getCommercialSummaries(positions)
@@ -2483,18 +2583,42 @@ function buildExcelCommercialSummarySheet(
         });
 
     sheet.autoFilter = {
-        from: "A1",
+        from: `A${headerRow.number}`,
         to: `N${Math.max(sheet.rowCount, 1)}`
     };
 
     sheet.views = [
         {
             state: "frozen",
-            ySplit: 1
+            ySplit: headerRow.number
         }
     ];
 
+    [
+        "B5",
+        "D5",
+        "H5",
+        "B6"
+    ].forEach(cellAddress => {
+
+        const cell =
+            sheet.getCell(cellAddress);
+
+        if (typeof cell.value === "number") {
+
+            cell.numFmt =
+                "#,##0.00 €";
+
+        }
+
+    });
+
     styleExcelWorksheet(sheet);
+
+    totalsRow.getCell(5).alignment = {
+        vertical: "middle",
+        shrinkToFit: false
+    };
 
     setExcelColumnWidths(
         sheet,
@@ -2981,6 +3105,10 @@ function getCommercialSummaries(
                         0,
                     occurrences:
                         0,
+                    firstNodeOrder:
+                        Number.POSITIVE_INFINITY,
+                    firstPositionOrder:
+                        Number.POSITIVE_INFINITY,
                     icon:
                         position.icon,
                     discountGroupSet:
@@ -3005,6 +3133,20 @@ function getCommercialSummaries(
             position.discountedTotal;
         summary.occurrences +=
             1;
+        summary.firstNodeOrder =
+            Math.min(
+                summary.firstNodeOrder,
+                Number.isFinite(position.nodeOrder)
+                    ? position.nodeOrder
+                    : Number.POSITIVE_INFINITY
+            );
+        summary.firstPositionOrder =
+            Math.min(
+                summary.firstPositionOrder,
+                Number.isFinite(position.positionOrder)
+                    ? position.positionOrder
+                    : Number.POSITIVE_INFINITY
+            );
 
         if (position.discountGroup) {
 
@@ -3095,6 +3237,38 @@ function compareCommercialSummaries(
     first,
     second
 ) {
+
+    const firstPositionOrder =
+        Number.isFinite(first.firstPositionOrder)
+            ? first.firstPositionOrder
+            : Number.POSITIVE_INFINITY;
+
+    const secondPositionOrder =
+        Number.isFinite(second.firstPositionOrder)
+            ? second.firstPositionOrder
+            : Number.POSITIVE_INFINITY;
+
+    if (firstPositionOrder !== secondPositionOrder) {
+
+        return firstPositionOrder - secondPositionOrder;
+
+    }
+
+    const firstNodeOrder =
+        Number.isFinite(first.firstNodeOrder)
+            ? first.firstNodeOrder
+            : Number.POSITIVE_INFINITY;
+
+    const secondNodeOrder =
+        Number.isFinite(second.firstNodeOrder)
+            ? second.firstNodeOrder
+            : Number.POSITIVE_INFINITY;
+
+    if (firstNodeOrder !== secondNodeOrder) {
+
+        return firstNodeOrder - secondNodeOrder;
+
+    }
 
     const firstDiscountGroupIndex =
         getCommercialDiscountGroupSortIndex(
@@ -4320,8 +4494,14 @@ function buildPrintableStructureSheet(
 }
 
 function buildCommercialSummarySheet(
-    positions
+    exportData
 ) {
+
+    const {
+        project,
+        totals,
+        positions
+    } = exportData;
 
     const summaryByArticleNumber =
         new Map();
@@ -4356,6 +4536,10 @@ function buildCommercialSummarySheet(
                         0,
                     occurrences:
                         0,
+                    firstNodeOrder:
+                        Number.POSITIVE_INFINITY,
+                    firstPositionOrder:
+                        Number.POSITIVE_INFINITY,
                     discountGroups:
                         new Set(),
                     listUnitPrices:
@@ -4382,6 +4566,20 @@ function buildCommercialSummarySheet(
 
         summary.occurrences +=
             1;
+        summary.firstNodeOrder =
+            Math.min(
+                summary.firstNodeOrder,
+                Number.isFinite(position.nodeOrder)
+                    ? position.nodeOrder
+                    : Number.POSITIVE_INFINITY
+            );
+        summary.firstPositionOrder =
+            Math.min(
+                summary.firstPositionOrder,
+                Number.isFinite(position.positionOrder)
+                    ? position.positionOrder
+                    : Number.POSITIVE_INFINITY
+            );
 
         if (position.discountGroup) {
 
@@ -4409,6 +4607,49 @@ function buildCommercialSummarySheet(
             );
 
     const rows = [
+        [
+            "Kaufmännische Übersicht"
+        ],
+        [
+            "Projekt",
+            project.name ?? "",
+            "",
+            "Kunde",
+            project.customerName ?? ""
+        ],
+        [
+            "Kundennummer",
+            project.customerNumber ?? "",
+            "",
+            "Ort",
+            project.customerCity ?? ""
+        ],
+        [],
+        [
+            "Listenpreis gesamt",
+            roundCurrency(totals.listPrice),
+            "Rabatt gesamt",
+            roundCurrency(totals.discount),
+            "Rabattierter Preis gesamt",
+            "",
+            "",
+            roundCurrency(totals.discountedPrice)
+        ],
+        ...(
+            hasProjectDiscount(totals)
+                ? [
+                    [
+                        "Projektrabatt",
+                        roundCurrency(totals.projectDiscount),
+                        "",
+                        "",
+                        "",
+                        ""
+                    ]
+                ]
+                : []
+        ),
+        [],
         [
             "Artikelnummer",
             "Hersteller-Typ",
@@ -4466,6 +4707,34 @@ function buildCommercialSummarySheet(
             rows
         );
 
+    const headerRowNumber =
+        hasProjectDiscount(totals)
+            ? 8
+            : 7;
+
+    sheet["!merges"] = [
+        {
+            s: {
+                r: 0,
+                c: 0
+            },
+            e: {
+                r: 0,
+                c: 13
+            }
+        },
+        {
+            s: {
+                r: 4,
+                c: 4
+            },
+            e: {
+                r: 4,
+                c: 6
+            }
+        }
+    ];
+
     sheet["!cols"] = [
         {
             wch: 16
@@ -4513,16 +4782,35 @@ function buildCommercialSummarySheet(
 
     sheet["!autofilter"] = {
         ref:
-            `A1:N${Math.max(rows.length, 1)}`
+            `A${headerRowNumber}:N${Math.max(rows.length, 1)}`
     };
 
     sheet["!freeze"] = {
         xSplit: 0,
-        ySplit: 1
+        ySplit: headerRowNumber
     };
 
+    [
+        "B5",
+        "D5",
+        "H5",
+        "B6"
+    ].forEach(cellAddress => {
+
+        if (typeof sheet[cellAddress]?.v === "number") {
+
+            setNumberFormat(
+                sheet,
+                cellAddress,
+                "#,##0.00 €"
+            );
+
+        }
+
+    });
+
     for (
-        let rowIndex = 2;
+        let rowIndex = headerRowNumber + 1;
         rowIndex <= rows.length;
         rowIndex++
     ) {
@@ -4551,7 +4839,7 @@ function buildCommercialSummarySheet(
     addIconLinks(
         sheet,
         "N",
-        2,
+        headerRowNumber + 1,
         rows.length
     );
 

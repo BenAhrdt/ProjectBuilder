@@ -635,6 +635,7 @@ async function renderView(
     registerProjectNodeMenus(projectId);
     registerProjectNodeDragAndDrop(projectId);
     registerNodeArticleMenus(projectId);
+    registerNodeArticleQuantityInputs(projectId);
     registerNodeArticleDragAndDrop(projectId);
     registerArticleListLayoutSync();
     syncArticleListHeight();
@@ -710,6 +711,10 @@ async function refreshProjectTree(
     );
 
     registerNodeArticleMenus(
+        projectId
+    );
+
+    registerNodeArticleQuantityInputs(
         projectId
     );
 
@@ -1238,6 +1243,17 @@ function renderNodeArticle(
             draggable="true"
         >
 
+            <input
+                class="node-article-quantity-input"
+                type="number"
+                value="${quantity}"
+                min="1"
+                step="1"
+                inputmode="numeric"
+                title="${i18n.t("project.quantity")}"
+                aria-label="${i18n.t("project.quantity")}"
+            >
+
             <img
                 src="${getArticleIcon(fullArticle)}"
                 alt=""
@@ -1300,13 +1316,6 @@ function renderNodeArticle(
                         data-action="position-name"
                     >
                         ${i18n.t("project.positionName")}
-                    </button>
-
-                    <button
-                        type="button"
-                        data-action="quantity"
-                    >
-                        ${i18n.t("project.quantity")}
                     </button>
 
                     <button
@@ -4719,76 +4728,6 @@ function registerNodeArticleMenus(
 
                     }
 
-                    if (action === "quantity") {
-
-                        const currentQuantity =
-                            article.dataset.quantity
-                            ||
-                            "1";
-
-                        const quantity =
-                            await openProjectModal({
-                                title: i18n.t("project.quantity"),
-                                label: i18n.t("project.quantity"),
-                                type: "number",
-                                value: currentQuantity,
-                                min: "1",
-                                step: "1"
-                            });
-
-                        if (quantity === null) {
-
-                            return;
-
-                        }
-
-                        const normalizedQuantity =
-                            Number(
-                                quantity.replace(
-                                    ",",
-                                    "."
-                                )
-                            );
-
-                        if (
-                            !Number.isFinite(
-                                normalizedQuantity
-                            )
-                            ||
-                            !Number.isInteger(
-                                normalizedQuantity
-                            )
-                            ||
-                            normalizedQuantity <= 0
-                        ) {
-
-                            await showAlert(
-                                i18n.t("project.quantityValidation")
-                            );
-
-                            return;
-
-                        }
-
-                        const updatedNodeArticle =
-                            await updateNodeArticlePosition(
-                                positionId,
-                                {
-                                    quantity:
-                                        normalizedQuantity
-                                }
-                            );
-
-                        updateNodeArticleElement(
-                            article,
-                            updatedNodeArticle,
-                            projectId
-                        );
-
-                        return;
-
-                    }
-
                     if (action === "duplicate") {
 
                         await duplicateNodeArticle(
@@ -4825,6 +4764,113 @@ function registerNodeArticleMenus(
                     }
 
                 }
+            );
+
+        });
+
+}
+
+function registerNodeArticleQuantityInputs(
+    projectId
+) {
+
+    document
+        .querySelectorAll(
+            ".node-article-quantity-input"
+        )
+        .forEach(input => {
+
+            if (
+                input.dataset.quantityRegistered
+                ===
+                "true"
+            ) {
+
+                return;
+
+            }
+
+            input.dataset.quantityRegistered =
+                "true";
+
+            const article =
+                input.closest(
+                    ".node-article"
+                );
+
+            const saveQuantity =
+                async () => {
+
+                    const quantity =
+                        Number(input.value);
+
+                    if (
+                        !Number.isInteger(quantity)
+                        ||
+                        quantity <= 0
+                    ) {
+
+                        input.value =
+                            article?.dataset.quantity
+                            ||
+                            "1";
+
+                        await showAlert(
+                            i18n.t("project.quantityValidation")
+                        );
+
+                        return;
+
+                    }
+
+                    if (
+                        String(quantity)
+                        ===
+                        article.dataset.quantity
+                    ) {
+
+                        return;
+
+                    }
+
+                    const updatedNodeArticle =
+                        await updateNodeArticlePosition(
+                            article.dataset.id,
+                            { quantity }
+                        );
+
+                    updateNodeArticleElement(
+                        article,
+                        updatedNodeArticle,
+                        projectId
+                    );
+
+                };
+
+            input.addEventListener(
+                "click",
+                event => event.stopPropagation()
+            );
+
+            input.addEventListener(
+                "keydown",
+                event => {
+
+                    event.stopPropagation();
+
+                    if (event.key === "Enter") {
+
+                        event.preventDefault();
+                        input.blur();
+
+                    }
+
+                }
+            );
+
+            input.addEventListener(
+                "change",
+                saveQuantity
             );
 
         });
@@ -5719,6 +5765,10 @@ async function duplicateNodeArticle(
         projectId
     );
 
+    registerNodeArticleQuantityInputs(
+        projectId
+    );
+
     registerNodeArticleDragAndDrop(
         projectId
     );
@@ -5760,6 +5810,10 @@ function updateNodeArticleElement(
     if (updatedArticleElement) {
 
         registerNodeArticleMenus(
+            projectId
+        );
+
+        registerNodeArticleQuantityInputs(
             projectId
         );
 

@@ -1138,12 +1138,19 @@ function buildProjectExportData(
             totals.projectDiscount
         );
 
+    const nodeTotals =
+        calculateExportNodeTotals(
+            nodes,
+            positions
+        );
+
     return {
         project,
         nodes,
         nodesById,
         orderedNodes,
         positions,
+        nodeTotals,
         totals
     };
 
@@ -1963,7 +1970,8 @@ function buildExcelPrintableStructureSheet(
         project,
         totals,
         orderedNodes,
-        positions
+        positions,
+        nodeTotals
     } = exportData;
 
     const includePrices =
@@ -2173,7 +2181,94 @@ function buildExcelPrintableStructureSheet(
             positions
         );
 
+    const addNodeSubtotal =
+        node => {
+
+            if (!includePrices) {
+
+                return;
+
+            }
+
+            const nodeTotal =
+                nodeTotals.get(
+                    String(node.id)
+                );
+
+            const subtotal =
+                priceMode === "list"
+                    ? nodeTotal?.listTotal ?? 0
+                    : nodeTotal?.discountedTotal ?? 0;
+
+            const displayedSubtotal =
+                priceMode === "discounted"
+                    ? subtotal * projectDiscountFactor
+                    : subtotal;
+
+            const subtotalRow =
+                sheet.addRow(
+                    includeDiscounts
+                        ? [
+                            `${"  ".repeat(node.depth)}Zwischenpreis ${projectNodeTypeLabels[node.type] ?? node.type}: ${node.name ?? ""}`,
+                            "",
+                            "",
+                            "",
+                            "",
+                            "",
+                            roundCurrency(displayedSubtotal),
+                            ""
+                        ]
+                        : [
+                            `${"  ".repeat(node.depth)}Zwischenpreis ${projectNodeTypeLabels[node.type] ?? node.type}: ${node.name ?? ""}`,
+                            "",
+                            "",
+                            "",
+                            "",
+                            roundCurrency(displayedSubtotal),
+                            ""
+                        ]
+                );
+
+            subtotalRow.font = {
+                bold: true,
+                color: {
+                    argb: "FF1F3552"
+                }
+            };
+
+            subtotalRow.fill = {
+                type: "pattern",
+                pattern: "solid",
+                fgColor: {
+                    argb: "FFF5F8FC"
+                }
+            };
+
+            subtotalRow.getCell(
+                includeDiscounts ? 7 : 6
+            ).numFmt =
+                "#,##0.00 €";
+
+        };
+
+    const openNodes =
+        [];
+
     orderedNodes.forEach(node => {
+
+        while (
+            openNodes.length > 0
+            &&
+            openNodes[openNodes.length - 1].depth
+            >=
+            node.depth
+        ) {
+
+            addNodeSubtotal(
+                openNodes.pop()
+            );
+
+        }
 
         const row =
             sheet.addRow([
@@ -2295,7 +2390,17 @@ function buildExcelPrintableStructureSheet(
 
         });
 
+        openNodes.push(node);
+
     });
+
+    while (openNodes.length > 0) {
+
+        addNodeSubtotal(
+            openNodes.pop()
+        );
+
+    }
 
     if (includePrices) {
 
@@ -3230,6 +3335,127 @@ function groupPositionsByNodeId(
     });
 
     return positionsByNodeId;
+
+}
+
+function calculateExportNodeTotals(
+    nodes,
+    positions
+) {
+
+    const positionsByNodeId =
+        groupPositionsByNodeId(
+            positions
+        );
+
+    const childrenByParentId =
+        new Map();
+
+    nodes.forEach(node => {
+
+        const parentId =
+            node.parentId === null
+            ||
+            node.parentId === undefined
+                ? "root"
+                : String(node.parentId);
+
+        if (!childrenByParentId.has(parentId)) {
+
+            childrenByParentId.set(
+                parentId,
+                []
+            );
+
+        }
+
+        childrenByParentId
+            .get(parentId)
+            .push(node);
+
+    });
+
+    const totalsByNodeId =
+        new Map();
+
+    const calculateNodeTotal =
+        node => {
+
+            const ownTotal =
+                (
+                    positionsByNodeId.get(
+                        String(node.id)
+                    )
+                    ||
+                    []
+                ).reduce(
+                    (total, position) => ({
+                        listTotal:
+                            total.listTotal
+                            +
+                            position.listTotal,
+                        discountedTotal:
+                            total.discountedTotal
+                            +
+                            position.discountedTotal
+                    }),
+                    {
+                        listTotal: 0,
+                        discountedTotal: 0
+                    }
+                );
+
+            const total =
+                (
+                    childrenByParentId.get(
+                        String(node.id)
+                    )
+                    ||
+                    []
+                ).reduce(
+                    (sum, child) => {
+
+                        const childTotal =
+                            calculateNodeTotal(child);
+
+                        return {
+                            listTotal:
+                                sum.listTotal
+                                +
+                                childTotal.listTotal,
+                            discountedTotal:
+                                sum.discountedTotal
+                                +
+                                childTotal.discountedTotal
+                        };
+
+                    },
+                    ownTotal
+                );
+
+            const roundedTotal = {
+                listTotal:
+                    roundCurrency(total.listTotal),
+                discountedTotal:
+                    roundCurrency(total.discountedTotal)
+            };
+
+            totalsByNodeId.set(
+                String(node.id),
+                roundedTotal
+            );
+
+            return roundedTotal;
+
+        };
+
+    (
+        childrenByParentId.get("root")
+        ||
+        []
+    ).forEach(calculateNodeTotal);
+
+    return totalsByNodeId;
 
 }
 

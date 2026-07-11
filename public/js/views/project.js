@@ -3,6 +3,7 @@ await i18n.loadLanguage("de");
 
 import * as utils from "../utils/icons.js";
 import * as router from "../router.js";
+import * as settings from "../utils/settings.js";
 import {
     showAlert,
     showConfirm
@@ -300,6 +301,8 @@ const view =
 async function renderView(
     projectId
 ) {
+
+    await settings.load();
 
     loadCollapsedNodes(
         projectId
@@ -929,7 +932,7 @@ function renderFavoriteArticles(
 
 function areArticleFavoritesCollapsed() {
 
-    return localStorage.getItem(
+    return settings.getItem(
         articleFavoritesCollapsedStorageKey
     )
     ===
@@ -941,7 +944,7 @@ function saveArticleFavoritesCollapsed(
     isCollapsed
 ) {
 
-    localStorage.setItem(
+    settings.setItem(
         articleFavoritesCollapsedStorageKey,
         isCollapsed
             ? "true"
@@ -963,7 +966,7 @@ function getFavoriteArticleNumberList() {
     try {
 
         return JSON.parse(
-                localStorage.getItem(
+                settings.getItem(
                     articleFavoritesStorageKey
                 )
                 ||
@@ -982,7 +985,7 @@ function saveFavoriteArticleNumberList(
     favoriteArticleNumbers
 ) {
 
-    localStorage.setItem(
+    settings.setItem(
         articleFavoritesStorageKey,
         JSON.stringify(
             favoriteArticleNumbers.map(String)
@@ -995,7 +998,7 @@ function saveFavoriteArticleNumbers(
     favoriteArticleNumbers
 ) {
 
-    localStorage.setItem(
+    settings.setItem(
         articleFavoritesStorageKey,
         JSON.stringify(
             Array.from(
@@ -2042,7 +2045,7 @@ function loadCollapsedNodes(
         collapsedNodes =
             new Set(
                 JSON.parse(
-                    localStorage.getItem(
+                    settings.getItem(
                         getCollapsedNodesStorageKey(
                             projectId
                         )
@@ -2065,7 +2068,7 @@ function saveCollapsedNodes(
     projectId
 ) {
 
-    localStorage.setItem(
+    settings.setItem(
         getCollapsedNodesStorageKey(
             projectId
         ),
@@ -2092,7 +2095,7 @@ function isProjectDescriptionOpen(
 ) {
 
     const storedValue =
-        localStorage.getItem(
+        settings.getItem(
             getProjectDescriptionCollapsedStorageKey(
                 projectId
             )
@@ -2135,7 +2138,7 @@ function registerProjectDescriptionPersistence(
         "toggle",
         () => {
 
-            localStorage.setItem(
+            settings.setItem(
                 getProjectDescriptionCollapsedStorageKey(
                     projectId
                 ),

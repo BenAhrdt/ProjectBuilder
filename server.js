@@ -7,6 +7,7 @@ import customersRouter from "./routes/customers.js";
 import projectsRouter from "./routes/projects.js";
 import projectNodesRouter from "./routes/projectNodes.js";
 import projectNodeArticlesRouter from "./routes/projectNodeArticles.js";
+import settingsRouter from "./routes/settings.js";
 
 const app = express()
 
@@ -83,6 +84,8 @@ app.use(
     "/api/projectNodeArticles",
     projectNodeArticlesRouter
 );
+
+app.use("/api/settings", settingsRouter);
 
 // --------------------------------------------------
 // SPA Catch-All

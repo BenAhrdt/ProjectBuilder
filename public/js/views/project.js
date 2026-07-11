@@ -390,9 +390,20 @@ async function renderView(
 
     view.innerHTML = `
 
-        <div class="view-header">
+        <div class="view-header project-view-header">
 
-            ${project.name}
+            <span class="project-view-title">
+                ${project.name}
+            </span>
+
+            <div
+                id="project-price-summary"
+                class="project-price-summary"
+            >
+
+                ${renderProjectPriceSummary(projectTotals)}
+
+            </div>
 
         </div>
 
@@ -534,15 +545,6 @@ async function renderView(
                     <h2>
                         ${i18n.t("project.projectStructure")}
                     </h2>
-
-                    <div
-                        id="project-price-summary"
-                        class="project-price-summary"
-                    >
-
-                        ${renderProjectPriceSummary(projectTotals)}
-
-                    </div>
 
                     <div class="project-root-actions">
 

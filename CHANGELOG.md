@@ -2,6 +2,18 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.0.4 - 11.07.2026
+
+### Geändert
+
+- Preisübersicht wurde aus der linken Projektstruktur in den oberen Projektkopf verschoben.
+- Listenpreis, Rabatt, Projektrabatt und rabattierter Preis werden kompakt neben dem Projektnamen angezeigt.
+- Die Projektstruktur bietet dadurch mehr Platz für Gebäude, Positionen und Artikel.
+
+### Behoben
+
+- Preisübersicht passt sich bei kleineren Fensterbreiten responsiv an.
+
 ## 1.0.3 - 11.07.2026
 
 ### Geändert

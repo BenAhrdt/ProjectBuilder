@@ -4,6 +4,19 @@
 
 }
 
+.project-view-header {
+    justify-content: space-between;
+    gap: 28px;
+    padding-right: 2%;
+}
+
+.project-view-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .project-card {
 
     background: var(--color-accent);
@@ -546,11 +559,19 @@
 
     display: grid;
 
-    gap: 8px;
+    grid-template-columns:
+        repeat(
+            4,
+            minmax(115px, 1fr)
+        );
 
-    margin-bottom: 18px;
+    gap: 0;
 
-    padding: 12px;
+    width: min(680px, 65%);
+
+    margin: 8px 0;
+
+    padding: 9px 12px;
 
     border: 1px solid #d9e1ec;
 
@@ -564,13 +585,25 @@
 
     display: flex;
 
-    justify-content: space-between;
+    flex-direction: column;
 
-    gap: 12px;
+    justify-content: center;
+
+    gap: 3px;
+
+    padding: 0 14px;
+
+    border-left: 1px solid #d9e1ec;
 
     color: #526173;
 
     font-size: 13px;
+
+}
+
+.project-price-summary-item:first-child {
+
+    border-left: 0;
 
 }
 
@@ -586,15 +619,32 @@
 
 .project-price-summary-total {
 
-    margin-top: 4px;
+    margin-top: 0;
 
-    padding-top: 8px;
+    padding-top: 0;
 
-    border-top: 1px solid #d9e1ec;
+    border-top: 0;
 
     color: #1f3552;
 
     font-weight: 700;
+
+}
+
+@media (max-width: 1250px) {
+
+    .project-view-header {
+        align-items: stretch;
+        flex-direction: column;
+        justify-content: center;
+        padding-top: 12px;
+        padding-bottom: 12px;
+    }
+
+    .project-view-header .project-price-summary {
+        width: 100%;
+        margin: 0;
+    }
 
 }
 

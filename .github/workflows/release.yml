@@ -40,3 +40,23 @@ jobs:
         run: npm run dist:win -- --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update-Dateien vollständig veröffentlichen
+        shell: pwsh
+        run: |
+          $version = node -p "require('./package.json').version"
+          $installer = "release/ProjectBuilder Setup $version.exe"
+          $blockmap = "$installer.blockmap"
+          $installerTarget = "release/ProjectBuilder-Setup-$version.exe"
+          $blockmapTarget = "$installerTarget.blockmap"
+
+          Copy-Item -LiteralPath $installer -Destination $installerTarget -Force
+          Copy-Item -LiteralPath $blockmap -Destination $blockmapTarget -Force
+
+          gh release upload $env:GITHUB_REF_NAME `
+            $installerTarget `
+            $blockmapTarget `
+            "release/latest.yml" `
+            --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

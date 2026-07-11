@@ -4,6 +4,10 @@ import * as utils from "../utils/icons.js";
 import * as router from "../router.js";
 
 const navbar = document.getElementById('navbar');
+const versionResponse = await fetch("/api/version");
+const { version } = versionResponse.ok
+    ? await versionResponse.json()
+    : { version: "unbekannt" };
 
 navbar.innerHTML = `
     <div class="searchBox">
@@ -38,10 +42,23 @@ navbar.innerHTML = `
         <div id="navbar-information-1" class="navbar-information">
         </div>
         <div id="navbar-information-version" class="navbar-information">
-            Aktuelle Version: 1.0.0
+            <span>Aktuelle Version: ${version}</span>
+            <button
+                id="navbar-changelog-button"
+                type="button"
+                title="Changelog öffnen"
+                aria-label="Changelog öffnen"
+            >
+                ${utils.icons.book}
+            </button>
         </div>
     </div>
 `;
+
+document.getElementById("navbar-changelog-button").addEventListener(
+    "click",
+    () => router.navigate("/changelog")
+);
 
 // Clickhandler
 const navbarItems = document.querySelectorAll(".navbar-item");
@@ -61,5 +78,5 @@ export function setItemsActive(dataView) {
 
         // Item active setzen
         const item = document.querySelector(`[data-view="${dataView}"]`);
-        item.classList.add("active");
+        item?.classList.add("active");
 }

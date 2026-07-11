@@ -193,4 +193,23 @@
     grid-area: version;
     padding-left: 20px;
     color: black;
+    gap: 8px;
+}
+
+#navbar-changelog-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: #374151;
+    cursor: pointer;
+}
+
+#navbar-changelog-button:hover,
+#navbar-changelog-button:focus-visible {
+    background: #e5e7eb;
+    color: #111827;
 }

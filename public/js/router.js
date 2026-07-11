@@ -5,6 +5,7 @@ import * as navbar from "./base/navbar.js";
 import * as customer from "./views/customer.js";
 import * as projects from "./views/projects.js";
 import * as project from "./views/project.js";
+import * as changelog from "./views/changelog.js";
 
 const routes = {
     "/": {
@@ -30,6 +31,10 @@ const routes = {
     "/projects": {
         render: projects.renderView,
         active: "projects",
+    },
+    "/changelog": {
+        render: changelog.renderView,
+        active: null,
     },
 };
 

@@ -1,4 +1,5 @@
 import express from "express"
+import fs from "fs"
 import path from "path"
 import { fileURLToPath, pathToFileURL } from "url"
 import * as database from "./database/index.js";
@@ -17,6 +18,9 @@ const app = express()
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+const packageVersion = JSON.parse(
+    fs.readFileSync(path.join(__dirname, "package.json"), "utf8")
+).version
 
 // --------------------------------------------------
 // Middleware
@@ -40,6 +44,16 @@ app.get("/api", (req, res) => {
         status: "ProjectBuilder API läuft"
     })
 
+})
+
+app.get("/api/version", (req, res) => {
+    res.json({ version: packageVersion })
+})
+
+app.get("/api/changelog", (req, res) => {
+    res.type("text/markdown").send(
+        fs.readFileSync(path.join(__dirname, "CHANGELOG.md"), "utf8")
+    )
 })
 
 // --------------------------------------------------

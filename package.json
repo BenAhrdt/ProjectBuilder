@@ -1,13 +1,15 @@
 {
   "name": "projectbuilder",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "type": "module",
   "description": "",
   "main": "electron/main.js",
   "scripts": {
-    "start": "node server.js",
-    "start:electron": "electron .",
-    "electron": "electron .",
+    "rebuild:node": "npm rebuild better-sqlite3 sqlite3",
+    "rebuild:electron": "electron-rebuild -f -w better-sqlite3 -w sqlite3",
+    "start": "npm run rebuild:node && node server.js",
+    "start:electron": "npm run rebuild:electron && electron .",
+    "electron": "npm run start:electron",
     "dist:win": "electron-builder --win nsis",
     "test": "node --test"
   },
@@ -62,6 +64,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.2.0",
     "electron": "^39.8.3",
     "electron-builder": "^26.15.3"
   }

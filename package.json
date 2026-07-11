@@ -1,21 +1,67 @@
 {
-  "name": "ProjectBuilder",
+  "name": "projectbuilder",
   "version": "1.0.0",
   "type": "module",
   "description": "",
-  "main": "server.js",
+  "main": "electron/main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "start:electron": "electron .",
+    "electron": "electron .",
+    "dist:win": "electron-builder --win nsis",
+    "test": "node --test"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "build": {
+    "appId": "de.benahrdt.projectbuilder",
+    "productName": "ProjectBuilder",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "icon.png",
+      "server.js",
+      "database/**/*",
+      "routes/**/*",
+      "utils/**/*",
+      "public/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "deleteAppDataOnUninstall": false
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "BenAhrdt",
+      "repo": "ProjectBuilder",
+      "releaseType": "release"
+    }
+  },
   "dependencies": {
     "better-sqlite3": "^12.10.0",
+    "electron-updater": "^6.8.9",
     "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "multer": "^2.1.1",
     "sqlite3": "^6.0.1",
     "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "electron": "^39.8.3",
+    "electron-builder": "^26.15.3"
   }
 }

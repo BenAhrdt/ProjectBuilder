@@ -1,5 +1,6 @@
 import Database from "better-sqlite3";
-const articles = new Database("./database/projectbuilder.db");
+import { getDatabasePath } from "./config.js";
+const articles = new Database(getDatabasePath());
 
 // --------------------------------------------------
 // Tabellen

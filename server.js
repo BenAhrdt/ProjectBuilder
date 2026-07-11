@@ -1,6 +1,6 @@
 import express from "express"
 import path from "path"
-import { fileURLToPath } from "url"
+import { fileURLToPath, pathToFileURL } from "url"
 import * as database from "./database/index.js";
 import articlesRoutes from "./routes/articles.js";
 import customersRouter from "./routes/customers.js";
@@ -98,10 +98,20 @@ app.use((req, res) => {
 // Start
 // --------------------------------------------------
 
-const PORT = 3000
+export function startServer({ port = 3000, host = "127.0.0.1" } = {}) {
+    return new Promise((resolve, reject) => {
+        const server = app.listen(port, host, () => resolve(server));
+        server.once("error", reject);
+    });
+}
 
-app.listen(PORT, () => {
+const isDirectStart = process.argv[1]
+    && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
 
-    console.log(`Server läuft auf Port ${PORT}`)
+if (isDirectStart) {
+    const port = Number.parseInt(process.env.PORT ?? "3000", 10);
+    const server = await startServer({ port });
+    console.log(`Server läuft auf http://127.0.0.1:${server.address().port}`);
+}
 
-})
+export { app };

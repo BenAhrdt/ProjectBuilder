@@ -1,8 +1,9 @@
 import Database from "better-sqlite3";
+import { getDatabasePath } from "./config.js";
 
 const database =
     new Database(
-        "./database/projectbuilder.db"
+        getDatabasePath()
     );
 
 database.exec(`

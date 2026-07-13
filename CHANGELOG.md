@@ -2,6 +2,13 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.0.6 - 13.07.2026
+
+### Behoben
+
+- Zwischensummen in der ersten Druckansicht werden mit den rabattierten Positionspreisen statt mit Listenpreisen berechnet.
+- Die Preislogik der separaten Ansichten für Listenpreise und rabattierte Preise bleibt unverändert.
+
 ## 1.0.5 - 13.07.2026
 
 ### Behoben

@@ -2210,12 +2210,14 @@ function buildExcelPrintableStructureSheet(
                 );
 
             const subtotal =
-                priceMode === "list"
-                    ? nodeTotal?.listTotal ?? 0
-                    : nodeTotal?.discountedTotal ?? 0;
+                includeDiscounts
+                || priceMode === "discounted"
+                    ? nodeTotal?.discountedTotal ?? 0
+                    : nodeTotal?.listTotal ?? 0;
 
             const displayedSubtotal =
-                priceMode === "discounted"
+                !includeDiscounts
+                && priceMode === "discounted"
                     ? subtotal * projectDiscountFactor
                     : subtotal;
 

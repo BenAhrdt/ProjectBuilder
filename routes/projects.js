@@ -1,6 +1,7 @@
 import express from "express";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import ExcelJS from "exceljs";
 import multer from "multer";
 import XLSX from "xlsx";
@@ -10,6 +11,19 @@ from "../database/index.js";
 
 const router =
     express.Router();
+
+const __dirname =
+    path.dirname(
+        fileURLToPath(import.meta.url)
+    );
+
+const publicIconsDirectory =
+    path.join(
+        __dirname,
+        "..",
+        "public",
+        "icons"
+    );
 
 const upload =
     multer({
@@ -3601,9 +3615,8 @@ function addExcelIcon(
     }
 
     const iconPath =
-        path.resolve(
-            "public",
-            "icons",
+        path.join(
+            publicIconsDirectory,
             iconName
         );
 
@@ -3657,7 +3670,8 @@ function addExcelIcon(
 
     const imageId =
         workbook.addImage({
-            filename: iconPath,
+            buffer:
+                fs.readFileSync(iconPath),
             extension
         });
 

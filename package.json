@@ -1,6 +1,6 @@
 {
   "name": "projectbuilder",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "type": "module",
   "description": "",
   "main": "electron/main.js",
@@ -11,7 +11,7 @@
     "start:electron": "npm run rebuild:electron && electron .",
     "electron": "npm run start:electron",
     "dist:win": "electron-builder --win nsis",
-    "test": "node --test"
+    "test": "node --test --test-isolation=none"
   },
   "keywords": [],
   "author": "",

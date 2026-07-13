@@ -5,6 +5,12 @@ import * as utils from "../utils/icons.js";
 import * as router from "../router.js";
 import * as settings from "../utils/settings.js";
 import {
+    openProjectOverview
+} from "./projectOverview.js";
+import {
+    calculateStructureUnitPrice
+} from "./projectPricing.js";
+import {
     showAlert,
     showConfirm
 } from "../utils/modal.js";
@@ -15,6 +21,7 @@ let currentArticles = [];
 let currentNodeArticles = [];
 let currentProject = null;
 let currentProjectCustomer = null;
+let currentStructurePriceMode = "list";
 let draggedArticleNumber = null;
 const pendingNodeArticleOrderRequests =
     new Set();
@@ -24,6 +31,8 @@ const articleFavoritesCollapsedStorageKey =
     "projectBuilder.articleFavoritesCollapsed";
 const projectDescriptionCollapsedStorageKey =
     "projectBuilder.projectDescriptionCollapsed";
+const projectStructurePriceModeStorageKey =
+    "projectBuilder.projectStructurePriceMode";
 const articleIconRules = [
     {
         icon: "hdr1te.png",
@@ -304,6 +313,11 @@ async function renderView(
 
     await settings.load();
 
+    currentStructurePriceMode =
+        getProjectStructurePriceMode(
+            projectId
+        );
+
     loadCollapsedNodes(
         projectId
     );
@@ -376,6 +390,7 @@ async function renderView(
 
     const projectTotals =
         calculateProjectTotals(
+            nodes,
             nodeArticles,
             articles,
             currentProjectCustomer,
@@ -423,6 +438,21 @@ async function renderView(
                     </h2>
 
                     <div class="project-card-header-actions">
+
+                        <button
+                            id="show-project-overview"
+                            type="button"
+                            title="${i18n.t("project.showOverview")}"
+                            aria-label="${i18n.t("project.showOverview")}"
+                        >
+                            <span class="project-overview-button-icon">
+                                ${utils.icons.projects}
+                            </span>
+
+                            <span>
+                                ${i18n.t("project.showOverview")}
+                            </span>
+                        </button>
 
                         <button
                             id="export-project-excel"
@@ -542,9 +572,34 @@ async function renderView(
 
                 <div class="project-structure-card">
 
-                    <h2>
-                        ${i18n.t("project.projectStructure")}
-                    </h2>
+                    <div class="project-structure-header">
+                        <h2>
+                            ${i18n.t("project.projectStructure")}
+                        </h2>
+
+                        <div
+                            class="project-structure-price-toggle"
+                            role="group"
+                            aria-label="${i18n.t("project.structurePriceDisplay")}"
+                        >
+                            <button
+                                type="button"
+                                data-price-mode="list"
+                                class="${currentStructurePriceMode === "list" ? "active" : ""}"
+                                aria-pressed="${currentStructurePriceMode === "list"}"
+                            >
+                                ${i18n.t("project.structureListPrices")}
+                            </button>
+                            <button
+                                type="button"
+                                data-price-mode="discounted"
+                                class="${currentStructurePriceMode === "discounted" ? "active" : ""}"
+                                aria-pressed="${currentStructurePriceMode === "discounted"}"
+                            >
+                                ${i18n.t("project.structureDiscountedPrices")}
+                            </button>
+                        </div>
+                    </div>
 
                     <div class="project-root-actions">
 
@@ -627,9 +682,11 @@ async function renderView(
     `;
 
     generateHandler(projectId);
+    registerProjectOverview(projectId);
     registerProjectExport(projectId);
     registerProjectDelete(projectId, project);
     registerProjectDescriptionPersistence(projectId);
+    registerProjectStructurePriceToggle(projectId);
     generateNodeHandler(projectId);
     registerNodeButtons(projectId);
     registerArticleDragSources();
@@ -1011,6 +1068,86 @@ function saveFavoriteArticleNumbers(
 
 }
 
+function getProjectStructurePriceMode(
+    projectId
+) {
+    return settings.getItem(
+        `${projectStructurePriceModeStorageKey}.${projectId}`
+    ) === "discounted"
+        ? "discounted"
+        : "list";
+}
+
+function saveProjectStructurePriceMode(
+    projectId,
+    priceMode
+) {
+    settings.setItem(
+        `${projectStructurePriceModeStorageKey}.${projectId}`,
+        priceMode
+    );
+}
+
+function registerProjectStructurePriceToggle(
+    projectId
+) {
+    const toggle =
+        document.querySelector(
+            ".project-structure-price-toggle"
+        );
+
+    if (!toggle) {
+        return;
+    }
+
+    toggle.addEventListener(
+        "click",
+        event => {
+            const button =
+                event.target.closest(
+                    "button[data-price-mode]"
+                );
+
+            if (!button) {
+                return;
+            }
+
+            currentStructurePriceMode =
+                button.dataset.priceMode
+                ===
+                "discounted"
+                    ? "discounted"
+                    : "list";
+
+            saveProjectStructurePriceMode(
+                projectId,
+                currentStructurePriceMode
+            );
+
+            toggle
+                .querySelectorAll(
+                    "button[data-price-mode]"
+                )
+                .forEach(toggleButton => {
+                    const isActive =
+                        toggleButton.dataset.priceMode
+                        ===
+                        currentStructurePriceMode;
+                    toggleButton.classList.toggle(
+                        "active",
+                        isActive
+                    );
+                    toggleButton.setAttribute(
+                        "aria-pressed",
+                        String(isActive)
+                    );
+                });
+
+            updateProjectStructurePrices();
+        }
+    );
+}
+
 // Render Nodes
 function renderNodes(nodes, nodeArticles, articles, nodeTotals) {
     return renderChildNodes(nodes, nodeArticles, articles, nodeTotals, null);
@@ -1232,8 +1369,13 @@ function renderNodeArticle(
     const quantity =
         Number(nodeArticle.quantity) || 1;
 
+    const unitPrice =
+        getStructureArticleUnitPrice(
+            fullArticle
+        );
+
     const total =
-        getArticleUnitPrice(fullArticle)
+        unitPrice
         *
         quantity;
 
@@ -1287,7 +1429,7 @@ function renderNodeArticle(
                     <span class="node-article-price">
 
                         ${formatQuantity(quantity)} x
-                        ${formatCurrency(getArticleUnitPrice(fullArticle))}
+                        ${formatCurrency(unitPrice)}
                         =
                         ${formatCurrency(total)}
 
@@ -1501,11 +1643,19 @@ function calculateNodeTotals(
 }
 
 function calculateProjectTotals(
+    nodes,
     nodeArticles,
     articles,
     customer,
     project = {}
 ) {
+
+    const projectNodeIds =
+        new Set(
+            nodes.map(node =>
+                String(node.id)
+            )
+        );
 
     const articleByNumber =
         new Map(
@@ -1516,59 +1666,65 @@ function calculateProjectTotals(
         );
 
     const totals =
-        nodeArticles.reduce(
-        (totals, nodeArticle) => {
+        nodeArticles
+            .filter(nodeArticle =>
+                projectNodeIds.has(
+                    String(nodeArticle.projectNodeId)
+                )
+            )
+            .reduce(
+                (totals, nodeArticle) => {
 
-            const article =
-                articleByNumber.get(
-                    String(nodeArticle.articleNumber)
-                );
+                    const article =
+                        articleByNumber.get(
+                            String(nodeArticle.articleNumber)
+                        );
 
-            const quantity =
-                Number(nodeArticle.quantity)
-                ||
-                1;
+                    const quantity =
+                        Number(nodeArticle.quantity)
+                        ||
+                        1;
 
-            const listUnitPrice =
-                getArticleUnitPrice(article);
+                    const listUnitPrice =
+                        getArticleUnitPrice(article);
 
-            const discountPercent =
-                getArticleDiscountPercent(
-                    article,
-                    customer
-                );
+                    const discountPercent =
+                        getArticleDiscountPercent(
+                            article,
+                            customer
+                        );
 
-            const listTotal =
-                listUnitPrice
-                *
-                quantity;
+                    const listTotal =
+                        listUnitPrice
+                        *
+                        quantity;
 
-            const discountedTotal =
-                listTotal
-                *
-                (1 - (discountPercent / 100));
+                    const discountedTotal =
+                        listTotal
+                        *
+                        (1 - (discountPercent / 100));
 
-            totals.listPrice +=
-                listTotal;
+                    totals.listPrice +=
+                        listTotal;
 
-            totals.discount +=
-                listTotal
-                -
-                discountedTotal;
+                    totals.discount +=
+                        listTotal
+                        -
+                        discountedTotal;
 
-            totals.discountedPrice +=
-                discountedTotal;
+                    totals.discountedPrice +=
+                        discountedTotal;
 
-            return totals;
+                    return totals;
 
-        },
-        {
-            listPrice: 0,
-            discount: 0,
-            projectDiscount: 0,
-            discountedPrice: 0
-        }
-    );
+                },
+                {
+                    listPrice: 0,
+                    discount: 0,
+                    projectDiscount: 0,
+                    discountedPrice: 0
+                }
+            );
 
     const projectDiscountPercent =
         normalizeDiscountPercent(
@@ -1661,6 +1817,7 @@ function updateProjectPriceSummary() {
     summary.innerHTML =
         renderProjectPriceSummary(
             calculateProjectTotals(
+                currentNodes,
                 currentNodeArticles,
                 currentArticles,
                 currentProjectCustomer,
@@ -1719,10 +1876,30 @@ function getNodeArticleTotal(
     article
 ) {
 
-    return getArticleUnitPrice(article)
+    return getStructureArticleUnitPrice(article)
         *
         (Number(nodeArticle.quantity) || 1);
 
+}
+
+function getStructureArticleUnitPrice(
+    article
+) {
+    const listPrice =
+        getArticleUnitPrice(article);
+
+    return calculateStructureUnitPrice({
+        listPrice,
+        customerDiscountPercent:
+            getArticleDiscountPercent(
+                article,
+                currentProjectCustomer
+            ),
+        projectDiscountPercent:
+            currentProject?.projectDiscount,
+        priceMode:
+            currentStructurePriceMode
+    });
 }
 
 function getArticleUnitPrice(
@@ -2447,7 +2624,7 @@ function generateHandler(
                             input.value
                     };
 
-                    updateProjectPriceSummary();
+                    updateProjectStructurePrices();
 
                 }
 
@@ -2488,7 +2665,7 @@ function generateHandler(
                     customerSelect.value
                 );
 
-            updateProjectPriceSummary();
+            updateProjectStructurePrices();
 
         }
     );
@@ -2528,6 +2705,158 @@ function registerProjectExport(
         }
     );
 
+}
+
+function updateProjectStructurePrices() {
+
+    document
+        .querySelectorAll(
+            ".node-article"
+        )
+        .forEach(articleElement => {
+            const article =
+                getCurrentArticleByNumber(
+                    articleElement.dataset.articleNumber
+                );
+            const quantity =
+                Number(
+                    articleElement
+                        .querySelector(
+                            ".node-article-quantity-input"
+                        )
+                        ?.value
+                    ??
+                    articleElement.dataset.quantity
+                )
+                ||
+                1;
+            const unitPrice =
+                getStructureArticleUnitPrice(
+                    article
+                );
+            const priceElement =
+                articleElement.querySelector(
+                    ".node-article-price"
+                );
+
+            if (priceElement) {
+                priceElement.textContent =
+                    `${formatQuantity(quantity)} x ${formatCurrency(unitPrice)} = ${formatCurrency(unitPrice * quantity)}`;
+            }
+        });
+
+    updateProjectNodeTotals();
+}
+
+function registerProjectOverview(
+    projectId
+) {
+    const overviewButton =
+        document.getElementById(
+            "show-project-overview"
+        );
+
+    if (!overviewButton) {
+        return;
+    }
+
+    overviewButton.addEventListener(
+        "click",
+        async () => {
+            clearTimeout(
+                saveTimeout
+            );
+            await saveProject(
+                projectId
+            );
+
+            const currentName =
+                document.getElementById(
+                    "project-name"
+                )?.value
+                ??
+                currentProject?.name
+                ??
+                "";
+
+            openProjectOverview({
+                project: {
+                    ...(currentProject ?? {}),
+                    name: currentName
+                },
+                customer:
+                    currentProjectCustomer,
+                nodes:
+                    currentNodes,
+                nodeArticles:
+                    currentNodeArticles,
+                articles:
+                    currentArticles,
+                getArticleIcon,
+                getArticleDiscountPercent,
+                labels: {
+                    title:
+                        i18n.t("project.overviewTitle"),
+                    project:
+                        i18n.t("project.overviewProject"),
+                    empty:
+                        i18n.t("project.overviewEmpty"),
+                    noStructure:
+                        i18n.t("project.overviewNoStructure"),
+                    zoomIn:
+                        i18n.t("project.overviewZoomIn"),
+                    zoomOut:
+                        i18n.t("project.overviewZoomOut"),
+                    fit:
+                        i18n.t("project.overviewFit"),
+                    print:
+                        i18n.t("project.overviewPrint"),
+                    close:
+                        i18n.t("project.overviewClose"),
+                    hint:
+                        i18n.t("project.overviewHint"),
+                    overviewView:
+                        i18n.t("project.overviewView"),
+                    detailView:
+                        i18n.t("project.overviewDetailView"),
+                    page:
+                        i18n.t("project.overviewPage"),
+                    summaryFields:
+                        i18n.t("project.overviewSummaryFields"),
+                    summaryMeters:
+                        i18n.t("project.overviewSummaryMeters"),
+                    summaryPositions:
+                        i18n.t("project.overviewSummaryPositions"),
+                    prices:
+                        i18n.t("project.overviewPrices"),
+                    withoutPrices:
+                        i18n.t("project.overviewWithoutPrices"),
+                    withPrices:
+                        i18n.t("project.overviewWithPrices"),
+                    priceBasis:
+                        i18n.t("project.overviewPriceBasis"),
+                    price:
+                        i18n.t("project.overviewPrice"),
+                    listPrices:
+                        i18n.t("project.structureListPrices"),
+                    discountedPrices:
+                        i18n.t("project.structureDiscountedPrices"),
+                    nodeTypes: {
+                        building:
+                            i18n.t("project.overviewBuilding"),
+                        generalPosition:
+                            i18n.t("project.overviewGeneralPosition"),
+                        panel:
+                            i18n.t("project.overviewPanel"),
+                        field:
+                            i18n.t("project.overviewField"),
+                        meter:
+                            i18n.t("project.overviewMeter")
+                    }
+                }
+            });
+        }
+    );
 }
 
 function registerProjectDelete(

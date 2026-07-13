@@ -2,6 +2,25 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.0.7 - 13.07.2026
+
+### Neu
+
+- Projekte bieten einen automatisch erzeugten SVG-Übersichtsplan mit Zoom, Verschieben und Druckfunktion.
+- Eine vertikale Gesamtübersicht und logisch getrennte Detailseiten je Verteilung stehen zur Auswahl.
+- Detailseiten können mehrseitig im A4-Querformat gedruckt werden.
+- Der Übersichtsplan kann ohne Preise sowie mit Listenpreisen oder rabattierten Zwischensummen dargestellt werden.
+
+### Geändert
+
+- In der Projektstruktur kann projektbezogen zwischen Listenpreisen und rabattierten Artikel- und Zwischensummen umgeschaltet werden.
+- Lange Bezeichnungen im Übersichtsplan werden innerhalb der Karten mehrzeilig dargestellt.
+- Der Übersichtsplan startet mit Detailseiten, rabattierten Preisen und sichtbaren Artikeln.
+
+### Behoben
+
+- Die Preisübersicht im Projektkopf berücksichtigt nur noch Positionen des aktuell geöffneten Projekts.
+
 ## 1.0.6 - 13.07.2026
 
 ### Behoben

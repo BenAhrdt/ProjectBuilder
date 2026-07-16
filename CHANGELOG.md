@@ -2,6 +2,13 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.0.8 - 16.07.2026
+
+### Behoben
+
+- Geänderte Artikelmengen bleiben beim direkten anschließenden Duplizieren oder Löschen von Projektpositionen erhalten.
+- Laufende Mengenänderungen werden vor dem Neuladen der Projektstruktur vollständig gespeichert, sodass Stückzahlen anderer Messstellen nicht mehr auf `1` zurückspringen.
+
 ## 1.0.7 - 13.07.2026
 
 ### Neu

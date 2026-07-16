@@ -25,6 +25,8 @@ let currentStructurePriceMode = "list";
 let draggedArticleNumber = null;
 const pendingNodeArticleOrderRequests =
     new Set();
+const pendingNodeArticleQuantityRequests =
+    new Set();
 const articleFavoritesStorageKey =
     "projectBuilder.articleFavorites";
 const articleFavoritesCollapsedStorageKey =
@@ -706,6 +708,8 @@ async function renderView(
 async function refreshProjectTree(
     projectId
 ) {
+
+    await waitForPendingNodeArticleQuantities();
 
     const nodesResponse =
         await fetch(
@@ -4846,6 +4850,8 @@ function registerProjectNodeMenus(
 
                     if (action === "duplicate") {
 
+                        await waitForPendingNodeArticleQuantities();
+
                         await waitForPendingNodeArticleOrders();
 
                         await fetch(
@@ -4879,6 +4885,8 @@ function registerProjectNodeMenus(
                     }
 
                     if (action === "delete") {
+
+                        await waitForPendingNodeArticleQuantities();
 
                         await fetch(
 
@@ -5075,6 +5083,8 @@ function registerNodeArticleMenus(
 
                     if (action === "delete") {
 
+                        await waitForPendingNodeArticleQuantities();
+
                         await fetch(
 
                             `/api/projectNodeArticles/${positionId}`,
@@ -5167,17 +5177,36 @@ function registerNodeArticleQuantityInputs(
 
                     }
 
-                    const updatedNodeArticle =
-                        await updateNodeArticlePosition(
+                    const request =
+                        updateNodeArticlePosition(
                             article.dataset.id,
                             { quantity }
+                        )
+                            .then(updatedNodeArticle => {
+
+                                updateNodeArticleElement(
+                                    article,
+                                    updatedNodeArticle,
+                                    projectId
+                                );
+
+                            });
+
+                    pendingNodeArticleQuantityRequests.add(
+                        request
+                    );
+
+                    try {
+
+                        await request;
+
+                    } finally {
+
+                        pendingNodeArticleQuantityRequests.delete(
+                            request
                         );
 
-                    updateNodeArticleElement(
-                        article,
-                        updatedNodeArticle,
-                        projectId
-                    );
+                    }
 
                 };
 
@@ -5934,6 +5963,22 @@ async function waitForPendingNodeArticleOrders() {
 
 }
 
+async function waitForPendingNodeArticleQuantities() {
+
+    if (
+        pendingNodeArticleQuantityRequests.size === 0
+    ) {
+
+        return;
+
+    }
+
+    await Promise.all(
+        pendingNodeArticleQuantityRequests
+    );
+
+}
+
 async function updateNodeArticlePosition(
     positionId,
     data
@@ -6019,6 +6064,8 @@ async function duplicateNodeArticle(
     articleElement,
     projectId
 ) {
+
+    await waitForPendingNodeArticleQuantities();
 
     const sourceNodeArticle =
         currentNodeArticles.find(

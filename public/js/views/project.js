@@ -1260,6 +1260,15 @@ function renderChildNodes(nodes, nodeArticles, articles, nodeTotals, parentId) {
 
                         <div class="project-node-menu-options">
 
+                            ${node.type === "meter" ? `
+                                <button
+                                    type="button"
+                                    data-action="properties"
+                                >
+                                    ${i18n.t("project.properties")}
+                                </button>
+                            ` : ""}
+
                             <button
                                 type="button"
                                 data-action="position-name"
@@ -1430,6 +1439,9 @@ function renderNodeArticle(
 
                     </span>
 
+                    ${nodeArticle.isOptional ? `<span class="node-article-property-badge">${i18n.t("project.optional")}</span>` : ""}
+                    ${nodeArticle.isAlternative ? `<span class="node-article-property-badge">${i18n.t("project.alternative")}</span>` : ""}
+
                     <span class="node-article-price">
 
                         ${formatQuantity(quantity)} x
@@ -1461,6 +1473,13 @@ function renderNodeArticle(
                 </button>
 
                 <div class="node-article-menu-options">
+
+                    <button
+                        type="button"
+                        data-action="properties"
+                    >
+                        ${i18n.t("project.properties")}
+                    </button>
 
                     <button
                         type="button"
@@ -1708,6 +1727,15 @@ function calculateProjectTotals(
                         *
                         (1 - (discountPercent / 100));
 
+                    if (nodeArticle.isOptional || nodeArticle.isAlternative) {
+
+                        totals.optionalAlternativeTotal +=
+                            discountedTotal;
+
+                        return totals;
+
+                    }
+
                     totals.listPrice +=
                         listTotal;
 
@@ -1726,7 +1754,8 @@ function calculateProjectTotals(
                     listPrice: 0,
                     discount: 0,
                     projectDiscount: 0,
-                    discountedPrice: 0
+                    discountedPrice: 0,
+                    optionalAlternativeTotal: 0
                 }
             );
 
@@ -1742,6 +1771,9 @@ function calculateProjectTotals(
 
     totals.discountedPrice -=
         totals.projectDiscount;
+
+    totals.optionalAlternativeTotal *=
+        1 - (projectDiscountPercent / 100);
 
     return totals;
 
@@ -1797,6 +1829,18 @@ function renderProjectPriceSummary(
 
             <strong>
                 ${formatCurrency(totals.discountedPrice)}
+            </strong>
+
+        </div>
+
+        <div class="project-price-summary-item">
+
+            <span>
+                ${i18n.t("project.optionalAlternativeTotal")}
+            </span>
+
+            <strong>
+                ${formatCurrency(totals.optionalAlternativeTotal ?? 0)}
             </strong>
 
         </div>
@@ -1879,6 +1923,12 @@ function getNodeArticleTotal(
     nodeArticle,
     article
 ) {
+
+    if (nodeArticle.isOptional || nodeArticle.isAlternative) {
+
+        return 0;
+
+    }
 
     return getStructureArticleUnitPrice(article)
         *
@@ -2176,6 +2226,285 @@ function openProjectModal({
                 ".project-modal-input"
             )
             .select();
+
+    });
+
+}
+
+function openMeterPropertiesModal(
+    node
+) {
+
+    return new Promise(resolve => {
+
+        const modal =
+            document.createElement("div");
+
+        modal.className =
+            "project-modal-backdrop";
+
+        const options =
+            (selectedValue, values) =>
+                values.map(value => `
+                    <option
+                        value="${escapeAttribute(value)}"
+                        ${value === selectedValue ? "selected" : ""}
+                    >${value || "Bitte auswählen"}</option>
+                `).join("");
+
+        const automaticDeviceDesignation =
+            getAutomaticMeterDeviceDesignation(node.id);
+        const automaticLocation =
+            getAutomaticMeterLocation(node.id);
+
+        modal.innerHTML = `
+            <form class="project-modal project-properties-modal">
+                <h3>${i18n.t("project.properties")}</h3>
+
+                <fieldset>
+                    <legend>${i18n.t("project.dataCollectionPlan")}</legend>
+
+                    <label>
+                        ${i18n.t("project.physicalQuantity")}
+                        <input
+                            name="physicalQuantity"
+                            value="${escapeAttribute(node.physicalQuantity || "kWh") }"
+                        >
+                    </label>
+
+                    <label>
+                        ${i18n.t("project.deviceDesignation")}
+                        <input
+                            name="deviceDesignation"
+                            value="${escapeAttribute(node.deviceDesignation || automaticDeviceDesignation)}"
+                            placeholder="${escapeAttribute(automaticDeviceDesignation)}"
+                        >
+                    </label>
+
+                    <label>
+                        ${i18n.t("project.dataCollectionLocation")}
+                        <input
+                            name="dataCollectionLocation"
+                            value="${escapeAttribute(node.dataCollectionLocation || automaticLocation)}"
+                            placeholder="${escapeAttribute(automaticLocation)}"
+                        >
+                    </label>
+
+                    <label>
+                        ${i18n.t("project.fundingObject")}
+                        <select name="fundingObject">
+                            ${options(node.fundingObject || "", ["", "Ja", "Nein"])}
+                        </select>
+                    </label>
+
+                    <label>
+                        ${i18n.t("project.responsibility")}
+                        <input
+                            name="responsibility"
+                            value="${escapeAttribute(node.responsibility || "") }"
+                        >
+                    </label>
+
+                    <label>
+                        ${i18n.t("project.collectionFrequency")}
+                        <input
+                            name="collectionFrequency"
+                            value="${escapeAttribute(node.collectionFrequency || "") }"
+                            placeholder="z. B. Viertelstündlich"
+                        >
+                    </label>
+
+                    <label>
+                        ${i18n.t("project.thirdPartyQuantity")}
+                        <select name="thirdPartyQuantity">
+                            ${options(node.thirdPartyQuantity || "", ["", "Ja", "Nein"])}
+                        </select>
+                    </label>
+                </fieldset>
+
+                <div class="project-modal-actions">
+                    <button type="button" data-action="cancel">
+                        ${i18n.t("project.cancel")}
+                    </button>
+                    <button type="submit">
+                        ${i18n.t("project.save")}
+                    </button>
+                </div>
+            </form>
+        `;
+
+        const close = result => {
+
+            modal.remove();
+            resolve(result);
+
+        };
+
+        modal.addEventListener("mousedown", event => {
+
+            if (event.target === modal) {
+
+                close(null);
+
+            }
+
+        });
+
+        modal.querySelector("[data-action=\"cancel\"]")
+            .addEventListener("click", () => close(null));
+
+        modal.querySelector("form")
+            .addEventListener("submit", event => {
+
+                event.preventDefault();
+
+                const formData =
+                    new FormData(event.currentTarget);
+
+                const enteredLocation =
+                    String(formData.get("dataCollectionLocation") || "").trim();
+
+                close({
+                    physicalQuantity: String(formData.get("physicalQuantity") || "kWh").trim() || "kWh",
+                    deviceDesignation: String(formData.get("deviceDesignation") || "").trim(),
+                    dataCollectionLocation:
+                        enteredLocation === automaticLocation
+                            ? ""
+                            : enteredLocation,
+                    fundingObject: String(formData.get("fundingObject") || ""),
+                    responsibility: String(formData.get("responsibility") || "").trim(),
+                    collectionFrequency: String(formData.get("collectionFrequency") || "").trim(),
+                    thirdPartyQuantity: String(formData.get("thirdPartyQuantity") || "")
+                });
+
+            });
+
+        document.body.appendChild(modal);
+
+        modal.querySelector("[name=\"physicalQuantity\"]").focus();
+
+    });
+
+}
+
+function getAutomaticMeterDeviceDesignation(
+    nodeId
+) {
+
+    const designations =
+        currentNodeArticles
+            .filter(position =>
+                String(position.projectNodeId) === String(nodeId)
+            )
+            .map(position => {
+
+                const article =
+                    getCurrentArticleByNumber(position.articleNumber);
+
+                return article?.manufacturerType
+                    || position.positionName
+                    || position.articleNumber
+                    || "";
+
+            })
+            .filter(Boolean);
+
+    return designations.find(value => /UMG/i.test(value))
+        || designations.find(value => /Modul/i.test(value))
+        || "";
+
+}
+
+function getAutomaticMeterLocation(
+    nodeId
+) {
+
+    const nodesById =
+        new Map(
+            currentNodes.map(node => [
+                String(node.id),
+                node
+            ])
+        );
+    const path = [];
+    const visited = new Set();
+    let node =
+        nodesById.get(String(nodeId));
+
+    while (node && !visited.has(String(node.id))) {
+
+        visited.add(String(node.id));
+        path.unshift(node.name ?? "");
+        node = node.parentId === null || node.parentId === undefined
+            ? null
+            : nodesById.get(String(node.parentId));
+
+    }
+
+    return path.filter(Boolean).join(" / ");
+
+}
+
+function openArticlePropertiesModal(
+    nodeArticle
+) {
+
+    return new Promise(resolve => {
+
+        const modal = document.createElement("div");
+        modal.className = "project-modal-backdrop";
+        modal.innerHTML = `
+            <form class="project-modal project-properties-modal">
+                <h3>${i18n.t("project.properties")}</h3>
+                <fieldset>
+                    <legend>${i18n.t("project.general")}</legend>
+                    <label class="project-properties-checkbox">
+                        <input
+                            type="checkbox"
+                            name="isOptional"
+                            ${nodeArticle.isOptional ? "checked" : ""}
+                        >
+                        <span>${i18n.t("project.optional")}</span>
+                    </label>
+                    <label class="project-properties-checkbox">
+                        <input
+                            type="checkbox"
+                            name="isAlternative"
+                            ${nodeArticle.isAlternative ? "checked" : ""}
+                        >
+                        <span>${i18n.t("project.alternative")}</span>
+                    </label>
+                </fieldset>
+                <p class="project-properties-hint">
+                    ${i18n.t("project.optionalAlternativeHint")}
+                </p>
+                <div class="project-modal-actions">
+                    <button type="button" data-action="cancel">${i18n.t("project.cancel")}</button>
+                    <button type="submit">${i18n.t("project.save")}</button>
+                </div>
+            </form>
+        `;
+
+        const close = result => {
+            modal.remove();
+            resolve(result);
+        };
+
+        modal.addEventListener("mousedown", event => {
+            if (event.target === modal) close(null);
+        });
+        modal.querySelector("[data-action=\"cancel\"]")
+            .addEventListener("click", () => close(null));
+        modal.querySelector("form").addEventListener("submit", event => {
+            event.preventDefault();
+            const formData = new FormData(event.currentTarget);
+            close({
+                isOptional: formData.has("isOptional"),
+                isAlternative: formData.has("isAlternative")
+            });
+        });
+
+        document.body.appendChild(modal);
 
     });
 
@@ -4794,6 +5123,34 @@ function registerProjectNodeMenus(
                     const action =
                         actionButton.dataset.action;
 
+                    if (action === "properties") {
+
+                        const currentNode =
+                            currentNodes.find(item =>
+                                String(item.id) === String(nodeId)
+                            );
+
+                        const properties =
+                            await openMeterPropertiesModal(currentNode ?? {});
+
+                        if (properties === null) {
+
+                            return;
+
+                        }
+
+                        const updatedNode =
+                            await updateProjectNode(
+                                nodeId,
+                                properties
+                            );
+
+                        updateCurrentNode(updatedNode);
+
+                        return;
+
+                    }
+
                     if (action === "position-name") {
 
                         const currentName =
@@ -5025,6 +5382,31 @@ function registerNodeArticleMenus(
 
                     const action =
                         actionButton.dataset.action;
+
+                    if (action === "properties") {
+
+                        const currentPosition =
+                            currentNodeArticles.find(item =>
+                                String(item.id) === String(positionId)
+                            ) ?? {};
+
+                        const properties =
+                            await openArticlePropertiesModal(currentPosition);
+
+                        if (properties === null) {
+
+                            return;
+
+                        }
+
+                        const updatedNodeArticle =
+                            await updateNodeArticlePosition(positionId, properties);
+
+                        updateNodeArticleElement(article, updatedNodeArticle, projectId);
+
+                        return;
+
+                    }
 
                     if (action === "position-name") {
 

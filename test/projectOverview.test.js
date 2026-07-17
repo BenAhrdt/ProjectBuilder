@@ -294,6 +294,61 @@ test(
 );
 
 test(
+    "marks optional articles and excludes them from overview prices",
+    () => {
+        const diagram =
+            buildOverviewDiagram({
+                project: {
+                    name: "Projekt"
+                },
+                nodes: [
+                    {
+                        id: 1,
+                        parentId: null,
+                        type: "meter",
+                        name: "Messstelle"
+                    }
+                ],
+                nodeArticles: [
+                    {
+                        id: 1,
+                        projectNodeId: 1,
+                        articleNumber: "standard",
+                        quantity: 1
+                    },
+                    {
+                        id: 2,
+                        projectNodeId: 1,
+                        articleNumber: "option",
+                        quantity: 1,
+                        isOptional: 1
+                    }
+                ],
+                articles: [
+                    {
+                        articleNumber: "standard",
+                        manufacturerType: "Standardgerät",
+                        listPrice: 100
+                    },
+                    {
+                        articleNumber: "option",
+                        manufacturerType: "Zusatzmodul",
+                        listPrice: 50
+                    }
+                ],
+                getArticleDiscountPercent: () => 0,
+                labels,
+                showPrices: true,
+                priceMode: "list"
+            });
+
+        assert.match(diagram.svg, /Preis: 100,00/);
+        assert.doesNotMatch(diagram.svg, /Preis: 150,00/);
+        assert.match(diagram.svg, /\[OPTIONAL\] Zusatzmodul/);
+    }
+);
+
+test(
     "keeps orphaned nodes visible at the project root",
     () => {
         const diagram =

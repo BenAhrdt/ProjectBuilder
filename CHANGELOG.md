@@ -2,6 +2,18 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.0.9 - 17.07.2026
+
+### Neu
+
+- Messstellen können um Eigenschaften für den Datenerfassungsplan ergänzt werden.
+- Artikelpositionen lassen sich als optional oder alternativ kennzeichnen.
+- Optional- und Alternativpositionen werden separat ausgewiesen und nicht in die reguläre Projektsumme eingerechnet.
+
+### Geändert
+
+- Projektübersicht und Exporte berücksichtigen die neuen Messstellen- und Positionseigenschaften.
+
 ## 1.0.8 - 16.07.2026
 
 ### Behoben

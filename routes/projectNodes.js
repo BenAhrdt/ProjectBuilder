@@ -64,7 +64,14 @@ router.post(
                 parentId,
                 type,
                 name,
-                sortOrder
+                sortOrder,
+                physicalQuantity,
+                deviceDesignation,
+                dataCollectionLocation,
+                fundingObject,
+                responsibility,
+                collectionFrequency,
+                thirdPartyQuantity
 
             )
 
@@ -74,7 +81,14 @@ router.post(
                 @parentId,
                 @type,
                 @name,
-                @sortOrder
+                @sortOrder,
+                @physicalQuantity,
+                @deviceDesignation,
+                @dataCollectionLocation,
+                @fundingObject,
+                @responsibility,
+                @collectionFrequency,
+                @thirdPartyQuantity
 
             )
 
@@ -93,7 +107,15 @@ router.post(
                 req.body.name,
 
             sortOrder:
-                req.body.sortOrder ?? nextSortOrder
+                req.body.sortOrder ?? nextSortOrder,
+
+            physicalQuantity: req.body.physicalQuantity ?? "kWh",
+            deviceDesignation: req.body.deviceDesignation ?? "",
+            dataCollectionLocation: req.body.dataCollectionLocation ?? "",
+            fundingObject: req.body.fundingObject ?? "",
+            responsibility: req.body.responsibility ?? "",
+            collectionFrequency: req.body.collectionFrequency ?? "",
+            thirdPartyQuantity: req.body.thirdPartyQuantity ?? ""
 
         });
 
@@ -349,7 +371,14 @@ router.post(
                     parentId,
                     type,
                     name,
-                    sortOrder
+                    sortOrder,
+                    physicalQuantity,
+                    deviceDesignation,
+                    dataCollectionLocation,
+                    fundingObject,
+                    responsibility,
+                    collectionFrequency,
+                    thirdPartyQuantity
 
                 )
 
@@ -359,7 +388,14 @@ router.post(
                     @parentId,
                     @type,
                     @name,
-                    @sortOrder
+                    @sortOrder,
+                    @physicalQuantity,
+                    @deviceDesignation,
+                    @dataCollectionLocation,
+                    @fundingObject,
+                    @responsibility,
+                    @collectionFrequency,
+                    @thirdPartyQuantity
 
                 )
 
@@ -413,7 +449,9 @@ router.post(
                     articleNumber,
                     quantity,
                     positionName,
-                    sortOrder
+                    sortOrder,
+                    isOptional,
+                    isAlternative
 
                 )
 
@@ -423,7 +461,9 @@ router.post(
                     @articleNumber,
                     @quantity,
                     @positionName,
-                    @sortOrder
+                    @sortOrder,
+                    @isOptional,
+                    @isAlternative
 
                 )
 
@@ -451,7 +491,15 @@ router.post(
                                 : node.name,
 
                         sortOrder:
-                            node.sortOrder ?? 0
+                            node.sortOrder ?? 0,
+
+                        physicalQuantity: node.physicalQuantity ?? "kWh",
+                        deviceDesignation: node.deviceDesignation ?? "",
+                        dataCollectionLocation: node.dataCollectionLocation ?? "",
+                        fundingObject: node.fundingObject ?? "",
+                        responsibility: node.responsibility ?? "",
+                        collectionFrequency: node.collectionFrequency ?? "",
+                        thirdPartyQuantity: node.thirdPartyQuantity ?? ""
 
                     });
 
@@ -479,7 +527,10 @@ router.post(
                                 nodeArticle.positionName ?? null,
 
                             sortOrder:
-                                index
+                                index,
+
+                            isOptional: nodeArticle.isOptional ? 1 : 0,
+                            isAlternative: nodeArticle.isAlternative ? 1 : 0
 
                         });
 
@@ -547,7 +598,15 @@ router.patch(
 
             UPDATE projectNodes
 
-            SET name = @name
+            SET
+                name = @name,
+                physicalQuantity = @physicalQuantity,
+                deviceDesignation = @deviceDesignation,
+                dataCollectionLocation = @dataCollectionLocation,
+                fundingObject = @fundingObject,
+                responsibility = @responsibility,
+                collectionFrequency = @collectionFrequency,
+                thirdPartyQuantity = @thirdPartyQuantity
 
             WHERE id = @id
 
@@ -557,7 +616,15 @@ router.patch(
                 req.params.id,
 
             name:
-                req.body.name ?? current.name
+                req.body.name ?? current.name,
+
+            physicalQuantity: req.body.physicalQuantity ?? current.physicalQuantity ?? "kWh",
+            deviceDesignation: req.body.deviceDesignation ?? current.deviceDesignation ?? "",
+            dataCollectionLocation: req.body.dataCollectionLocation ?? current.dataCollectionLocation ?? "",
+            fundingObject: req.body.fundingObject ?? current.fundingObject ?? "",
+            responsibility: req.body.responsibility ?? current.responsibility ?? "",
+            collectionFrequency: req.body.collectionFrequency ?? current.collectionFrequency ?? "",
+            thirdPartyQuantity: req.body.thirdPartyQuantity ?? current.thirdPartyQuantity ?? ""
 
         });
 

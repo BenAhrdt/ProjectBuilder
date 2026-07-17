@@ -57,7 +57,9 @@ router.post(
                 articleNumber,
                 quantity,
                 positionName,
-                sortOrder
+                sortOrder,
+                isOptional,
+                isAlternative
 
             )
 
@@ -67,7 +69,9 @@ router.post(
                 @articleNumber,
                 @quantity,
                 @positionName,
-                @sortOrder
+                @sortOrder,
+                @isOptional,
+                @isAlternative
 
             )
 
@@ -86,7 +90,10 @@ router.post(
                 req.body.positionName ?? null,
 
             sortOrder:
-                req.body.sortOrder ?? nextSortOrder
+                req.body.sortOrder ?? nextSortOrder,
+
+            isOptional: req.body.isOptional ? 1 : 0,
+            isAlternative: req.body.isAlternative ? 1 : 0
 
         });
 
@@ -243,7 +250,9 @@ router.patch(
                 projectNodeId = @projectNodeId,
                 quantity = @quantity,
                 positionName = @positionName,
-                sortOrder = @sortOrder
+                sortOrder = @sortOrder,
+                isOptional = @isOptional,
+                isAlternative = @isAlternative
 
             WHERE id = @id
 
@@ -269,7 +278,17 @@ router.patch(
             sortOrder:
                 Number.isFinite(nextSortOrder)
                     ? nextSortOrder
-                    : current.sortOrder
+                    : current.sortOrder,
+
+            isOptional:
+                req.body.isOptional === undefined
+                    ? current.isOptional
+                    : req.body.isOptional ? 1 : 0,
+
+            isAlternative:
+                req.body.isAlternative === undefined
+                    ? current.isAlternative
+                    : req.body.isAlternative ? 1 : 0
 
         });
 

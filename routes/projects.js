@@ -1055,6 +1055,10 @@ function buildProjectExportData(
                     positions.length,
                 sortOrder:
                     nodeArticle.sortOrder ?? 0,
+                isOptional:
+                    Boolean(nodeArticle.isOptional),
+                isAlternative:
+                    Boolean(nodeArticle.isAlternative),
                 articleNumber:
                     nodeArticle.articleNumber,
                 positionName:
@@ -1111,7 +1115,11 @@ function buildProjectExportData(
     });
 
     const totals =
-        positions.reduce(
+        positions.filter(position =>
+            !position.isOptional
+            &&
+            !position.isAlternative
+        ).reduce(
             (sum, position) => ({
                 listPrice:
                     sum.listPrice
@@ -1129,7 +1137,8 @@ function buildProjectExportData(
             {
                 listPrice: 0,
                 discount: 0,
-                discountedPrice: 0
+                discountedPrice: 0,
+                optionalAlternativeTotal: 0
             }
         );
 
@@ -1150,6 +1159,22 @@ function buildProjectExportData(
             totals.discountedPrice
             -
             totals.projectDiscount
+        );
+
+    totals.optionalAlternativeTotal =
+        roundCurrency(
+            positions
+                .filter(position =>
+                    position.isOptional
+                    ||
+                    position.isAlternative
+                )
+                .reduce(
+                    (sum, position) => sum + position.discountedTotal,
+                    0
+                )
+            *
+            (1 - (projectDiscountPercent / 100))
         );
 
     const nodeTotals =
@@ -1353,7 +1378,14 @@ function importProjectPayload(
                         parentId,
                         type,
                         name,
-                        sortOrder
+                        sortOrder,
+                        physicalQuantity,
+                        deviceDesignation,
+                        dataCollectionLocation,
+                        fundingObject,
+                        responsibility,
+                        collectionFrequency,
+                        thirdPartyQuantity
                     )
 
                     VALUES (
@@ -1361,7 +1393,14 @@ function importProjectPayload(
                         @parentId,
                         @type,
                         @name,
-                        @sortOrder
+                        @sortOrder,
+                        @physicalQuantity,
+                        @deviceDesignation,
+                        @dataCollectionLocation,
+                        @fundingObject,
+                        @responsibility,
+                        @collectionFrequency,
+                        @thirdPartyQuantity
                     )
 
                 `);
@@ -1374,7 +1413,9 @@ function importProjectPayload(
                         articleNumber,
                         quantity,
                         positionName,
-                        sortOrder
+                        sortOrder,
+                        isOptional,
+                        isAlternative
                     )
 
                     VALUES (
@@ -1382,7 +1423,9 @@ function importProjectPayload(
                         @articleNumber,
                         @quantity,
                         @positionName,
-                        @sortOrder
+                        @sortOrder,
+                        @isOptional,
+                        @isAlternative
                     )
 
                 `);
@@ -1431,7 +1474,21 @@ function importProjectPayload(
                         name:
                             node.name ?? "",
                         sortOrder:
-                            Number(node.sortOrder) || 0
+                            Number(node.sortOrder) || 0,
+                        physicalQuantity:
+                            node.physicalQuantity ?? "kWh",
+                        deviceDesignation:
+                            node.deviceDesignation ?? "",
+                        dataCollectionLocation:
+                            node.dataCollectionLocation ?? "",
+                        fundingObject:
+                            node.fundingObject ?? "",
+                        responsibility:
+                            node.responsibility ?? "",
+                        collectionFrequency:
+                            node.collectionFrequency ?? "",
+                        thirdPartyQuantity:
+                            node.thirdPartyQuantity ?? ""
                     });
 
                 oldToNewNodeId.set(
@@ -1468,7 +1525,11 @@ function importProjectPayload(
                         positionName:
                             position.positionName || null,
                         sortOrder:
-                            Number(position.sortOrder) || 0
+                            Number(position.sortOrder) || 0,
+                        isOptional:
+                            position.isOptional ? 1 : 0,
+                        isAlternative:
+                            position.isAlternative ? 1 : 0
                     });
 
                 });
@@ -1813,6 +1874,11 @@ async function buildProjectWorkbookBuffer(
         imageCache
     );
 
+    buildExcelDataCollectionPlanSheet(
+        workbook,
+        exportData
+    );
+
     buildExcelPositionsSheet(
         workbook,
         exportData.positions,
@@ -1830,6 +1896,148 @@ async function buildProjectWorkbookBuffer(
     );
 
     return await workbook.xlsx.writeBuffer();
+
+}
+
+function buildExcelDataCollectionPlanSheet(
+    workbook,
+    {
+        orderedNodes,
+        positions
+    }
+) {
+
+    const sheet =
+        workbook.addWorksheet(
+            "Datenerfassungsplan",
+            {
+                pageSetup: {
+                    orientation: "landscape",
+                    paperSize: 9,
+                    fitToPage: true,
+                    fitToWidth: 1,
+                    fitToHeight: 0
+                }
+            }
+        );
+
+    sheet.columns = [
+        { header: "Variablenname", key: "variableName", width: 24 },
+        { header: "Physikalische Größe", key: "physicalQuantity", width: 24 },
+        { header: "Standort des Messpunktes", key: "location", width: 44 },
+        { header: "Fördergegenstand", key: "fundingObject", width: 18 },
+        { header: "Gerätebezeichnung", key: "deviceName", width: 44 },
+        { header: "Zuständigkeit", key: "responsibility", width: 24 },
+        { header: "Erfassungshäufigkeit", key: "collectionFrequency", width: 22 },
+        { header: "Drittmenge", key: "thirdPartyQuantity", width: 14 }
+    ];
+
+    styleExcelHeaderRow(
+        sheet.getRow(1)
+    );
+
+    const positionsByNodeId =
+        new Map();
+
+    positions.forEach(position => {
+
+        const nodeId =
+            String(position.nodeId);
+
+        if (!positionsByNodeId.has(nodeId)) {
+
+            positionsByNodeId.set(
+                nodeId,
+                []
+            );
+
+        }
+
+        positionsByNodeId.get(nodeId).push(position);
+
+    });
+
+    const meterNodes =
+        orderedNodes.filter(node =>
+            node.type === "meter"
+        );
+
+    meterNodes.forEach(node => {
+
+        const meterPositions =
+            positionsByNodeId.get(String(node.id))
+            ?? [];
+
+        const deviceCandidates =
+            meterPositions
+                .map(position =>
+                    position.manufacturerType
+                    || position.positionName
+                    || position.articleNumber
+                    || ""
+                )
+                .filter(Boolean);
+
+        const automaticDeviceDesignation =
+            deviceCandidates.find(value => /UMG/i.test(value))
+            || deviceCandidates.find(value => /Modul/i.test(value))
+            || "";
+
+        sheet.addRow({
+            variableName:
+                node.name ?? "",
+            physicalQuantity:
+                node.physicalQuantity || "kWh",
+            location:
+                node.dataCollectionLocation || node.pathText || "",
+            fundingObject:
+                node.fundingObject || "Bitte prüfen",
+            deviceName:
+                node.deviceDesignation || automaticDeviceDesignation,
+            responsibility:
+                node.responsibility || "Bitte ergänzen",
+            collectionFrequency:
+                node.collectionFrequency || "Bitte ergänzen",
+            thirdPartyQuantity:
+                node.thirdPartyQuantity || "Bitte prüfen"
+        });
+
+    });
+
+    if (meterNodes.length === 0) {
+
+        sheet.addRow({
+            variableName: "Bitte Messpunkt ergänzen",
+            physicalQuantity: "kWh",
+            location: "Bitte ergänzen",
+            fundingObject: "Bitte prüfen",
+            deviceName: "Bitte ergänzen",
+            responsibility: "Bitte ergänzen",
+            collectionFrequency: "Bitte ergänzen",
+            thirdPartyQuantity: "Bitte prüfen"
+        });
+
+    }
+
+    sheet.autoFilter = {
+        from: "A1",
+        to: `H${Math.max(sheet.rowCount, 1)}`
+    };
+
+    sheet.views = [
+        {
+            state: "frozen",
+            ySplit: 1
+        }
+    ];
+
+    sheet.pageSetup.printTitlesRow =
+        "1:1";
+
+    sheet.pageSetup.printArea =
+        `A1:H${Math.max(sheet.rowCount, 1)}`;
+
+    styleExcelWorksheet(sheet);
 
 }
 
@@ -1928,6 +2136,10 @@ function buildExcelProjectSheet(
             "Rabattierter Preis gesamt",
             roundCurrency(totals.discountedPrice)
         ],
+        [
+            "Optionen / Alternativen gesamt",
+            roundCurrency(totals.optionalAlternativeTotal ?? 0)
+        ],
         [],
         [
             "Export-Version",
@@ -1951,7 +2163,8 @@ function buildExcelProjectSheet(
                 "Listenpreis gesamt",
                 "Rabatt gesamt",
                 "Projektrabatt",
-                "Rabattierter Preis gesamt"
+                "Rabattierter Preis gesamt",
+                "Optionen / Alternativen gesamt"
             ].includes(label)
         ) {
 
@@ -2314,10 +2527,13 @@ function buildExcelPrintableStructureSheet(
             []
         ).forEach(position => {
 
-            const label =
+            const baseLabel =
                 position.positionName
                     ? `${position.positionName} - ${position.manufacturerType}`
                     : position.manufacturerType;
+
+            const label =
+                getExportPositionLabel(position, baseLabel);
 
             const positionRow =
                 sheet.addRow(
@@ -2369,6 +2585,17 @@ function buildExcelPrintableStructureSheet(
                 position.icon
                     ? 38
                     : 18;
+
+            if (position.isOptional || position.isAlternative) {
+
+                positionRow.font = {
+                    italic: true,
+                    color: {
+                        argb: "FF9A6700"
+                    }
+                };
+
+            }
 
             if (includePrices) {
 
@@ -2461,6 +2688,26 @@ function buildExcelPrintableStructureSheet(
             column.width
         )
     );
+
+}
+
+function getExportPositionLabel(
+    position,
+    baseLabel
+) {
+
+    const markers = [
+        position.isOptional
+            ? "OPTIONAL"
+            : "",
+        position.isAlternative
+            ? "ALTERNATIV"
+            : ""
+    ].filter(Boolean);
+
+    return markers.length > 0
+        ? `[${markers.join(" / ")}] ${baseLabel}`
+        : baseLabel;
 
 }
 
@@ -2876,6 +3123,16 @@ function buildExcelPositionsSheet(
             width: 55
         },
         {
+            header: "Optional",
+            key: "isOptional",
+            width: 12
+        },
+        {
+            header: "Alternativ",
+            key: "isAlternative",
+            width: 12
+        },
+        {
             header: "ProjektNodeId",
             key: "nodeId",
             width: 14
@@ -2898,6 +3155,10 @@ function buildExcelPositionsSheet(
                 position:
                     index + 1,
                 ...position,
+                isOptional:
+                    position.isOptional ? "Ja" : "Nein",
+                isAlternative:
+                    position.isAlternative ? "Ja" : "Nein",
                 discountPercent:
                     position.discountPercent / 100,
                 icon:
@@ -2942,7 +3203,7 @@ function buildExcelPositionsSheet(
 
     sheet.autoFilter = {
         from: "A1",
-        to: `V${Math.max(sheet.rowCount, 1)}`
+        to: `X${Math.max(sheet.rowCount, 1)}`
     };
 
     sheet.views = [
@@ -2977,6 +3238,8 @@ function buildExcelPositionsSheet(
             16,
             excelIconColumnWidth,
             55,
+            12,
+            12,
             14,
             12
         ]
@@ -3136,7 +3399,21 @@ function buildExcelImportSheet(
                 name:
                     node.name ?? "",
                 sortOrder:
-                    node.sortOrder ?? 0
+                    node.sortOrder ?? 0,
+                physicalQuantity:
+                    node.physicalQuantity ?? "kWh",
+                deviceDesignation:
+                    node.deviceDesignation ?? "",
+                dataCollectionLocation:
+                    node.dataCollectionLocation ?? "",
+                fundingObject:
+                    node.fundingObject ?? "",
+                responsibility:
+                    node.responsibility ?? "",
+                collectionFrequency:
+                    node.collectionFrequency ?? "",
+                thirdPartyQuantity:
+                    node.thirdPartyQuantity ?? ""
             })),
         positions:
             positions.map(position => ({
@@ -3151,7 +3428,11 @@ function buildExcelImportSheet(
                 positionName:
                     position.positionName,
                 sortOrder:
-                    position.sortOrder ?? 0
+                    position.sortOrder ?? 0,
+                isOptional:
+                    Boolean(position.isOptional),
+                isAlternative:
+                    Boolean(position.isAlternative)
             }))
     };
 
@@ -3404,6 +3685,10 @@ function calculateExportNodeTotals(
                     )
                     ||
                     []
+                ).filter(position =>
+                    !position.isOptional
+                    &&
+                    !position.isAlternative
                 ).reduce(
                     (total, position) => ({
                         listTotal:
@@ -4536,10 +4821,13 @@ function buildPrintableStructureSheet(
             []
         ).forEach(position => {
 
-            const label =
+            const baseLabel =
                 position.positionName
                     ? `${position.positionName} - ${position.manufacturerType}`
                     : position.manufacturerType;
+
+            const label =
+                getExportPositionLabel(position, baseLabel);
 
             rows.push([
                 `${"  ".repeat(node.depth + 1)}${label}`,

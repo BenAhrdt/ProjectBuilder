@@ -776,6 +776,10 @@ function buildOverviewTree({
                 })
                 *
                 (Number(nodeArticle.quantity) || 1),
+            isOptional:
+                Boolean(nodeArticle.isOptional),
+            isAlternative:
+                Boolean(nodeArticle.isAlternative),
             sortOrder:
                 nodeArticle.sortOrder,
             id:
@@ -914,16 +918,26 @@ function calculateTreePriceTotals(
 ) {
     const ownTotals =
         node.articles.reduce(
-            (totals, article) => ({
-                list:
-                    totals.list
-                    +
-                    article.listTotal,
-                discounted:
-                    totals.discounted
-                    +
-                    article.discountedTotal
-            }),
+            (totals, article) => {
+
+                if (article.isOptional || article.isAlternative) {
+
+                    return totals;
+
+                }
+
+                return {
+                    list:
+                        totals.list
+                        +
+                        article.listTotal,
+                    discounted:
+                        totals.discounted
+                        +
+                        article.discountedTotal
+                };
+
+            },
             {
                 list: 0,
                 discounted: 0
@@ -1773,6 +1787,18 @@ function renderDiagramArticle(
     article,
     index
 ) {
+    const markers = [
+        article.isOptional ? "OPTIONAL" : "",
+        article.isAlternative ? "ALTERNATIV" : ""
+    ].filter(Boolean);
+    const displayName =
+        markers.length > 0
+            ? `[${markers.join(" / ")}] ${article.name}`
+            : article.name;
+    const textColor =
+        markers.length > 0
+            ? "#9a6700"
+            : "#26384f";
     const top =
         node.y
         +
@@ -1811,11 +1837,11 @@ function renderDiagramArticle(
         <text
             x="${node.x + 44}"
             y="${top + 12}"
-            fill="#26384f"
+            fill="${textColor}"
             font-family="Arial, sans-serif"
             font-size="11.5"
             font-weight="700"
-        >${escapeXml(truncateText(article.name, 29))}</text>
+        >${escapeXml(truncateText(displayName, 29))}</text>
         <text
             x="${node.x + 44}"
             y="${top + 27}"

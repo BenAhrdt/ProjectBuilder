@@ -26,6 +26,32 @@ projectNodes.prepare(`
 
 `).run();
 
+const projectNodeColumns = new Set(
+    projectNodes.prepare(`PRAGMA table_info(projectNodes)`).all()
+        .map(column => column.name)
+);
+
+[
+    ["physicalQuantity", "TEXT DEFAULT 'kWh'"],
+    ["deviceDesignation", "TEXT DEFAULT ''"],
+    ["dataCollectionLocation", "TEXT DEFAULT ''"],
+    ["fundingObject", "TEXT DEFAULT ''"],
+    ["responsibility", "TEXT DEFAULT ''"],
+    ["collectionFrequency", "TEXT DEFAULT ''"],
+    ["thirdPartyQuantity", "TEXT DEFAULT ''"]
+].forEach(([name, definition]) => {
+
+    if (!projectNodeColumns.has(name)) {
+
+        projectNodes.exec(`
+            ALTER TABLE projectNodes
+            ADD COLUMN ${name} ${definition}
+        `);
+
+    }
+
+});
+
 export {
     projectNodes
 };

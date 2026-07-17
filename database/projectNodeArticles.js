@@ -67,6 +67,18 @@ if (!columns.includes("sortOrder")) {
 
 }
 
+if (!columns.includes("isOptional")) {
+
+    database.exec(`ALTER TABLE projectNodeArticles ADD COLUMN isOptional INTEGER DEFAULT 0`);
+
+}
+
+if (!columns.includes("isAlternative")) {
+
+    database.exec(`ALTER TABLE projectNodeArticles ADD COLUMN isAlternative INTEGER DEFAULT 0`);
+
+}
+
 export {
     database as projectNodeArticles
 };

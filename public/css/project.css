@@ -1813,3 +1813,114 @@ body.project-overview-open {
     color: white;
 
 }
+
+.project-properties-modal {
+
+    width: min(520px, calc(100vw - 32px));
+
+}
+
+.project-properties-modal fieldset {
+
+    display: grid;
+
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    gap: 14px;
+
+    padding: 16px;
+
+    border: 1px solid #dbe3ed;
+
+    border-radius: 8px;
+
+}
+
+.project-properties-modal legend {
+
+    padding: 0 6px;
+
+    font-weight: 700;
+
+}
+
+.project-properties-modal label {
+
+    margin: 0;
+
+}
+
+.project-properties-modal input,
+.project-properties-modal select {
+
+    width: 100%;
+
+    box-sizing: border-box;
+
+    margin-top: 6px;
+
+    padding: 9px 10px;
+
+    border: 1px solid #cfd8e3;
+
+    border-radius: 8px;
+
+    background: white;
+
+    font: inherit;
+
+}
+
+.project-properties-modal .project-properties-checkbox {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 9px;
+
+}
+
+.project-properties-modal .project-properties-checkbox input {
+
+    width: auto;
+
+    margin: 0;
+
+}
+
+.project-properties-hint {
+
+    margin: 12px 0 0;
+
+    color: #64748b;
+
+    font-size: 13px;
+
+}
+
+.node-article-property-badge {
+
+    padding: 2px 6px;
+
+    border-radius: 999px;
+
+    background: #e8eef7;
+
+    color: #334155;
+
+    font-size: 11px;
+
+    font-weight: 700;
+
+}
+
+@media (max-width: 560px) {
+
+    .project-properties-modal fieldset {
+
+        grid-template-columns: 1fr;
+
+    }
+
+}

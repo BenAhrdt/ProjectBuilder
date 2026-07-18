@@ -35,6 +35,11 @@ const projectDescriptionCollapsedStorageKey =
     "projectBuilder.projectDescriptionCollapsed";
 const projectStructurePriceModeStorageKey =
     "projectBuilder.projectStructurePriceMode";
+const projectStructureWidthStorageKey =
+    "projectBuilder.projectStructureWidth";
+const defaultProjectStructureWidth = 495;
+const minimumProjectStructureWidth = 360;
+const minimumProjectArticlesWidth = 480;
 const articleIconRules = [
     {
         icon: "hdr1te.png",
@@ -657,6 +662,15 @@ async function renderView(
 
                 </div>
 
+                <div
+                    class="project-editor-resizer"
+                    role="separator"
+                    aria-orientation="vertical"
+                    aria-label="${i18n.t("project.resizeStructure")}"
+                    title="${i18n.t("project.resizeStructure")}"
+                    tabindex="0"
+                ></div>
+
                 <div class="project-articles-card">
 
                     <h2>
@@ -700,6 +714,7 @@ async function renderView(
     registerProjectDelete(projectId, project);
     registerProjectDescriptionPersistence(projectId);
     registerProjectStructurePriceToggle(projectId);
+    registerProjectEditorResizer(projectId);
     generateNodeHandler(projectId);
     registerNodeButtons(projectId);
     registerArticleDragSources();
@@ -1101,6 +1116,184 @@ function saveProjectStructurePriceMode(
         `${projectStructurePriceModeStorageKey}.${projectId}`,
         priceMode
     );
+}
+
+function getProjectStructureWidth(
+    projectId
+) {
+    const storedWidth = Number(
+        settings.getItem(
+            `${projectStructureWidthStorageKey}.${projectId}`
+        )
+    );
+
+    return Number.isFinite(storedWidth)
+        && storedWidth >= minimumProjectStructureWidth
+        ? storedWidth
+        : defaultProjectStructureWidth;
+}
+
+function saveProjectStructureWidth(
+    projectId,
+    width
+) {
+    settings.setItem(
+        `${projectStructureWidthStorageKey}.${projectId}`,
+        String(Math.round(width))
+    );
+}
+
+function registerProjectEditorResizer(
+    projectId
+) {
+    const editor =
+        document.querySelector(
+            ".project-editor"
+        );
+    const resizer =
+        editor?.querySelector(
+            ".project-editor-resizer"
+        );
+
+    if (!editor || !resizer) {
+        return;
+    }
+
+    let preferredWidth =
+        getProjectStructureWidth(projectId);
+    let renderedWidth = preferredWidth;
+    let dragStartX = 0;
+    let dragStartWidth = 0;
+
+    const applyWidth = width => {
+        const maximumWidth = Math.max(
+            minimumProjectStructureWidth,
+            editor.clientWidth
+                - resizer.offsetWidth
+                - minimumProjectArticlesWidth
+        );
+
+        renderedWidth = Math.min(
+            maximumWidth,
+            Math.max(
+                minimumProjectStructureWidth,
+                width
+            )
+        );
+
+        editor.style.setProperty(
+            "--project-structure-width",
+            `${renderedWidth}px`
+        );
+        resizer.setAttribute(
+            "aria-valuemin",
+            String(minimumProjectStructureWidth)
+        );
+        resizer.setAttribute(
+            "aria-valuemax",
+            String(Math.round(maximumWidth))
+        );
+        resizer.setAttribute(
+            "aria-valuenow",
+            String(Math.round(renderedWidth))
+        );
+    };
+
+    const finishResize = event => {
+        if (!resizer.classList.contains("dragging")) {
+            return;
+        }
+
+        resizer.classList.remove("dragging");
+        document.body.classList.remove(
+            "project-editor-resizing"
+        );
+
+        if (resizer.hasPointerCapture(event.pointerId)) {
+            resizer.releasePointerCapture(event.pointerId);
+        }
+
+        preferredWidth = renderedWidth;
+        saveProjectStructureWidth(
+            projectId,
+            preferredWidth
+        );
+    };
+
+    resizer.addEventListener(
+        "pointerdown",
+        event => {
+            if (event.button !== 0) {
+                return;
+            }
+
+            dragStartX = event.clientX;
+            dragStartWidth = renderedWidth;
+            resizer.classList.add("dragging");
+            document.body.classList.add(
+                "project-editor-resizing"
+            );
+            resizer.setPointerCapture(event.pointerId);
+            event.preventDefault();
+        }
+    );
+
+    resizer.addEventListener(
+        "pointermove",
+        event => {
+            if (!resizer.classList.contains("dragging")) {
+                return;
+            }
+
+            applyWidth(
+                dragStartWidth
+                    + event.clientX
+                    - dragStartX
+            );
+        }
+    );
+
+    resizer.addEventListener("pointerup", finishResize);
+    resizer.addEventListener("pointercancel", finishResize);
+    resizer.addEventListener(
+        "keydown",
+        event => {
+            if (event.key !== "ArrowLeft"
+                && event.key !== "ArrowRight") {
+                return;
+            }
+
+            preferredWidth = renderedWidth
+                + (event.key === "ArrowRight" ? 10 : -10);
+            applyWidth(preferredWidth);
+            preferredWidth = renderedWidth;
+            saveProjectStructureWidth(
+                projectId,
+                preferredWidth
+            );
+            event.preventDefault();
+        }
+    );
+    resizer.addEventListener(
+        "dblclick",
+        () => {
+            preferredWidth = defaultProjectStructureWidth;
+            applyWidth(preferredWidth);
+            saveProjectStructureWidth(
+                projectId,
+                renderedWidth
+            );
+        }
+    );
+
+    applyWidth(preferredWidth);
+
+    if (typeof ResizeObserver !== "undefined") {
+        const resizeObserver = new ResizeObserver(
+            () => applyWidth(preferredWidth)
+        );
+        resizeObserver.observe(editor);
+    }
 }
 
 function registerProjectStructurePriceToggle(

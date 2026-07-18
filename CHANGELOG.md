@@ -2,6 +2,13 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.1.1 - 18.07.2026
+
+### Geändert
+
+- Die Projektstruktur ist standardmäßig zehn Prozent breiter und lässt sich über einen Trenner gegenüber der Artikelliste anpassen.
+- Die gewählte Spaltenbreite wird für jedes Projekt separat gespeichert und beim erneuten Öffnen wiederhergestellt.
+
 ## 1.1.0 - 18.07.2026
 
 ### Neu

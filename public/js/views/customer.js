@@ -17,15 +17,14 @@ async function renderView(
     customerId
 ) {
 
-    const response =
-        await fetch(
+    const [customerResponse, projectsResponse] =
+        await Promise.all([
+            fetch(`/api/customers/${customerId}`),
+            fetch(`/api/projects?customerId=${encodeURIComponent(customerId)}`)
+        ]);
 
-            `/api/customers/${customerId}`
-
-        );
-
-    const customer =
-        await response.json();
+    const customer = await customerResponse.json();
+    const projects = await projectsResponse.json();
 
     view.innerHTML = `
 
@@ -123,14 +122,58 @@ async function renderView(
 
             </div>
 
+            <div class="customer-projects-card">
+                <div class="customer-projects-header">
+                    <h2>Projekte</h2>
+                    <span>${projects.length} ${projects.length === 1 ? "Projekt" : "Projekte"}</span>
+                </div>
+
+                ${projects.length > 0 ? `
+                    <table class="customer-projects-table">
+                        <thead>
+                            <tr>
+                                <th>Projektname</th>
+                                <th>Beschreibung</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${projects.map(project => `
+                                <tr class="customer-project-row" data-id="${project.id}" tabindex="0" role="link">
+                                    <td>${project.name ?? ""}</td>
+                                    <td>${project.description ?? ""}</td>
+                                </tr>
+                            `).join("")}
+                        </tbody>
+                    </table>
+                ` : `
+                    <div class="customer-projects-empty">
+                        Diesem Kunden sind noch keine Projekte zugeordnet.
+                    </div>
+                `}
+            </div>
+
         </div>
 
         <div class="view-right"></div>
 
     `;
     generateHandler(customerId);
+    registerCustomerProjectLinks();
     registerCustomerDelete(customerId, customer);
 
+}
+
+function registerCustomerProjectLinks() {
+    document.querySelectorAll(".customer-project-row").forEach(row => {
+        const openProject = () => router.navigate(`/project/${row.dataset.id}`);
+        row.addEventListener("click", openProject);
+        row.addEventListener("keydown", event => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                openProject();
+            }
+        });
+    });
 }
 
 function renderDiscounts(

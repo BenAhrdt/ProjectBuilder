@@ -5,6 +5,19 @@ import { fileURLToPath } from "node:url";
 import ExcelJS from "exceljs";
 import multer from "multer";
 import XLSX from "xlsx";
+import {
+    AlignmentType,
+    BorderStyle,
+    Document,
+    HeadingLevel,
+    Packer,
+    Paragraph,
+    Table,
+    TableCell,
+    TableRow,
+    TextRun,
+    WidthType
+} from "docx";
 
 import * as database
 from "../database/index.js";
@@ -462,11 +475,96 @@ router.get(
 );
 
 router.get(
+    "/:id/tender",
+    async (req, res) => {
+        const project = database.projects.prepare(`
+            SELECT projects.*, customers.customerNumber,
+                customers.name AS customerName, customers.city AS customerCity,
+                customers.additionalInfo AS customerAdditionalInfo,
+                customers.pg1, customers.pg2, customers.pg3, customers.pg4,
+                customers.pg5, customers.pg6, customers.pg7, customers.pg8,
+                customers.pg9, customers.pg10
+            FROM projects
+            LEFT JOIN customers ON customers.id = projects.customerId
+            WHERE projects.id = ?
+        `).get(req.params.id);
+
+        if (!project) {
+            res.status(404).json({ error: "Projekt nicht gefunden" });
+            return;
+        }
+
+        const nodes = database.projectNodes.prepare(`
+            SELECT * FROM projectNodes WHERE projectId = ?
+            ORDER BY COALESCE(sortOrder, id) ASC, id ASC
+        `).all(req.params.id);
+        const nodeIds = nodes.map(node => node.id);
+        const nodeArticles = nodeIds.length === 0 ? [] :
+            database.projectNodeArticles.prepare(`
+                SELECT projectNodeArticles.*, articles.ean,
+                    articles.manufacturerType, articles.manufacturerName,
+                    articles.quantityUnit, articles.listPrice,
+                    articles.listPriceCurrency, articles.discountGroup,
+                    articles.description
+                FROM projectNodeArticles
+                LEFT JOIN articles
+                    ON articles.articleNumber = projectNodeArticles.articleNumber
+                WHERE projectNodeArticles.projectNodeId IN (
+                    ${nodeIds.map(() => "?").join(",")}
+                )
+                ORDER BY projectNodeArticles.projectNodeId ASC,
+                    COALESCE(projectNodeArticles.sortOrder, projectNodeArticles.id) ASC,
+                    projectNodeArticles.id ASC
+            `).all(...nodeIds);
+
+        const exportData = buildProjectExportData(project, nodes, nodeArticles);
+        const format = req.query.format === "gaeb" ? "gaeb" : "word";
+        let priceMode = ["none", "list", "discounted"].includes(req.query.prices)
+            ? req.query.prices
+            : "none";
+        const gaebType = ["81", "82", "83", "84"].includes(req.query.gaebType)
+            ? req.query.gaebType
+            : (priceMode === "none" ? "83" : "84");
+        const gaebTypeHasPrices = gaebType === "82" || gaebType === "84";
+        if (format === "gaeb" && !gaebTypeHasPrices) priceMode = "none";
+        if (format === "gaeb" && gaebTypeHasPrices && priceMode === "none") priceMode = "list";
+        const baseName = sanitizeFilename(project.name || "Projekt");
+
+        if (format === "gaeb") {
+            const extension = `x${gaebType}`;
+            res.setHeader("Content-Type", "application/xml; charset=utf-8");
+            res.setHeader("Content-Disposition", `attachment; filename="${baseName}-Ausschreibung.${extension}"`);
+            res.send(buildGaebTenderXml(exportData, priceMode, gaebType));
+            return;
+        }
+
+        try {
+            const buffer = await buildWordTenderBuffer(exportData, priceMode);
+            res.setHeader(
+                "Content-Type",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            );
+            res.setHeader("Content-Disposition", `attachment; filename="${baseName}-Ausschreibung.docx"`);
+            res.send(buffer);
+        } catch (error) {
+            console.error("Word-Ausschreibung konnte nicht erstellt werden:", error);
+            res.status(500).json({
+                error: `Word-Datei konnte nicht erstellt werden: ${error.message}`
+            });
+        }
+    }
+);
+
+router.get(
     "/",
     (req, res) => {
 
         const search =
             req.query.search ?? "";
+        const customerId =
+            req.query.customerId
+                ? String(req.query.customerId)
+                : null;
 
         const projects =
             database.projects.prepare(`
@@ -488,18 +586,22 @@ router.get(
             LEFT JOIN customers
             ON customers.id = projects.customerId
 
-            WHERE
-
+            WHERE (
                 projects.name LIKE @search
-
                 OR projects.description LIKE @search
+            )
+            AND (
+                @customerId IS NULL
+                OR CAST(projects.customerId AS TEXT) = @customerId
+            )
 
             ORDER BY projects.name
 
             `).all({
 
                 search:
-                    `%${search}%`
+                    `%${search}%`,
+                customerId
 
             });
 
@@ -1897,6 +1999,234 @@ async function buildProjectWorkbookBuffer(
 
     return await workbook.xlsx.writeBuffer();
 
+}
+
+async function buildWordTenderBuffer(
+    exportData,
+    priceMode
+) {
+    const { project, positions } = exportData;
+    const showPrices = priceMode !== "none";
+    const children = [
+        new Paragraph({
+            text: "Leistungsverzeichnis",
+            heading: HeadingLevel.TITLE,
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 360 }
+        }),
+        new Paragraph({
+            children: [new TextRun({ text: project.name || "Projekt", bold: true, size: 32 })],
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 240 }
+        }),
+        new Paragraph({ text: project.description || "", alignment: AlignmentType.CENTER }),
+        new Paragraph({ text: `Auftraggeber: ${project.customerName || "____________________________"}` }),
+        new Paragraph({ text: `Projektnummer: ${project.id ?? ""}` }),
+        new Paragraph({ text: `Erstellt am: ${new Intl.DateTimeFormat("de-DE").format(new Date())}` }),
+        new Paragraph({
+            text: showPrices
+                ? `Preisbasis: ${priceMode === "list" ? "Listenpreise" : "rabattierte Preise"} (netto)`
+                : "Preise: vom Bieter einzutragen",
+            spacing: { after: 360 }
+        }),
+        new Paragraph({ text: "Allgemeine Hinweise", heading: HeadingLevel.HEADING_1 }),
+        new Paragraph({
+            text: "Die Mengen und technischen Angaben sind vor Angebotsabgabe zu prüfen. Die Produkttexte beschreiben Einzelkomponenten; ihre Kombination zu einer Systemlösung setzt eine fachgerechte Planung voraus. Gleichwertige Fabrikate sind nur zulässig, soweit dies durch den Auftraggeber gestattet wird.",
+            spacing: { after: 300 }
+        }),
+        new Paragraph({ text: "Leistungspositionen", heading: HeadingLevel.HEADING_1 })
+    ];
+
+    let previousPath = null;
+    let groupNumber = 0;
+    let positionInGroup = 0;
+    positions.forEach((position, index) => {
+        if (position.path !== previousPath) {
+            groupNumber += 1;
+            positionInGroup = 0;
+            children.push(new Paragraph({
+                children: [new TextRun({
+                    text: position.path || "Projektpositionen",
+                    bold: true,
+                    size: 20
+                })],
+                pageBreakBefore: index > 0,
+                spacing: { before: 120, after: 180 }
+            }));
+            previousPath = position.path;
+        }
+        positionInGroup += 1;
+        const number = `1.${groupNumber}.${positionInGroup}`;
+        const label = position.positionName || position.manufacturerType || position.articleNumber;
+        children.push(new Paragraph({
+            children: [
+                new TextRun({ text: number, bold: true, size: 18 }),
+                new TextRun({ text: `    ${label}`, bold: true, size: 18 }),
+                new TextRun({ text: position.isOptional ? "  (Bedarfsposition)" : position.isAlternative ? "  (Alternativposition)" : "", italics: true, size: 18 })
+            ],
+            spacing: { before: 120, after: 100 },
+            keepNext: true
+        }));
+
+        if (position.manufacturerType && position.manufacturerType !== label) {
+            children.push(new Paragraph({
+                children: [new TextRun({ text: position.manufacturerType, bold: true, size: 18 })],
+                spacing: { after: 100 },
+                keepNext: true
+            }));
+        }
+
+        const descriptionLines = String(
+            position.description || "Kein Ausschreibungstext hinterlegt."
+        ).split(/\r?\n/);
+        descriptionLines.forEach(line => {
+            children.push(new Paragraph({
+                children: [new TextRun({ text: line || " ", size: 18 })],
+                spacing: { after: line ? 55 : 90 },
+                keepLines: true
+            }));
+        });
+
+        children.push(new Paragraph({
+            children: [
+                new TextRun({ text: "Fabrikat: ", bold: true, size: 18 }),
+                new TextRun({ text: position.manufacturerName || "Janitza electronics GmbH", size: 18 })
+            ],
+            spacing: { before: 140, after: 45 }
+        }));
+        children.push(new Paragraph({
+            children: [
+                new TextRun({ text: "Typ: ", bold: true, size: 18 }),
+                new TextRun({ text: position.manufacturerType || label, size: 18 })
+            ],
+            spacing: { after: 45 }
+        }));
+        children.push(new Paragraph({
+            children: [
+                new TextRun({ text: "Art.-Nr.: ", bold: true, size: 18 }),
+                new TextRun({ text: position.articleNumber, size: 18 })
+            ],
+            spacing: { after: 100 }
+        }));
+
+        children.push(new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            borders: {
+                top: { style: BorderStyle.SINGLE, size: 4, color: "808080" },
+                bottom: { style: BorderStyle.SINGLE, size: 4, color: "808080" },
+                left: { style: BorderStyle.NIL },
+                right: { style: BorderStyle.NIL },
+                insideHorizontal: { style: BorderStyle.NIL },
+                insideVertical: { style: BorderStyle.NIL }
+            },
+            rows: [new TableRow({ children: [
+                tenderCell(`${formatTenderQuantity(position.quantity)} ${position.unit || "Stk."}`, 22),
+                tenderCell(`Art.-Nr. ${position.articleNumber}`, 28),
+                tenderCell(showPrices ? `EP ${formatTenderMoney(getTenderUnitPrice(position, priceMode, project))}` : "EP __________________", 25),
+                tenderCell(showPrices ? `GP ${formatTenderMoney(getTenderTotal(position, priceMode, project))}` : "GP __________________", 25)
+            ] })]
+        }));
+    });
+
+    const total = positions
+        .filter(position => !position.isOptional && !position.isAlternative)
+        .reduce((sum, position) => sum + getTenderTotal(position, priceMode, project), 0);
+    children.push(new Paragraph({ text: "LV-Zusammenfassung", heading: HeadingLevel.HEADING_1, spacing: { before: 360 } }));
+    children.push(new Paragraph({
+        children: [new TextRun({
+            text: showPrices ? `Gesamtsumme netto: ${formatTenderMoney(total)}` : "Angebotssumme netto: ____________________ EUR",
+            bold: true
+        })]
+    }));
+    children.push(new Paragraph({ text: "Ort, Datum: ____________________    Stempel/Unterschrift: ______________________________", spacing: { before: 480 } }));
+
+    return Packer.toBuffer(new Document({
+        creator: "ProjectBuilder",
+        title: `Ausschreibung ${project.name || "Projekt"}`,
+        styles: {
+            default: {
+                document: {
+                    run: { font: "Arial", size: 18 },
+                    paragraph: { spacing: { after: 80, line: 240 } }
+                }
+            }
+        },
+        sections: [{
+            properties: {
+                page: {
+                    margin: {
+                        top: 850,
+                        right: 1020,
+                        bottom: 850,
+                        left: 1020
+                    }
+                }
+            },
+            children
+        }]
+    }));
+}
+
+function tenderCell(text, width = 25) {
+    return new TableCell({
+        width: { size: width, type: WidthType.PERCENTAGE },
+        children: [new Paragraph({
+            children: [new TextRun({ text, size: 17 })],
+            spacing: { before: 35, after: 35 }
+        })]
+    });
+}
+
+function buildGaebTenderXml(exportData, priceMode, gaebType) {
+    const { project, positions } = exportData;
+    const priced = priceMode !== "none";
+    const dataType = gaebType;
+    const items = positions.map((position, index) => {
+        const itemNumber = String(index + 1).padStart(4, "0");
+        const label = position.positionName || position.manufacturerType || position.articleNumber;
+        const price = priced
+            ? `<UP>${getTenderUnitPrice(position, priceMode, project).toFixed(2)}</UP><IT>${getTenderTotal(position, priceMode, project).toFixed(2)}</IT>`
+            : "";
+        return `<Item ID="ID_${itemNumber}">
+<RNoPart>${itemNumber}</RNoPart><Qty>${Number(position.quantity).toFixed(3)}</Qty><QU>${escapeXml(position.unit || "Stk")}</QU>
+<Description><CompleteText><DetailTxt><Text><span>${escapeXml(position.description || label)}</span></Text></DetailTxt><OutlineText><OutlTxt><TextOutlTxt>${escapeXml(label)}</TextOutlTxt></OutlTxt></OutlineText></CompleteText></Description>
+<Provis>${position.isOptional ? "true" : "false"}</Provis>${price}</Item>`;
+    }).join("\n");
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<GAEB xmlns="http://www.gaeb.de/GAEB_DA_XML/DA${dataType}/3.2">
+<GAEBInfo><Version>3.2</Version><VersDate>2013-10</VersDate><Date>${new Date().toISOString().slice(0, 10)}</Date><Time>${new Date().toTimeString().slice(0, 8)}</Time><ProgSystem>ProjectBuilder</ProgSystem><ProgName>ProjectBuilder</ProgName></GAEBInfo>
+<Award><DP>${dataType}</DP><AwardInfo><Cur>EUR</Cur><CurLbl>Euro</CurLbl><BidCommPerm>true</BidCommPerm></AwardInfo>
+<BoQ ID="ID_BOQ"><BoQInfo><Name>${escapeXml(project.name || "Projekt")}</Name><LblBoQ>${escapeXml(project.description || "Leistungsverzeichnis")}</LblBoQ></BoQInfo><BoQBody>${items}</BoQBody></BoQ>
+</Award></GAEB>`;
+}
+
+function getTenderUnitPrice(position, priceMode, project) {
+    if (priceMode === "list") return position.listUnitPrice;
+    const projectDiscount = normalizeDiscountPercent(project?.projectDiscount);
+    return roundCurrency(position.discountedUnitPrice * (1 - projectDiscount / 100));
+}
+
+function getTenderTotal(position, priceMode, project) {
+    if (priceMode === "none") return 0;
+    return roundCurrency(getTenderUnitPrice(position, priceMode, project) * position.quantity);
+}
+
+function formatTenderMoney(value) {
+    return `${new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)} EUR`;
+}
+
+function formatTenderQuantity(value) {
+    return new Intl.NumberFormat("de-DE", { maximumFractionDigits: 3 }).format(value);
+}
+
+function escapeXml(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&apos;");
 }
 
 function buildExcelDataCollectionPlanSheet(

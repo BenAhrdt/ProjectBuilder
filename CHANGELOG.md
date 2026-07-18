@@ -2,6 +2,27 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.1.0 - 18.07.2026
+
+### Neu
+
+- Die Kundenansicht zeigt alle dem jeweiligen Kunden zugeordneten Projekte mit direkter Navigation.
+- Projekte bieten eine eigene Ausschreibungsrubrik mit Export als Word, GAEB XML oder in beiden Formaten.
+- Ausschreibungen können ohne Preise, mit Listenpreisen oder mit rabattierten Preisen erzeugt und explizit als GAEB X81, X82, X83 oder X84 ausgegeben werden.
+- Beim manuellen Anlegen von Artikeln ist das Langtextfeld eindeutig als Ausschreibungstext für Word- und GAEB-Exporte gekennzeichnet.
+
+### Geändert
+
+- Der Word-Ausschreibungsexport orientiert sich mit kompakter technischer Typografie, gegliederten Positionsnummern sowie Fabrikat-, Typ- und Artikelangaben stärker an der Janitza-Vorlage.
+- Optionale und alternative Positionen werden in getrennten Summenspalten angezeigt und reagieren auf die Auswahl zwischen Listenpreis und rabattiertem Preis.
+- Klickbare Zeilen in Kunden- und Projektlisten sind durch Pointer-Cursor und einen deutlicheren Hoverzustand erkennbar.
+
+### Behoben
+
+- Die Positionstabellen im Word-Ausschreibungsexport werden korrekt als DOCX-Tabellen erzeugt und führen nicht mehr zu einer HTML-Fehlerantwort.
+- Word-Ausschreibungen werden clientseitig auf den DOCX-Dateityp geprüft und ausdrücklich mit der Endung `.docx` gespeichert; HTML-Fehlantworten werden nicht mehr heruntergeladen.
+- Unbekannte Export-Endpunkte liefern nicht mehr die HTML-Startseite als Download; Word-Ausschreibungen werden dadurch eindeutig als DOCX behandelt.
+
 ## 1.0.9 - 17.07.2026
 
 ### Neu

@@ -114,6 +114,10 @@
 
     cursor: pointer;
 
+    transition:
+        background-color 0.16s ease,
+        box-shadow 0.16s ease;
+
 }
 
 /* --------------------------------------------------
@@ -124,6 +128,13 @@
 
     background: #f8f8f8;
 
+}
+
+.projects-table tbody .project-row:hover,
+.projects-table tbody .project-row:focus-visible {
+    outline: none;
+    background: #edf5ff;
+    box-shadow: inset 4px 0 0 #4c8bf5;
 }
 
 /* --------------------------------------------------

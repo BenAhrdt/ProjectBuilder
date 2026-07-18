@@ -132,7 +132,7 @@ async function renderView() {
 
                     ${customers.map(customer => `
 
-                        <tr class="customer-row" data-id="${customer.id}">
+                        <tr class="customer-row" data-id="${customer.id}" tabindex="0" role="link">
 
                             <td>
                                 ${customer.customerNumber ?? ""}
@@ -305,6 +305,16 @@ function attachCustomerRowHandlers() {
                 }
             );
 
+            row.addEventListener(
+                "keydown",
+                event => {
+                    if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        router.navigate(`/customer/${row.dataset.id}`);
+                    }
+                }
+            );
+
         });
 
 }
@@ -323,7 +333,7 @@ function renderCustomers(customers) {
     tbody.innerHTML =
         customers.map(customer => `
 
-            <tr class="customer-row" data-id="${customer.id}">
+            <tr class="customer-row" data-id="${customer.id}" tabindex="0" role="link">
 
                 <td>
                     ${customer.customerNumber ?? ""}

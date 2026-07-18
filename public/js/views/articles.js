@@ -80,7 +80,8 @@ async function renderView() {
 
                     <textarea
                         id="manual-article-description"
-                        placeholder="Beschreibung"
+                        aria-label="Ausschreibungstext / Langtext"
+                        placeholder="Ausschreibungstext / Langtext (wird in Word und GAEB übernommen)"
                     ></textarea>
 
                     <button id="save-manual-article-button">
@@ -113,7 +114,7 @@ async function renderView() {
                         </th>
 
                         <th>
-                            Beschreibung
+                            Ausschreibungstext / Langtext
                         </th>
 
                         <th>

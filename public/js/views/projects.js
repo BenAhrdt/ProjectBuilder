@@ -174,6 +174,8 @@ async function renderView() {
                         <tr
                             class="project-row"
                             data-id="${project.id}"
+                            tabindex="0"
+                            role="link"
                         >
 
                             <td>
@@ -390,6 +392,16 @@ function attachProjectRowHandlers() {
                 }
             );
 
+            row.addEventListener(
+                "keydown",
+                event => {
+                    if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        router.navigate(`/project/${row.dataset.id}`);
+                    }
+                }
+            );
+
         });
 
 }
@@ -528,6 +540,8 @@ function renderProjects(projects) {
             <tr
                 class="project-row"
                 data-id="${project.id}"
+                tabindex="0"
+                role="link"
             >
 
                 <td>

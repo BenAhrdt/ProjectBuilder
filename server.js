@@ -101,6 +101,15 @@ app.use(
 
 app.use("/api/settings", settingsRouter);
 
+// Unbekannte API-Endpunkte dürfen nicht in die SPA-Fallbackseite laufen.
+// Andernfalls würde beispielsweise ein nicht geladener Export-Endpunkt als
+// vermeintliche HTML-Datei heruntergeladen.
+app.use("/api", (req, res) => {
+    res.status(404).json({
+        error: "API-Endpunkt nicht gefunden"
+    });
+});
+
 // --------------------------------------------------
 // SPA Catch-All
 // --------------------------------------------------

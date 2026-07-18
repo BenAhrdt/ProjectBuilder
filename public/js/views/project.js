@@ -472,6 +472,16 @@ async function renderView(
                         </button>
 
                         <button
+                            id="export-project-tender"
+                            type="button"
+                            title="${i18n.t("project.exportTender")}"
+                            aria-label="${i18n.t("project.exportTender")}"
+                        >
+                            <span class="export-project-tender-icon">LV</span>
+                            <span>${i18n.t("project.exportTender")}</span>
+                        </button>
+
+                        <button
                             id="delete-project"
                             type="button"
                             title="Projekt löschen"
@@ -686,6 +696,7 @@ async function renderView(
     generateHandler(projectId);
     registerProjectOverview(projectId);
     registerProjectExport(projectId);
+    registerProjectTenderExport(projectId);
     registerProjectDelete(projectId, project);
     registerProjectDescriptionPersistence(projectId);
     registerProjectStructurePriceToggle(projectId);
@@ -1727,10 +1738,17 @@ function calculateProjectTotals(
                         *
                         (1 - (discountPercent / 100));
 
-                    if (nodeArticle.isOptional || nodeArticle.isAlternative) {
+                    if (nodeArticle.isOptional) {
+                        totals.optionalListTotal += listTotal;
+                        totals.optionalDiscountedTotal += discountedTotal;
 
-                        totals.optionalAlternativeTotal +=
-                            discountedTotal;
+                        return totals;
+
+                    }
+
+                    if (nodeArticle.isAlternative) {
+                        totals.alternativeListTotal += listTotal;
+                        totals.alternativeDiscountedTotal += discountedTotal;
 
                         return totals;
 
@@ -1755,7 +1773,10 @@ function calculateProjectTotals(
                     discount: 0,
                     projectDiscount: 0,
                     discountedPrice: 0,
-                    optionalAlternativeTotal: 0
+                    optionalListTotal: 0,
+                    optionalDiscountedTotal: 0,
+                    alternativeListTotal: 0,
+                    alternativeDiscountedTotal: 0
                 }
             );
 
@@ -1772,7 +1793,10 @@ function calculateProjectTotals(
     totals.discountedPrice -=
         totals.projectDiscount;
 
-    totals.optionalAlternativeTotal *=
+    totals.optionalDiscountedTotal *=
+        1 - (projectDiscountPercent / 100);
+
+    totals.alternativeDiscountedTotal *=
         1 - (projectDiscountPercent / 100);
 
     return totals;
@@ -1782,6 +1806,17 @@ function calculateProjectTotals(
 function renderProjectPriceSummary(
     totals
 ) {
+
+    const showDiscountedPrices =
+        currentStructurePriceMode === "discounted";
+
+    const optionalTotal = showDiscountedPrices
+        ? totals.optionalDiscountedTotal
+        : totals.optionalListTotal;
+
+    const alternativeTotal = showDiscountedPrices
+        ? totals.alternativeDiscountedTotal
+        : totals.alternativeListTotal;
 
     return `
 
@@ -1833,14 +1868,26 @@ function renderProjectPriceSummary(
 
         </div>
 
-        <div class="project-price-summary-item">
+        <div class="project-price-summary-item project-price-summary-special">
 
             <span>
-                ${i18n.t("project.optionalAlternativeTotal")}
+                ${i18n.t("project.optionalTotal")}
             </span>
 
             <strong>
-                ${formatCurrency(totals.optionalAlternativeTotal ?? 0)}
+                ${formatCurrency(optionalTotal ?? 0)}
+            </strong>
+
+        </div>
+
+        <div class="project-price-summary-item project-price-summary-special">
+
+            <span>
+                ${i18n.t("project.alternativeTotal")}
+            </span>
+
+            <strong>
+                ${formatCurrency(alternativeTotal ?? 0)}
             </strong>
 
         </div>
@@ -3038,6 +3085,167 @@ function registerProjectExport(
         }
     );
 
+}
+
+function registerProjectTenderExport(projectId) {
+    const button = document.getElementById("export-project-tender");
+    if (!button) return;
+
+    button.addEventListener("click", async () => {
+        clearTimeout(saveTimeout);
+        await saveProject(projectId);
+        const selection = await openTenderExportModal();
+        if (!selection) return;
+
+        const formats = selection.format === "both"
+            ? ["word", "gaeb"]
+            : [selection.format];
+        for (const format of formats) {
+            const downloaded = await downloadTenderFile(
+                projectId,
+                format,
+                selection
+            );
+            if (!downloaded) break;
+        }
+    });
+}
+
+async function downloadTenderFile(
+    projectId,
+    format,
+    selection
+) {
+    const response = await fetch(
+        `/api/projects/${projectId}/tender?format=${format}&prices=${selection.prices}&gaebType=${selection.gaebType}`
+    );
+    const contentType = String(
+        response.headers.get("content-type") ?? ""
+    ).toLowerCase();
+    const expectedType = format === "word"
+        ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        : "application/xml";
+
+    if (!response.ok || !contentType.includes(expectedType)) {
+        let detail = "";
+        try {
+            const payload = await response.json();
+            detail = payload.error ?? "";
+        } catch {
+            detail = contentType.includes("text/html")
+                ? "Der laufende Server hat statt der Exportdatei eine HTML-Seite geliefert."
+                : `Unerwarteter Dateityp: ${contentType || "unbekannt"}`;
+        }
+        await showAlert(
+            `${format === "word" ? "Word" : "GAEB"}-Export fehlgeschlagen. ${detail}`.trim(),
+            { title: "Ausschreibungsexport" }
+        );
+        return false;
+    }
+
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const projectName = sanitizeDownloadFilename(
+        currentProject?.name || "Projekt"
+    );
+    const extension = format === "word"
+        ? "docx"
+        : `x${selection.gaebType}`;
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = `${projectName}-Ausschreibung.${extension}`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    return true;
+}
+
+function sanitizeDownloadFilename(value) {
+    return String(value ?? "Projekt")
+        .replace(/[\\/:*?"<>|]/g, "_")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 120)
+        || "Projekt";
+}
+
+function openTenderExportModal() {
+    return new Promise(resolve => {
+        const modal = document.createElement("div");
+        modal.className = "project-modal-backdrop";
+        modal.innerHTML = `
+            <form class="project-modal project-tender-modal">
+                <h3>${i18n.t("project.tenderTitle")}</h3>
+                <p>${i18n.t("project.tenderDescription")}</p>
+                <fieldset>
+                    <legend>${i18n.t("project.tenderFormat")}</legend>
+                    <label><input type="radio" name="format" value="word" checked> Word (.docx)</label>
+                    <label><input type="radio" name="format" value="gaeb"> GAEB XML</label>
+                    <label><input type="radio" name="format" value="both"> ${i18n.t("project.tenderBoth")}</label>
+                </fieldset>
+                <fieldset class="project-tender-gaeb-types">
+                    <legend>${i18n.t("project.tenderGaebType")}</legend>
+                    <label><input type="radio" name="gaebType" value="81"> X81 – ${i18n.t("project.tenderX81")}</label>
+                    <label><input type="radio" name="gaebType" value="82"> X82 – ${i18n.t("project.tenderX82")}</label>
+                    <label><input type="radio" name="gaebType" value="83" checked> X83 – ${i18n.t("project.tenderX83")}</label>
+                    <label><input type="radio" name="gaebType" value="84"> X84 – ${i18n.t("project.tenderX84")}</label>
+                </fieldset>
+                <fieldset>
+                    <legend>${i18n.t("project.tenderPrices")}</legend>
+                    <label><input type="radio" name="prices" value="none" checked> ${i18n.t("project.tenderNoPrices")}</label>
+                    <label><input type="radio" name="prices" value="list"> ${i18n.t("project.tenderListPrices")}</label>
+                    <label><input type="radio" name="prices" value="discounted"> ${i18n.t("project.tenderDiscountedPrices")}</label>
+                </fieldset>
+                <p class="project-tender-hint">${i18n.t("project.tenderHint")}</p>
+                <div class="project-modal-actions">
+                    <button type="button" data-action="cancel">${i18n.t("project.cancel")}</button>
+                    <button type="submit">${i18n.t("project.tenderCreate")}</button>
+                </div>
+            </form>`;
+        const close = result => {
+            modal.remove();
+            resolve(result);
+        };
+        modal.addEventListener("mousedown", event => {
+            if (event.target === modal) close(null);
+        });
+        modal.querySelector("[data-action=cancel]").addEventListener("click", () => close(null));
+        const synchronizePrices = () => {
+            const format = modal.querySelector("input[name=format]:checked").value;
+            const usesGaeb = format !== "word";
+            const gaebType = modal.querySelector("input[name=gaebType]:checked").value;
+            const requiresPrices = gaebType === "82" || gaebType === "84";
+            const noPrices = modal.querySelector("input[name=prices][value=none]");
+            const listPrices = modal.querySelector("input[name=prices][value=list]");
+            modal.querySelectorAll("input[name=gaebType]").forEach(input => {
+                input.disabled = !usesGaeb;
+            });
+            noPrices.disabled = usesGaeb && requiresPrices;
+            if (usesGaeb && requiresPrices && noPrices.checked) listPrices.checked = true;
+            modal.querySelectorAll("input[name=prices]:not([value=none])").forEach(input => {
+                input.disabled = usesGaeb && !requiresPrices;
+            });
+            if (usesGaeb && !requiresPrices) noPrices.checked = true;
+        };
+        modal.querySelectorAll("input[name=gaebType]").forEach(input => {
+            input.addEventListener("change", synchronizePrices);
+        });
+        modal.querySelectorAll("input[name=format]").forEach(input => {
+            input.addEventListener("change", synchronizePrices);
+        });
+        synchronizePrices();
+        modal.querySelector("form").addEventListener("submit", event => {
+            event.preventDefault();
+            close({
+                format: new FormData(event.currentTarget).get("format"),
+                prices: new FormData(event.currentTarget).get("prices"),
+                gaebType: new FormData(event.currentTarget).get("gaebType")
+            });
+        });
+        document.body.appendChild(modal);
+        modal.querySelector("input").focus();
+    });
 }
 
 function updateProjectStructurePrices() {

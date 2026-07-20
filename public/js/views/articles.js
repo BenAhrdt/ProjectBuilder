@@ -5,7 +5,7 @@ import {
     showPrompt
 } from "../utils/modal.js";
 
-await i18n.loadLanguage("de");
+await i18n.loadLanguage();
 
 const view = document.getElementById("view");
 
@@ -170,6 +170,15 @@ async function renderView() {
     `;
 
     generateHandler();
+
+    const pendingSearch = sessionStorage.getItem("projectbuilder.pendingArticleSearch");
+    if (pendingSearch) {
+        sessionStorage.removeItem("projectbuilder.pendingArticleSearch");
+        const searchInput = document.getElementById("articles-search");
+        searchInput.value = pendingSearch;
+        searchInput.dispatchEvent(new Event("input"));
+        searchInput.focus();
+    }
 }
 
 function generateHandler() {

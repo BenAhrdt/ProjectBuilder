@@ -1,5 +1,5 @@
 import * as i18n from "../utils/i18n.js";
-await i18n.loadLanguage("de");
+await i18n.loadLanguage();
 
 import * as router from "../router.js";
 

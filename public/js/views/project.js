@@ -1,5 +1,5 @@
 import * as i18n from "../utils/i18n.js";
-await i18n.loadLanguage("de");
+await i18n.loadLanguage();
 
 import * as utils from "../utils/icons.js";
 import * as router from "../router.js";
@@ -377,6 +377,16 @@ async function renderView(
     currentNodes =
         nodes;
 
+    const pendingNodeSearch = getPendingNodeSearch(projectId);
+    if (pendingNodeSearch) {
+        let targetNode = nodes.find(node => String(node.id) === pendingNodeSearch.nodeId);
+        while (targetNode?.parentId != null) {
+            collapsedNodes.delete(String(targetNode.parentId));
+            targetNode = nodes.find(node => String(node.id) === String(targetNode.parentId));
+        }
+        saveCollapsedNodes(projectId);
+    }
+
     const nodeArticlesResponse =
         await fetch(
             "/api/projectNodeArticles"
@@ -729,6 +739,26 @@ async function renderView(
     registerNodeArticleDragAndDrop(projectId);
     registerArticleListLayoutSync();
     syncArticleListHeight();
+
+    if (pendingNodeSearch) {
+        sessionStorage.removeItem("projectbuilder.pendingNodeSearch");
+        const target = document.querySelector(`.project-node[data-id="${CSS.escape(pendingNodeSearch.nodeId)}"]`);
+        target?.scrollIntoView({ behavior: "smooth", block: "center" });
+        target?.classList.add("project-node-search-target");
+        setTimeout(() => target?.classList.remove("project-node-search-target"), 2400);
+    }
+}
+
+function getPendingNodeSearch(projectId) {
+    try {
+        const pending = JSON.parse(sessionStorage.getItem("projectbuilder.pendingNodeSearch") || "null");
+        return String(pending?.projectId) === String(projectId)
+            ? { ...pending, nodeId: String(pending.nodeId) }
+            : null;
+    } catch {
+        sessionStorage.removeItem("projectbuilder.pendingNodeSearch");
+        return null;
+    }
 }
 
 async function refreshProjectTree(

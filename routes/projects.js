@@ -589,6 +589,7 @@ router.get(
             WHERE (
                 projects.name LIKE @search
                 OR projects.description LIKE @search
+                OR customers.name LIKE @search
             )
             AND (
                 @customerId IS NULL

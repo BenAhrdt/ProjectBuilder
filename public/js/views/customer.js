@@ -5,7 +5,7 @@ import {
     showConfirm
 } from "../utils/modal.js";
 
-await i18n.loadLanguage("de");
+await i18n.loadLanguage();
 
 const view =
     document.getElementById(

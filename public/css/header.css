@@ -1,11 +1,41 @@
-
 #header {
-    display: flex;
+    display: grid;
+    grid-template-columns: 276px 1fr auto;
     align-items: center;
+    gap: 30px;
+    min-width: 0;
+    padding: 0 22px 0 0;
+    box-sizing: border-box;
 }
 
-#projectname {
-    margin-left: 25px;
-    color: #000000;
-    font-size: 2rem;
+.header-brand {
+    display: flex;
+    align-items: center;
+    align-self: stretch;
+    padding-left: 22px;
+}
+
+.header-brand img {
+    display: block;
+    width: 116px;
+    height: auto;
+}
+
+.language-selector { display: flex; align-items: center; justify-self: end; gap: 10px; color: #333; font-size: .875rem; font-weight: 600; }
+.language-dropdown { position: relative; }
+.language-dropdown-trigger { display: grid; grid-template-columns: 22px 1fr 14px; align-items: center; gap: 8px; min-width: 142px; padding: 8px 9px; border: 1px solid #d4d4d4; border-radius: 7px; background: #fff; color: #222; font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
+.language-dropdown-trigger:focus-visible { outline: 3px solid rgba(76, 139, 245, .25); border-color: #4c8bf5; }
+.language-dropdown-trigger img, .language-dropdown-menu img { display: block; width: 22px; height: 14px; border: 1px solid rgba(0, 0, 0, .14); border-radius: 2px; object-fit: cover; box-sizing: border-box; }
+.language-chevron { justify-self: end; color: #555; font-size: 15px; line-height: 1; }
+.language-dropdown-menu { position: absolute; z-index: 110; top: calc(100% + 5px); right: 0; min-width: 142px; padding: 5px; border: 1px solid #d4d8df; border-radius: 7px; background: #fff; box-shadow: 0 10px 28px rgba(20, 31, 50, .18); }
+.language-dropdown-menu[hidden] { display: none; }
+.language-dropdown-menu button { display: grid; grid-template-columns: 22px 1fr; align-items: center; gap: 8px; width: 100%; padding: 7px 8px; border: 0; border-radius: 5px; background: transparent; color: #222; font: inherit; text-align: left; cursor: pointer; }
+.language-dropdown-menu button:hover, .language-dropdown-menu button:focus { outline: none; background: #edf3fc; }
+.language-dropdown-menu button[aria-selected="true"] { background: #dce9fb; font-weight: 700; }
+
+@media (max-width: 900px) {
+    #header { grid-template-columns: 52px 1fr auto; gap: 12px; }
+    .header-brand { padding-left: 14px; overflow: hidden; }
+    .header-brand img { width: 92px; max-width: none; }
+    .language-selector > span { display: none; }
 }

@@ -1,5 +1,5 @@
 import * as i18n from "../utils/i18n.js";
-await i18n.loadLanguage("de");
+await i18n.loadLanguage();
 import * as utils from "../utils/icons.js";
 import * as router from "../router.js";
 
@@ -10,11 +10,16 @@ const { version } = versionResponse.ok
     : { version: "unbekannt" };
 
 navbar.innerHTML = `
-    <div class="searchBox">
-        <input
-        type="text"
-        placeholder="${i18n.t("navbar.search")}..."
-        >
+    <div class="navbar-global-search global-search">
+        <label class="global-search-label" for="global-search-input">${i18n.t("search.label")}</label>
+        <div class="global-search-control">
+            <span class="global-search-icon" aria-hidden="true">⌕</span>
+            <input id="global-search-input" type="search"
+                placeholder="${i18n.t("search.sidebarPlaceholder")}" autocomplete="off"
+                aria-autocomplete="list" aria-controls="global-search-results">
+            <kbd>${i18n.t("search.shortcut")}</kbd>
+        </div>
+        <div id="global-search-results" class="global-search-results" role="listbox" hidden></div>
     </div>
     <div id="navbar-item-range">
         <div id="navbar-item-group-1" class="navbar-item-group">
@@ -54,6 +59,8 @@ navbar.innerHTML = `
         </div>
     </div>
 `;
+
+document.dispatchEvent(new CustomEvent("projectbuilder:navbar-ready"));
 
 document.getElementById("navbar-changelog-button").addEventListener(
     "click",

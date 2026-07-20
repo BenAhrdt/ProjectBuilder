@@ -2,6 +2,23 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.2.0 - 20.07.2026
+
+### Neu
+
+- Eine globale Suche findet Kunden, Projekte, Artikel und Positionen innerhalb des aktuell geöffneten Projekts.
+- Suchergebnisse werden nach Bereichen gruppiert und können per Maus, Pfeiltasten oder über das Tastenkürzel `Strg + K` geöffnet werden.
+- Projektpositionen aus der globalen Suche werden automatisch aufgeklappt, angesteuert und hervorgehoben.
+- Die Benutzeroberfläche steht jetzt auf Deutsch, Englisch und Spanisch zur Verfügung.
+- Die Sprachauswahl zeigt grafische Länderflaggen und bleibt über App-Neustarts hinweg gespeichert.
+
+### Geändert
+
+- Der redundante ProjectBuilder-Schriftzug wurde durch das Janitza-Logo ersetzt und der Header kompakter gestaltet.
+- Die globale Suche befindet sich platzsparend in der Navbar; ihre Ergebnisse erscheinen rechts daneben, ohne den Inhalt zu verschieben.
+- Deutsch ist die Standardsprache, wenn noch keine gültige Sprachauswahl gespeichert wurde.
+- Projekte können in der globalen Suche auch über den zugeordneten Kundennamen gefunden werden.
+
 ## 1.1.1 - 18.07.2026
 
 ### Geändert

@@ -2030,3 +2030,12 @@ body.project-overview-open {
     }
 
 }
+.project-node-search-target {
+    border-radius: 6px;
+    animation: project-node-search-highlight 2.4s ease-out;
+}
+
+@keyframes project-node-search-highlight {
+    0%, 35% { background: #fff0a6; box-shadow: 0 0 0 4px rgba(255, 208, 64, .35); }
+    100% { background: transparent; box-shadow: none; }
+}

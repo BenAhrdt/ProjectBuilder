@@ -1,13 +1,16 @@
+import * as i18n from "../utils/i18n.js";
+await i18n.loadLanguage();
+
 const view = document.getElementById("view");
 
 async function renderView() {
     const [changelogResponse, versionResponse] = await Promise.all([
-        fetch("/api/changelog"),
+        fetch(`/api/changelog?language=${encodeURIComponent(i18n.getCurrentLanguage())}`),
         fetch("/api/version")
     ]);
 
     if (!changelogResponse.ok || !versionResponse.ok) {
-        throw new Error("Changelog konnte nicht geladen werden");
+        throw new Error(i18n.t("changelog.loadError"));
     }
 
     const markdown = await changelogResponse.text();
@@ -19,8 +22,8 @@ async function renderView() {
             <header class="changelog-header">
                 <span class="changelog-header-icon">📖</span>
                 <div>
-                    <h1>Changelog</h1>
-                    <p>Versionshistorie von ProjectBuilder</p>
+                    <h1>${i18n.t("changelog.title")}</h1>
+                    <p>${i18n.t("changelog.subtitle")}</p>
                 </div>
             </header>
             <div id="changelog-releases" class="changelog-releases"></div>
@@ -66,13 +69,13 @@ function createRelease(release, currentVersion) {
 
     const header = document.createElement("header");
     const title = document.createElement("h2");
-    title.textContent = `Version ${release.version}`;
+    title.textContent = `${i18n.t("changelog.version")} ${release.version}`;
     header.append(title);
 
     if (release.version === currentVersion) {
         const badge = document.createElement("span");
         badge.className = "changelog-current-badge";
-        badge.textContent = "Aktuell installiert";
+        badge.textContent = i18n.t("changelog.currentlyInstalled");
         header.append(badge);
     }
 
@@ -84,7 +87,7 @@ function createRelease(release, currentVersion) {
     for (const section of release.sections) {
         const sectionElement = document.createElement("section");
         const heading = document.createElement("h3");
-        heading.textContent = section.title;
+        heading.textContent = translateSectionTitle(section.title);
         const list = document.createElement("ul");
 
         for (const item of section.items) {
@@ -98,6 +101,15 @@ function createRelease(release, currentVersion) {
     }
 
     return article;
+}
+
+function translateSectionTitle(title) {
+    const sectionKeys = {
+        "Neu": "changelog.section.added",
+        "Geändert": "changelog.section.changed",
+        "Behoben": "changelog.section.fixed"
+    };
+    return sectionKeys[title] ? i18n.t(sectionKeys[title]) : title;
 }
 
 export { renderView };

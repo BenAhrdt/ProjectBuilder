@@ -499,10 +499,10 @@ async function renderView(
                         <button
                             id="delete-project"
                             type="button"
-                            title="Projekt löschen"
-                            aria-label="Projekt löschen"
+                            title="${i18n.t("project.deleteProject")}"
+                            aria-label="${i18n.t("project.deleteProject")}"
                         >
-                            Projekt löschen
+                            ${i18n.t("project.deleteProject")}
                         </button>
 
                     </div>
@@ -3645,10 +3645,10 @@ function registerProjectDelete(
 
             const confirmed =
                 await showConfirm(
-                    `Projekt "${project.name ?? ""}" wirklich löschen?`,
+                    i18n.t("project.deleteProjectConfirm").replace("{name}", project.name ?? ""),
                     {
-                        title: "Projekt löschen",
-                        confirmText: "Löschen",
+                        title: i18n.t("project.deleteProject"),
+                        confirmText: i18n.t("project.delete"),
                         danger: true
                     }
                 );
@@ -3681,7 +3681,7 @@ function registerProjectDelete(
 
                 await showAlert(
                     result.error
-                    || "Projekt konnte nicht gelöscht werden."
+                    || i18n.t("project.deleteProjectError")
                 );
 
                 return;

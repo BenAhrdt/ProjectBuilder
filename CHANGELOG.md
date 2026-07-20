@@ -2,6 +2,18 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.2.1 - 20.07.2026
+
+### Geändert
+
+- Versionsanzeige, Changelog-Oberfläche und Projekt-Löschaktion sind vollständig auf Deutsch, Englisch und Spanisch lokalisiert.
+- Der vollständige Changelog steht nun in allen drei Sprachen zur Verfügung und wird passend zur aktiven Sprache geladen.
+
+### Behoben
+
+- Die globale Suche findet Positionen in sämtlichen Projektstrukturen, ohne dass das jeweilige Projekt zuvor geöffnet werden muss.
+- Treffer aus anderen Projekten zeigen Projektname und vollständigen Strukturpfad und öffnen direkt die gefundene Position.
+
 ## 1.2.0 - 20.07.2026
 
 ### Neu

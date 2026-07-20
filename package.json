@@ -1,6 +1,6 @@
 {
   "name": "projectbuilder",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "type": "module",
   "description": "",
   "main": "electron/main.js",
@@ -25,7 +25,7 @@
     "files": [
       "electron/**/*",
       "icon.png",
-      "CHANGELOG.md",
+      "CHANGELOG*.md",
       "server.js",
       "database/**/*",
       "routes/**/*",

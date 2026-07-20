@@ -149,9 +149,7 @@ async function performSearch(query) {
             fetch(`/api/customers?search=${encodeURIComponent(query)}`).then(readJson),
             fetch(`/api/projects?search=${encodeURIComponent(query)}`).then(readJson),
             fetch(`/api/articles?search=${encodeURIComponent(query)}`).then(readJson),
-            projectId
-                ? fetch(`/api/projectNodes/${projectId}`).then(readJson)
-                : Promise.resolve([])
+            fetch(`/api/projectNodes/search?search=${encodeURIComponent(query)}`).then(readJson)
         ];
         const [customers, projects, articles, nodes] = await Promise.all(requests);
         if (requestId !== searchRequestId || query !== searchInput.value.trim()) return;
@@ -168,11 +166,14 @@ async function readJson(response) {
 }
 
 function renderResults(query, projectId, customers, projects, articles, nodes) {
-    const normalizedQuery = normalize(query);
-    const matchingNodes = nodes.filter(node => normalize(node.name).includes(normalizedQuery));
+    const currentProjectNodes = nodes.filter(node => String(node.projectId) === String(projectId));
+    const otherProjectNodes = nodes.filter(node => String(node.projectId) !== String(projectId));
     const groups = [
-        { label: i18n.t("search.currentProject"), type: "node", items: matchingNodes,
-            title: item => buildNodePath(item, nodes), detail: item => nodeTypeLabel(item.type), projectId },
+        { label: i18n.t("search.currentProject"), type: "node", items: currentProjectNodes,
+            title: item => item.path, detail: item => nodeTypeLabel(item.type), projectId },
+        { label: i18n.t("search.projectPositions"), type: "node", items: otherProjectNodes,
+            title: item => item.path,
+            detail: item => [item.projectName, nodeTypeLabel(item.type)].filter(Boolean).join(" · ") },
         { label: i18n.t("search.customers"), type: "customer", items: customers,
             title: item => item.name, detail: item => [item.customerNumber, item.city].filter(Boolean).join(" · ") },
         { label: i18n.t("search.projects"), type: "project", items: projects,
@@ -192,7 +193,7 @@ function renderResults(query, projectId, customers, projects, articles, nodes) {
             ${group.items.slice(0, MAX_RESULTS_PER_GROUP).map(item => `
                 <button type="button" role="option" data-result-type="${group.type}"
                     data-result-id="${escapeHtml(String(item.id ?? item.articleNumber))}"
-                    data-project-id="${escapeHtml(String(group.projectId ?? ""))}">
+                    data-project-id="${escapeHtml(String(item.projectId ?? group.projectId ?? ""))}">
                     <span class="global-search-result-title">${highlight(group.title(item), query)}</span>
                     <span class="global-search-result-detail">${highlight(group.detail(item), query)}</span>
                 </button>`).join("")}

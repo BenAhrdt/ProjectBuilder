@@ -51,8 +51,12 @@ app.get("/api/version", (req, res) => {
 })
 
 app.get("/api/changelog", (req, res) => {
+    const language = ["de", "en", "es"].includes(req.query.language)
+        ? req.query.language
+        : "de";
+    const filename = language === "de" ? "CHANGELOG.md" : `CHANGELOG.${language}.md`;
     res.type("text/markdown").send(
-        fs.readFileSync(path.join(__dirname, "CHANGELOG.md"), "utf8")
+        fs.readFileSync(path.join(__dirname, filename), "utf8")
     )
 })
 

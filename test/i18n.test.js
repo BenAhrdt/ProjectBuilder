@@ -24,3 +24,15 @@ test("all languages contain the same translation keys", () => {
         );
     }
 });
+
+test("localized changelogs cover the same releases", () => {
+    const changelogFiles = ["CHANGELOG.md", "CHANGELOG.en.md", "CHANGELOG.es.md"];
+    const versionsByFile = changelogFiles.map(file =>
+        [...fs.readFileSync(path.join(process.cwd(), file), "utf8").matchAll(/^##\s+([^\s]+)\s+-/gm)]
+            .map(match => match[1])
+    );
+
+    for (const versions of versionsByFile.slice(1)) {
+        assert.deepEqual(versions, versionsByFile[0]);
+    }
+});

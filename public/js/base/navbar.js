@@ -7,7 +7,7 @@ const navbar = document.getElementById('navbar');
 const versionResponse = await fetch("/api/version");
 const { version } = versionResponse.ok
     ? await versionResponse.json()
-    : { version: "unbekannt" };
+    : { version: i18n.t("navbar.unknownVersion") };
 
 navbar.innerHTML = `
     <div class="navbar-global-search global-search">
@@ -47,12 +47,12 @@ navbar.innerHTML = `
         <div id="navbar-information-1" class="navbar-information">
         </div>
         <div id="navbar-information-version" class="navbar-information">
-            <span>Aktuelle Version: ${version}</span>
+            <span>${i18n.t("navbar.currentVersion")}: ${version}</span>
             <button
                 id="navbar-changelog-button"
                 type="button"
-                title="Changelog öffnen"
-                aria-label="Changelog öffnen"
+                title="${i18n.t("navbar.openChangelog")}"
+                aria-label="${i18n.t("navbar.openChangelog")}"
             >
                 ${utils.icons.book}
             </button>

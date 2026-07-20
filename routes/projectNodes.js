@@ -7,6 +7,92 @@ const router =
     express.Router();
 
 router.get(
+    "/search",
+    (req, res) => {
+
+        const search =
+            String(req.query.search ?? "").trim();
+
+        if (search.length < 2) {
+            res.json([]);
+            return;
+        }
+
+        const normalize = value =>
+            String(value ?? "")
+                .toLocaleLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "");
+
+        const normalizedSearch =
+            normalize(search);
+
+        const nodes =
+            database.projectNodes.prepare(`
+
+                SELECT
+                    projectNodes.*,
+                    projects.name AS projectName
+
+                FROM projectNodes
+
+                LEFT JOIN projects
+                ON projects.id = projectNodes.projectId
+
+                ORDER BY
+                    projects.name,
+                    COALESCE(projectNodes.sortOrder, projectNodes.id),
+                    projectNodes.id
+
+            `).all();
+
+        const nodesByProjectAndId =
+            new Map(
+                nodes.map(node => [
+                    `${node.projectId}:${node.id}`,
+                    node
+                ])
+            );
+
+        const results =
+            nodes
+                .filter(node =>
+                    normalize(node.name).includes(normalizedSearch)
+                )
+                .map(node => {
+                    const path = [node.name];
+                    const visited = new Set([String(node.id)]);
+                    let parentId = node.parentId;
+
+                    while (
+                        parentId != null
+                        && !visited.has(String(parentId))
+                    ) {
+                        visited.add(String(parentId));
+                        const parent = nodesByProjectAndId.get(
+                            `${node.projectId}:${parentId}`
+                        );
+                        if (!parent) break;
+                        path.unshift(parent.name);
+                        parentId = parent.parentId;
+                    }
+
+                    return {
+                        id: node.id,
+                        projectId: node.projectId,
+                        projectName: node.projectName,
+                        name: node.name,
+                        type: node.type,
+                        path: path.join(" › ")
+                    };
+                });
+
+        res.json(results);
+
+    }
+);
+
+router.get(
     "/:projectId",
     (req, res) => {
 

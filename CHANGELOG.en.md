@@ -2,6 +2,13 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.2.2 - 07.08.2026
+### Changed
+- Word tender exports now follow the official Janitza tender template with compact Arial typography, structured position numbering and consistent text indentation.
+- Manufacturer, type, article number, quantity, unit price and total price are presented clearly and left-aligned below the technical tender text.
+- A compact introduction supplements the project description with technical notes and the selected price basis.
+- Spacing between the introduction, tender positions and commercial details was refined for a clearer document structure.
+
 ## 1.2.1 - 20.07.2026
 ### Changed
 - The version display, changelog interface and project deletion action are fully localized in German, English and Spanish.

@@ -2,6 +2,15 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.2.2 - 07.08.2026
+
+### Geändert
+
+- Der Word-Ausschreibungsexport folgt nun der Form der offiziellen Janitza-Ausschreibungsvorlage mit kompakter Arial-Typografie, gegliederten Positionsnummern und einheitlichen Texteinzügen.
+- Hersteller, Typ, Artikelnummer sowie Menge, Einzelpreis und Gesamtpreis werden übersichtlich und linksbündig unter dem technischen Ausschreibungstext dargestellt.
+- Ein kompakter Vorspann ergänzt die Projektbeschreibung um fachliche Vorbemerkungen und die gewählte Preisbasis.
+- Abstände zwischen Vorspann, Leistungspositionen und kaufmännischen Angaben wurden für eine ruhigere Dokumentstruktur angepasst.
+
 ## 1.2.1 - 20.07.2026
 
 ### Geändert

@@ -14,7 +14,9 @@ import {
     Paragraph,
     Table,
     TableCell,
+    TableLayoutType,
     TableRow,
+    TabStopType,
     TextRun,
     WidthType
 } from "docx";
@@ -2002,7 +2004,158 @@ async function buildProjectWorkbookBuffer(
 
 }
 
-async function buildWordTenderBuffer(
+async function buildWordTenderBuffer(exportData, priceMode) {
+    const { project, positions } = exportData;
+    const showPrices = priceMode !== "none";
+    const children = [janitzaHeading("1", project.name || "Projekt", 20)];
+
+    if (project.description) {
+        String(project.description).split(/\r?\n/).forEach(line => {
+            children.push(janitzaText(line || " "));
+        });
+    }
+
+    children.push(new Paragraph({
+        children: [new TextRun({ text: "Vorbemerkungen", bold: true, size: 20 })],
+        indent: { left: 1040 },
+        spacing: { before: 240, after: 80, line: 240 },
+        keepNext: true
+    }));
+    children.push(janitzaText(
+        "Die nachfolgenden Positionen basieren auf den technischen " +
+        "Ausschreibungstexten der ausgewählten Artikel. Mengen und technische " +
+        "Angaben sind vor der Angebotsabgabe zu prüfen."
+    ));
+    children.push(janitzaText(
+        "Die beschriebenen Einzelkomponenten sind entsprechend der jeweiligen " +
+        "Projektanforderungen fachgerecht zu einer Systemlösung zu kombinieren."
+    ));
+    children.push(new Paragraph({
+        children: [
+            new TextRun({ text: "Preisbasis: ", bold: true, size: 20 }),
+            new TextRun({
+                text: showPrices
+                    ? `${priceMode === "list" ? "Listenpreise" : "rabattierte Preise"} (netto)`
+                    : "Preise vom Bieter einzutragen",
+                size: 20
+            })
+        ],
+        indent: { left: 1040 },
+        spacing: { before: 80, after: 320, line: 240 }
+    }));
+
+    let previousPath = null;
+    let groupNumber = 0;
+    let positionInGroup = 0;
+    positions.forEach(position => {
+        if (position.path !== previousPath) {
+            groupNumber += 1;
+            positionInGroup = 0;
+            children.push(janitzaHeading(`1.${groupNumber}`, position.path || "Projektpositionen"));
+            previousPath = position.path;
+        }
+
+        positionInGroup += 1;
+        const number = `1.${groupNumber}.${positionInGroup}`;
+        const label = position.positionName || position.manufacturerType || position.articleNumber;
+        const suffix = position.isOptional
+            ? " (Bedarfsposition)"
+            : position.isAlternative ? " (Alternativposition)" : "";
+        children.push(janitzaHeading(number, `${label}${suffix}`));
+
+        String(position.description || "Kein Ausschreibungstext hinterlegt.")
+            .split(/\r?\n/)
+            .forEach(line => children.push(janitzaText(line || " ")));
+
+        children.push(janitzaLabel("Hersteller: ", position.manufacturerName || "Janitza electronics GmbH", 240));
+        children.push(janitzaLabel("Typ: ", position.manufacturerType || label));
+        children.push(janitzaLabel("Artikelnr.: ", position.articleNumber, 0, 120));
+
+        const unitPrice = showPrices
+            ? formatTenderMoney(getTenderUnitPrice(position, priceMode, project)).replace(/\sEUR$/, "")
+            : "...........";
+        const totalPrice = showPrices
+            ? formatTenderMoney(getTenderTotal(position, priceMode, project)).replace(/\sEUR$/, "")
+            : "...........";
+        children.push(new Table({
+            width: { size: 6900, type: WidthType.DXA },
+            indent: { size: 1040, type: WidthType.DXA },
+            alignment: AlignmentType.LEFT,
+            layout: TableLayoutType.FIXED,
+            columnWidths: [2300, 2300, 2300],
+            margins: { marginUnitType: WidthType.DXA, left: 0, right: 0 },
+            rows: [new TableRow({ children: [
+                janitzaCell(`Menge: ${formatTenderQuantity(position.quantity) || "..........."} ${position.unit || "Stk"}`, 2300, true),
+                janitzaCell(`Preis: ${unitPrice} €`, 2300, true),
+                janitzaCell(`GP: ${totalPrice} €`, 2300, true)
+            ] })]
+        }));
+        children.push(new Paragraph({ spacing: { after: 120 } }));
+    });
+
+    return Packer.toBuffer(new Document({
+        creator: "ProjectBuilder",
+        title: `Ausschreibung ${project.name || "Projekt"}`,
+        styles: { default: { document: {
+            run: { font: "Arial", size: 20 },
+            paragraph: { spacing: { after: 0, line: 240 } }
+        } } },
+        sections: [{
+            properties: { page: { margin: { top: 1134, right: 1134, bottom: 1134, left: 1134 } } },
+            children
+        }]
+    }));
+}
+
+function janitzaHeading(number, text, size = 19) {
+    return new Paragraph({
+        children: [
+            new TextRun({ text: number, bold: true, size }),
+            new TextRun({ text: "\t" }),
+            new TextRun({ text, bold: true, size })
+        ],
+        tabStops: [{ type: TabStopType.LEFT, position: 1035 }],
+        indent: { left: 1035, hanging: 1035 },
+        spacing: { before: 120, after: 0, line: 240 },
+        keepNext: true
+    });
+}
+
+function janitzaText(text) {
+    return new Paragraph({
+        children: [new TextRun({ text, size: 20 })],
+        indent: { left: 1040 },
+        spacing: { after: 0, line: 240 },
+        keepLines: true
+    });
+}
+
+function janitzaLabel(label, value, before = 0, after = 0) {
+    return new Paragraph({
+        children: [
+            new TextRun({ text: label, bold: true, size: 20 }),
+            new TextRun({ text: value, size: 20 })
+        ],
+        indent: { left: 1040 },
+        spacing: { before, after, line: 240 }
+    });
+}
+
+function janitzaCell(text, width, bold = false, size = 18) {
+    return new TableCell({
+        width: { size: width, type: WidthType.DXA },
+        borders: {
+            top: { style: BorderStyle.NIL }, bottom: { style: BorderStyle.NIL },
+            left: { style: BorderStyle.NIL }, right: { style: BorderStyle.NIL }
+        },
+        children: [new Paragraph({
+            children: [new TextRun({ text, bold, size })],
+            spacing: { before: 100, after: 100, line: 240 }
+        })]
+    });
+}
+
+async function buildLegacyWordTenderBuffer(
     exportData,
     priceMode
 ) {

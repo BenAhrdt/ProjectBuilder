@@ -2,6 +2,13 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.2.2 - 07.08.2026
+### Modificado
+- La exportación de licitaciones a Word sigue ahora la plantilla oficial de Janitza, con tipografía Arial compacta, numeración estructurada y sangrías uniformes.
+- El fabricante, tipo, número de artículo, cantidad, precio unitario y precio total aparecen claramente alineados a la izquierda debajo del texto técnico.
+- Una introducción compacta complementa la descripción del proyecto con indicaciones técnicas y la base de precios seleccionada.
+- Se ajustaron los espacios entre la introducción, las posiciones y los datos comerciales para mejorar la estructura del documento.
+
 ## 1.2.1 - 20.07.2026
 ### Modificado
 - La versión mostrada, la interfaz del registro y la eliminación de proyectos están completamente localizadas en alemán, inglés y español.

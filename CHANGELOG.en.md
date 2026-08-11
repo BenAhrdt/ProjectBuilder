@@ -2,6 +2,19 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.2.4 - 11.08.2026
+### Added
+- Articles can be removed individually or cleared completely from the article list.
+- Before deletion, ProjectBuilder shows the projects using an article and provides direct navigation to each project position.
+- Backups of articles, customers and projects can be created manually and restored selectively.
+- Automatic backups can run daily, weekly or monthly; missed backups run at the next application start and the latest ten backups are retained.
+### Changed
+- Import pricelist and Backup & restore are grouped directly above the version information.
+- The language selector always shows the native names “Deutsch”, “English” and “Español”, regardless of the active language.
+### Fixed
+- B21, B23 and B24 articles use their matching product images instead of the generic energy-meter icon.
+- Direct navigation from customers, search results and usage notices correctly updates the active navbar section.
+
 ## 1.2.3 - 11.08.2026
 ### Changed
 - The Windows application and installer are digitally signed with the ProjectBuilder code-signing certificate.

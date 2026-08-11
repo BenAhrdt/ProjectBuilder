@@ -2,6 +2,19 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.2.4 - 11.08.2026
+### Nuevo
+- Los artículos se pueden eliminar individualmente o borrar por completo de la lista de artículos.
+- Antes de eliminarlos, ProjectBuilder muestra los proyectos que utilizan el artículo y permite saltar directamente a cada posición del proyecto.
+- Se pueden crear copias manuales de artículos, clientes y proyectos y restaurar áreas seleccionadas.
+- Las copias automáticas pueden ejecutarse diaria, semanal o mensualmente; las copias pendientes se realizan al iniciar la aplicación y se conservan las diez más recientes.
+### Modificado
+- Importar lista de precios y Copia y restauración están agrupados directamente encima de la información de versión.
+- El selector de idioma siempre muestra los nombres nativos “Deutsch”, “English” y “Español”, independientemente del idioma activo.
+### Corregido
+- Los artículos B21, B23 y B24 usan sus imágenes de producto correspondientes en lugar del icono genérico de medidor de energía.
+- La navegación directa desde clientes, resultados de búsqueda y avisos de uso actualiza correctamente la sección activa de la barra lateral.
+
 ## 1.2.3 - 11.08.2026
 ### Modificado
 - La aplicación de Windows y el instalador se firman digitalmente con el certificado de firma de código de ProjectBuilder.

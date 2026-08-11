@@ -2,6 +2,13 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.2.9 - 11.08.2026
+### Nuevo
+- La importación reconoce automáticamente nombres de columnas en alemán e inglés, además de variantes habituales de formato.
+- Las listas en EUR, GBP, USD y AUD conservan la moneda indicada en la columna correspondiente de cada archivo.
+### Modificado
+- Las listas no compatibles muestran un mensaje claro cuando no se encuentra una columna reconocida de número de artículo.
+
 ## 1.2.8 - 11.08.2026
 ### Modificado
 - Versión de prueba para verificar la actualización automática desde la versión 1.2.7 sin verificación adicional del editor.

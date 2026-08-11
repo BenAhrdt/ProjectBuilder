@@ -2,6 +2,10 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.2.6 - 11.08.2026
+### Changed
+- Test release for verifying automatic update downloads and the progress display introduced in version 1.2.5.
+
 ## 1.2.5 - 11.08.2026
 ### Added
 - Update downloads show their status, a progress bar and the current percentage in the lower-left navigation area.

@@ -2,6 +2,12 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.2.6 - 11.08.2026
+
+### Geändert
+
+- Testrelease zur Überprüfung des automatischen Update-Downloads und der in Version 1.2.5 eingeführten Fortschrittsanzeige.
+
 ## 1.2.5 - 11.08.2026
 
 ### Neu

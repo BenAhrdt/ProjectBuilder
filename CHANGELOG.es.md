@@ -2,6 +2,10 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.2.8 - 11.08.2026
+### Modificado
+- Versión de prueba para verificar la actualización automática desde la versión 1.2.7 sin verificación adicional del editor.
+
 ## 1.2.7 - 11.08.2026
 ### Modificado
 - La verificación adicional del editor del actualizador automático se desactiva temporalmente para permitir actualizaciones mientras el certificado firmado internamente aún no sea de confianza central en los equipos de destino.

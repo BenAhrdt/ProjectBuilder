@@ -2,6 +2,11 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.2.3 - 11.08.2026
+### Changed
+- The Windows application and installer are digitally signed with the ProjectBuilder code-signing certificate.
+- The public certificate is attached to the release for review and controlled distribution by corporate IT.
+
 ## 1.2.2 - 07.08.2026
 ### Changed
 - Word tender exports now follow the official Janitza tender template with compact Arial typography, structured position numbering and consistent text indentation.

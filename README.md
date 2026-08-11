@@ -56,6 +56,8 @@ npm run dist:win
 
 Die erzeugten Installationsdateien werden im Verzeichnis `release` abgelegt. Die lokale Projektdatenbank bleibt bei einer Aktualisierung oder Deinstallation standardmäßig erhalten.
 
+Veröffentlichte Windows-Builds werden mit einem selbstsignierten ProjectBuilder-Code-Signing-Zertifikat signiert. Das öffentliche Zertifikat liegt dem GitHub Release bei und muss vor der Installation durch die zuständige IT geprüft und auf den Zielrechnern als vertrauenswürdig verteilt werden. Der private Schlüssel wird ausschließlich verschlüsselt in GitHub Secrets hinterlegt und nicht in das Repository aufgenommen.
+
 ## Ausschreibungsexport
 
 Der Export verwendet die Langtexte aus der importierten Preisliste beziehungsweise aus manuell angelegten Artikeln. Verfügbar sind:

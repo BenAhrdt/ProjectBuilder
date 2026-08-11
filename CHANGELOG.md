@@ -2,6 +2,13 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.2.3 - 11.08.2026
+
+### Geändert
+
+- Windows-Anwendung und Installationsprogramm werden digital mit dem ProjectBuilder-Code-Signing-Zertifikat signiert.
+- Das öffentliche Zertifikat wird dem Release zur Prüfung und kontrollierten Verteilung durch die Unternehmens-IT beigefügt.
+
 ## 1.2.2 - 07.08.2026
 
 ### Geändert

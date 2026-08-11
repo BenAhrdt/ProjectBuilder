@@ -175,14 +175,16 @@
 #navbar-item-group-3 {
     grid-area: navbar-item-group-3;
     display: grid;
-    grid-template-rows: 1fr 1fr 1fr 1fr 1fr;
+    grid-template-rows: 1fr auto auto;
     grid-template-areas:
-    "item-1"
-    "item-2"
-    "item-3"
-    "item-4"
-    "importPricelist";
+    "spacer"
+    "importPricelist"
+    "backups";
     align-items: center;
+}
+
+#navbar-backups {
+    grid-area: backups;
 }
 
 #navbar-import-pricelist {

@@ -1,5 +1,16 @@
 let activeModal = null;
 
+function escapeHtml(value) {
+
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+
+}
+
 function ensureModalRoot() {
 
     let root =
@@ -46,7 +57,8 @@ function showModal({
     cancelText = "Abbrechen",
     showCancel = false,
     input = null,
-    danger = false
+    danger = false,
+    choices = []
 }) {
 
     closeActiveModal();
@@ -78,12 +90,22 @@ function showModal({
                     <div class="app-modal-message"></div>
                 </div>
                 <div class="app-modal-actions">
+                    ${choices.map((choice, index) => `
+                        <button
+                            class="app-modal-confirm app-modal-choice"
+                            type="button"
+                            data-choice-index="${index}"
+                        >${escapeHtml(choice.label)}</button>
+                    `).join("")}
                     ${
                         showCancel
                             ? `<button class="app-modal-cancel" type="button">${cancelText}</button>`
                             : ""
                     }
-                    <button class="app-modal-confirm${danger ? " app-modal-danger" : ""}" type="button">${confirmText}</button>
+                    ${choices.length === 0
+                        ? `<button class="app-modal-confirm${danger ? " app-modal-danger" : ""}" type="button">${confirmText}</button>`
+                        : ""
+                    }
                 </div>
             </div>
         `;
@@ -145,9 +167,9 @@ function showModal({
 
         overlay
             .querySelector(
-                ".app-modal-confirm"
+                ".app-modal-confirm:not(.app-modal-choice)"
             )
-            .addEventListener(
+            ?.addEventListener(
                 "click",
                 () => {
 
@@ -159,6 +181,30 @@ function showModal({
 
                 }
             );
+
+        overlay
+            .querySelectorAll(
+                ".app-modal-choice"
+            )
+            .forEach(button => {
+
+                button.addEventListener(
+                    "click",
+                    () => {
+
+                        const choice =
+                            choices[
+                                Number(button.dataset.choiceIndex)
+                            ];
+
+                        finish(
+                            choice?.value ?? null
+                        );
+
+                    }
+                );
+
+            });
 
         overlay
             .querySelector(
@@ -180,6 +226,15 @@ function showModal({
                 }
 
                 if (event.key === "Enter") {
+
+                    if (
+                        choices.length > 0
+                        && !inputElement
+                    ) {
+
+                        return;
+
+                    }
 
                     event.preventDefault();
                     finish(
@@ -204,7 +259,15 @@ function showModal({
             inputElement
             ||
             overlay.querySelector(
+                ".app-modal-choice"
+            )
+            ||
+            overlay.querySelector(
                 ".app-modal-confirm"
+            )
+            ||
+            overlay.querySelector(
+                ".app-modal-cancel"
             )
         ).focus();
 
@@ -275,8 +338,28 @@ function showPrompt(
 
 }
 
+function showChoice(
+    message,
+    options = {}
+) {
+
+    return showModal({
+        title:
+            options.title ?? "Auswählen",
+        message,
+        cancelText:
+            options.cancelText ?? "Schließen",
+        showCancel:
+            true,
+        choices:
+            options.choices ?? []
+    });
+
+}
+
 export {
     showAlert,
     showConfirm,
-    showPrompt
+    showPrompt,
+    showChoice
 };

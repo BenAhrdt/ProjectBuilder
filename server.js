@@ -9,6 +9,8 @@ import projectsRouter from "./routes/projects.js";
 import projectNodesRouter from "./routes/projectNodes.js";
 import projectNodeArticlesRouter from "./routes/projectNodeArticles.js";
 import settingsRouter from "./routes/settings.js";
+import backupsRouter from "./routes/backups.js";
+import { startAutomaticBackupScheduler } from "./utils/backup.js";
 
 const app = express()
 
@@ -104,6 +106,7 @@ app.use(
 );
 
 app.use("/api/settings", settingsRouter);
+app.use("/api/backups", backupsRouter);
 
 // Unbekannte API-Endpunkte dürfen nicht in die SPA-Fallbackseite laufen.
 // Andernfalls würde beispielsweise ein nicht geladener Export-Endpunkt als
@@ -129,6 +132,7 @@ app.use((req, res) => {
 // --------------------------------------------------
 
 export function startServer({ port = 3000, host = "127.0.0.1" } = {}) {
+    startAutomaticBackupScheduler();
     return new Promise((resolve, reject) => {
         const server = app.listen(port, host, () => resolve(server));
         server.once("error", reject);

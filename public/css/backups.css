@@ -1,0 +1,43 @@
+.backup-content {
+    display: grid;
+    gap: 18px;
+    padding: 22px;
+    box-sizing: border-box;
+    background: transparent;
+}
+
+.backup-card {
+    padding: 22px;
+    border: 1px solid #dfe3ea;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.backup-card h2 { margin: 0 0 8px; font-size: 20px; }
+.backup-card p { color: #596273; }
+.backup-options { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+.backup-option { display: flex; align-items: center; gap: 7px; padding: 9px 12px; border: 1px solid #d8deea; border-radius: 8px; background: #f8faff; }
+.backup-option-disabled { opacity: 0.55; }
+.backup-dependency-note { font-size: 13px; }
+.backup-primary, .backup-card button { padding: 10px 14px; border: 1px solid #c6d1e5; border-radius: 8px; background: #fff; cursor: pointer; font-weight: 700; }
+.backup-primary { border-color: #4c8bf5 !important; background: #4c8bf5 !important; color: #fff; }
+.backup-danger { border-color: #d92d20 !important; background: #d92d20 !important; color: #fff; }
+.backup-switch-row { display: flex; align-items: center; gap: 8px; margin: 14px 0; font-weight: 700; }
+.backup-form-grid { display: grid; grid-template-columns: minmax(180px, 0.5fr) minmax(320px, 1.5fr); gap: 16px; }
+.backup-form-grid label { display: grid; gap: 7px; }
+.backup-form-grid select, .backup-form-grid input { padding: 10px; border: 1px solid #cfd6e2; border-radius: 8px; box-sizing: border-box; }
+.backup-directory-field > div { display: flex; gap: 8px; }
+.backup-directory-field input { flex: 1; min-width: 0; }
+.backup-status-grid { display: grid; grid-template-columns: max-content 1fr; gap: 7px 18px; margin: 16px 0; }
+.backup-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.backup-error, .backup-warning { padding: 10px 12px; border-radius: 8px; background: #fff2f0; color: #a5271d !important; }
+.backup-restore-preview { margin-top: 18px; padding-top: 18px; border-top: 1px solid #e2e5eb; }
+.backup-restore-preview dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; }
+.backup-restore-preview dt { font-weight: 700; }
+.backup-restore-preview dd { margin: 0; overflow-wrap: anywhere; }
+.backup-counts { display: flex; flex-wrap: wrap; gap: 14px; }
+
+@media (max-width: 900px) {
+    .backup-form-grid { grid-template-columns: 1fr; }
+}

@@ -2,6 +2,25 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.2.4 - 11.08.2026
+
+### Neu
+
+- Artikel können einzeln oder vollständig aus der Artikelliste gelöscht werden.
+- Vor dem Löschen zeigt ProjectBuilder die verwendenden Projekte an und ermöglicht den direkten Sprung zur jeweiligen Projektposition.
+- Backups für Artikel, Kunden und Projekte können manuell erstellt und selektiv wiederhergestellt werden.
+- Automatische Backups lassen sich täglich, wöchentlich oder monatlich ausführen; verpasste Sicherungen werden beim nächsten Programmstart nachgeholt und die letzten zehn Sicherungen aufbewahrt.
+
+### Geändert
+
+- Die Hilfsfunktionen „Preisliste importieren“ und „Backup & Wiederherstellung“ sind direkt oberhalb der Versionsinformation angeordnet.
+- Die Sprachauswahl zeigt die festen Eigennamen „Deutsch“, „English“ und „Español“ unabhängig von der aktiven Sprache.
+
+### Behoben
+
+- B21-, B23- und B24-Artikel verwenden die passenden Produktbilder statt des allgemeinen Energy-Meter-Symbols.
+- Bei direkter Navigation aus Kunden-, Such- und Verwendungshinweisen wird der aktive Bereich der Navbar korrekt aktualisiert.
+
 ## 1.2.3 - 11.08.2026
 
 ### Geändert

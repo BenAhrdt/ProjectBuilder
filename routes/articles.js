@@ -645,10 +645,7 @@ router.patch("/:articleNumber/price", (req, res) => {
 // Artikel löschen
 // --------------------------------------------------
 
-router.delete("/:articleNumber", (req, res) => {
-
-    const articleNumber =
-        req.params.articleNumber;
+router.delete("/", (req, res) => {
 
     const usage =
         database.projectNodeArticles.prepare(`
@@ -657,17 +654,159 @@ router.delete("/:articleNumber", (req, res) => {
 
             FROM projectNodeArticles
 
-            WHERE articleNumber = ?
+            WHERE articleNumber IN (
 
-        `).get(
-            articleNumber
-        );
+                SELECT articleNumber
+                FROM articles
+
+            )
+
+        `).get();
 
     if (usage.count > 0) {
 
         res.status(409).json({
             success: false,
-            error: `Artikel wird in ${usage.count} Projektposition(en) verwendet.`
+            error: `Die Artikelliste kann nicht geleert werden, weil Artikel in ${usage.count} Projektposition(en) verwendet werden.`
+        });
+
+        return;
+
+    }
+
+    const result =
+        database.articles.prepare(`
+
+            DELETE FROM articles
+
+        `).run();
+
+    res.json({
+        success: true,
+        deletedArticles: result.changes
+    });
+
+});
+
+router.delete("/:articleNumber", (req, res) => {
+
+    const articleNumber =
+        req.params.articleNumber;
+
+    const usages =
+        database.projectNodeArticles.prepare(`
+
+            SELECT
+                projectNodeArticles.id,
+                projectNodeArticles.positionName,
+                projectNodes.id AS nodeId,
+                projectNodes.projectId,
+                projectNodes.parentId,
+                projectNodes.name AS nodeName,
+                projects.name AS projectName
+
+            FROM projectNodeArticles
+
+            LEFT JOIN projectNodes
+            ON projectNodes.id = projectNodeArticles.projectNodeId
+
+            LEFT JOIN projects
+            ON projects.id = projectNodes.projectId
+
+            WHERE projectNodeArticles.articleNumber = ?
+
+            ORDER BY
+                projects.name,
+                projectNodeArticles.id
+
+        `).all(
+            articleNumber
+        );
+
+    if (usages.length > 0) {
+
+        const nodes =
+            database.projectNodes.prepare(`
+
+                SELECT
+                    id,
+                    projectId,
+                    parentId,
+                    name
+
+                FROM projectNodes
+
+            `).all();
+
+        const nodesByProjectAndId =
+            new Map(
+                nodes.map(node => [
+                    `${node.projectId}:${node.id}`,
+                    node
+                ])
+            );
+
+        const usageDetails =
+            usages.map(usage => {
+
+                const path =
+                    [usage.nodeName || "Unbekannte Strukturposition"];
+
+                const visited =
+                    new Set([
+                        String(usage.nodeId)
+                    ]);
+
+                let parentId =
+                    usage.parentId;
+
+                while (
+                    parentId !== null
+                    && parentId !== undefined
+                    && !visited.has(String(parentId))
+                ) {
+
+                    visited.add(String(parentId));
+
+                    const parent =
+                        nodesByProjectAndId.get(
+                            `${usage.projectId}:${parentId}`
+                        );
+
+                    if (!parent) {
+
+                        break;
+
+                    }
+
+                    path.unshift(
+                        parent.name
+                        || "Unbenannte Strukturposition"
+                    );
+
+                    parentId =
+                        parent.parentId;
+
+                }
+
+                return {
+                    projectId: usage.projectId,
+                    projectName:
+                        usage.projectName
+                        || "Unbekanntes Projekt",
+                    nodeId: usage.nodeId,
+                    path: path.join(" › "),
+                    positionName:
+                        usage.positionName
+                        || ""
+                };
+
+            });
+
+        res.status(409).json({
+            success: false,
+            error: `Artikel wird in ${usages.length} Projektposition(en) verwendet.`,
+            usages: usageDetails
         });
 
         return;

@@ -41,6 +41,10 @@ navbar.innerHTML = `
                 <span class="navbar-item-icon">${utils.icons.excel}</span>
                 <div class="navbar-item-text">${i18n.t("navbar.importPricelist")}</div>
             </div>
+            <div id="navbar-backups" data-view="backups" class="navbar-item">
+                <span class="navbar-item-icon">${utils.icons.backup}</span>
+                <div class="navbar-item-text">${i18n.t("navbar.backups")}</div>
+            </div>
         </div>
     </div>
     <div id="navbar-informations">

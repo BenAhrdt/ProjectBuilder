@@ -2,8 +2,10 @@ import * as i18n from "../utils/i18n.js";
 import {
     showAlert,
     showConfirm,
-    showPrompt
+    showPrompt,
+    showChoice
 } from "../utils/modal.js";
+import * as router from "../router.js";
 
 await i18n.loadLanguage();
 
@@ -42,6 +44,11 @@ async function renderView() {
             <button id="add-article-button">
                 + Artikel hinzufügen
             </button>
+            ${articles.length > 0 ? `
+                <button id="clear-articles-button" type="button">
+                    ${i18n.t("articles.clearList")}
+                </button>
+            ` : ""}
         </div>
 
         <div id="articles-left" class="view-left"></div>
@@ -231,6 +238,16 @@ function generateHandler() {
         }
     );
 
+    const clearArticlesButton =
+        document.getElementById(
+            "clear-articles-button"
+        );
+
+    clearArticlesButton?.addEventListener(
+        "click",
+        clearArticles
+    );
+
     const saveManualArticleButton =
         document.getElementById(
             "save-manual-article-button"
@@ -378,7 +395,7 @@ async function saveManualArticle() {
 
     }
 
-    await refreshArticles();
+    await renderView();
 
     closeManualArticleForm();
 
@@ -452,12 +469,6 @@ function renderArticles(articles) {
 
 function renderArticleNumber(article) {
 
-    if (article.manufacturerName !== "Manuell") {
-
-        return article.articleNumber ?? "";
-
-    }
-
     return `
         <div class="article-number-actions">
             <span>
@@ -469,7 +480,7 @@ function renderArticleNumber(article) {
                 data-article-number="${article.articleNumber ?? ""}"
                 title="Artikel löschen"
             >
-                Löschen
+                ${i18n.t("articles.remove")}
             </button>
         </div>
     `;
@@ -605,6 +616,82 @@ async function deleteArticle(
         || !result.success
     ) {
 
+        const usages =
+            Array.isArray(result.usages)
+                ? result.usages
+                : [];
+
+        if (usages.length > 0) {
+
+            const projectNameCounts =
+                usages.reduce((counts, usage) => {
+
+                    counts.set(
+                        usage.projectName,
+                        (counts.get(usage.projectName) || 0) + 1
+                    );
+
+                    return counts;
+
+                }, new Map());
+
+            const selectedUsage =
+                await showChoice(
+                    i18n.t("articles.usedNavigationHint"),
+                    {
+                        title:
+                            i18n.t("articles.articleInUse"),
+                        cancelText:
+                            i18n.t("articles.close"),
+                        choices:
+                            usages.map(usage => {
+
+                                const hasDuplicateProject =
+                                    projectNameCounts.get(
+                                        usage.projectName
+                                    ) > 1;
+
+                                const positionLabel =
+                                    usage.positionName
+                                    || usage.path
+                                        .split("›")
+                                        .at(-1)
+                                        ?.trim();
+
+                                return {
+                                    label:
+                                        hasDuplicateProject
+                                            ? `${usage.projectName} – ${positionLabel}`
+                                            : usage.projectName,
+                                    value: usage
+                                };
+
+                            })
+                    }
+                );
+
+            if (selectedUsage) {
+
+                sessionStorage.setItem(
+                    "projectbuilder.pendingNodeSearch",
+                    JSON.stringify({
+                        projectId:
+                            selectedUsage.projectId,
+                        nodeId:
+                            selectedUsage.nodeId
+                    })
+                );
+
+                router.navigate(
+                    `/project/${selectedUsage.projectId}`
+                );
+
+            }
+
+            return;
+
+        }
+
         await showAlert(
             result.error
             || "Artikel konnte nicht gelöscht werden."
@@ -614,7 +701,54 @@ async function deleteArticle(
 
     }
 
-    await refreshArticles();
+    await renderView();
+
+}
+
+async function clearArticles() {
+
+    const confirmed =
+        await showConfirm(
+            i18n.t("articles.clearListConfirm"),
+            {
+                title: i18n.t("articles.clearList"),
+                confirmText: i18n.t("articles.clearList"),
+                danger: true
+            }
+        );
+
+    if (!confirmed) {
+
+        return;
+
+    }
+
+    const response =
+        await fetch(
+            "/api/articles",
+            {
+                method: "DELETE"
+            }
+        );
+
+    const result =
+        await response.json();
+
+    if (
+        !response.ok
+        || !result.success
+    ) {
+
+        await showAlert(
+            result.error
+            || i18n.t("articles.clearListFailed")
+        );
+
+        return;
+
+    }
+
+    await renderView();
 
 }
 

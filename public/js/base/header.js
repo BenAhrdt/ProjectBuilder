@@ -22,13 +22,13 @@ header.innerHTML = `
             </button>
             <div class="language-dropdown-menu" role="listbox" hidden>
                 <button type="button" role="option" data-language="de">
-                    <img src="/icons/flags/de.svg" alt=""><span>${i18n.t("language.de")}</span>
+                    <img src="/icons/flags/de.svg" alt=""><span>Deutsch</span>
                 </button>
                 <button type="button" role="option" data-language="en">
-                    <img src="/icons/flags/gb.svg" alt=""><span>${i18n.t("language.en")}</span>
+                    <img src="/icons/flags/gb.svg" alt=""><span>English</span>
                 </button>
                 <button type="button" role="option" data-language="es">
-                    <img src="/icons/flags/es.svg" alt=""><span>${i18n.t("language.es")}</span>
+                    <img src="/icons/flags/es.svg" alt=""><span>Español</span>
                 </button>
             </div>
         </div>
@@ -49,9 +49,9 @@ const searchContainer = searchInput.closest(".global-search");
 
 const languageMenu = document.querySelector(".language-dropdown-menu");
 const languageLabels = {
-    de: i18n.t("language.de"),
-    en: i18n.t("language.en"),
-    es: i18n.t("language.es")
+    de: "Deutsch",
+    en: "English",
+    es: "Español"
 };
 const languageFlags = { de: "de", en: "gb", es: "es" };
 const selectedLanguage = i18n.getCurrentLanguage();

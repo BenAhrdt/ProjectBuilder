@@ -2,6 +2,12 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.2.8 - 11.08.2026
+
+### Geändert
+
+- Testrelease zur Überprüfung des automatischen Updates von Version 1.2.7 ohne zusätzliche Herausgeberprüfung.
+
 ## 1.2.7 - 11.08.2026
 
 ### Geändert

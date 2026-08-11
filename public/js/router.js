@@ -72,13 +72,17 @@ function renderRoute(path) {
 
     }
 
-   //Projekt
+    // Projekt
     if (
         path.startsWith("/project/")
     ) {
 
         const projectId =
             path.split("/")[2];
+
+        navbar.setItemsActive(
+            "projects"
+        );
 
         project.renderView(
             projectId

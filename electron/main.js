@@ -25,6 +25,8 @@ async function checkForUpdates() {
 
     autoUpdater.autoDownload = false;
     autoUpdater.autoInstallOnAppQuit = true;
+    // Temporär deaktiviert, bis das interne Zertifikat zentral vertraut wird.
+    autoUpdater.verifyUpdateCodeSignature = async () => null;
 
     autoUpdater.on("update-available", async info => {
         const result = await dialog.showMessageBox(mainWindow, {

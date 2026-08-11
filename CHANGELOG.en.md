@@ -2,6 +2,11 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.2.7 - 11.08.2026
+### Changed
+- The automatic updater's additional publisher verification is temporarily disabled so updates can be installed while the internally signed certificate is not yet centrally trusted on target systems.
+- The installer and application remain digitally signed; Windows SmartScreen and security software continue to inspect them unchanged.
+
 ## 1.2.6 - 11.08.2026
 ### Changed
 - Test release for verifying automatic update downloads and the progress display introduced in version 1.2.5.

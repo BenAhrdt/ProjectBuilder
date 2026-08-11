@@ -2,6 +2,13 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.2.7 - 11.08.2026
+
+### Geändert
+
+- Die zusätzliche Herausgeberprüfung des automatischen Updaters ist vorübergehend deaktiviert, damit Updates trotz des intern signierten, auf Zielsystemen noch nicht zentral vertrauten Zertifikats installiert werden können.
+- Installationsprogramm und Anwendung bleiben weiterhin digital signiert; Windows SmartScreen und Sicherheitssoftware prüfen sie unverändert.
+
 ## 1.2.6 - 11.08.2026
 
 ### Geändert

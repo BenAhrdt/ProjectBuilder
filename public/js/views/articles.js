@@ -42,7 +42,7 @@ async function renderView() {
                 ${i18n.t("articles.articleCount")}: ${articles.length} 
             </div>
             <button id="add-article-button">
-                + Artikel hinzufügen
+                + ${i18n.t("articles.addArticle")}
             </button>
             ${articles.length > 0 ? `
                 <button id="clear-articles-button" type="button">
@@ -62,13 +62,13 @@ async function renderView() {
                     <input
                         id="manual-article-number"
                         type="text"
-                        placeholder="Artikelnummer"
+                        placeholder="${i18n.t("articles.articleNumber")}"
                     >
 
                     <input
                         id="manual-article-name"
                         type="text"
-                        placeholder="Name"
+                        placeholder="${i18n.t("articles.name")}"
                     >
 
                     <input
@@ -76,30 +76,30 @@ async function renderView() {
                         type="number"
                         min="0"
                         step="0.01"
-                        placeholder="Preis"
+                        placeholder="${i18n.t("articles.price")}"
                     >
 
                     <input
                         id="manual-article-discount-group"
                         type="text"
-                        placeholder="Rabattgruppe"
+                        placeholder="${i18n.t("articles.discountGroup")}"
                     >
 
                     <textarea
                         id="manual-article-description"
-                        aria-label="Ausschreibungstext / Langtext"
-                        placeholder="Ausschreibungstext / Langtext (wird in Word und GAEB übernommen)"
+                        aria-label="${i18n.t("articles.description")}"
+                        placeholder="${i18n.t("articles.descriptionPlaceholder")}"
                     ></textarea>
 
                     <button id="save-manual-article-button">
-                        Speichern
+                        ${i18n.t("common.save")}
                     </button>
 
                     <button
                         id="cancel-manual-article-button"
                         type="button"
                     >
-                        Abbrechen
+                        ${i18n.t("common.cancel")}
                     </button>
 
                 </div>
@@ -113,23 +113,23 @@ async function renderView() {
                     <tr>
 
                         <th>
-                            Artikelnummer
+                            ${i18n.t("articles.articleNumber")}
                         </th>
 
                         <th>
-                            Name
+                            ${i18n.t("articles.name")}
                         </th>
 
                         <th>
-                            Ausschreibungstext / Langtext
+                            ${i18n.t("articles.description")}
                         </th>
 
                         <th>
-                            Rabattgruppe
+                            ${i18n.t("articles.discountGroup")}
                         </th>
 
                         <th>
-                            Preis
+                            ${i18n.t("articles.price")}
                         </th>
 
                     </tr>
@@ -331,7 +331,7 @@ async function saveManualArticle() {
     if (!articleNumber || !manufacturerType) {
 
         await showAlert(
-            "Artikelnummer und Name sind Pflicht."
+            i18n.t("articles.requiredFields")
         );
 
         return;
@@ -347,7 +347,7 @@ async function saveManualArticle() {
     ) {
 
         await showAlert(
-            "Bitte einen gültigen Preis eingeben."
+            i18n.t("articles.invalidPrice")
         );
 
         return;
@@ -388,7 +388,7 @@ async function saveManualArticle() {
 
         await showAlert(
             result.error
-            || "Artikel konnte nicht gespeichert werden."
+            || i18n.t("articles.saveFailed")
         );
 
         return;
@@ -478,7 +478,7 @@ function renderArticleNumber(article) {
                 class="article-delete-button"
                 type="button"
                 data-article-number="${article.articleNumber ?? ""}"
-                title="Artikel löschen"
+                title="${i18n.t("articles.deleteArticle")}"
             >
                 ${i18n.t("articles.remove")}
             </button>
@@ -503,9 +503,9 @@ function renderArticlePrice(article) {
                 data-article-number="${article.articleNumber ?? ""}"
                 data-current-price="${article.listPrice ?? ""}"
                 data-current-currency="${article.listPriceCurrency ?? "EUR"}"
-                title="Preis ändern"
+                title="${i18n.t("articles.editPrice")}"
             >
-                Ändern
+                ${i18n.t("common.edit")}
             </button>
         </div>
     `;
@@ -528,7 +528,7 @@ function formatArticlePrice(article) {
 
     }
 
-    return article.listPrice ?? "Auf Anfrage";
+    return article.listPrice ?? i18n.t("articles.onRequest");
 
 }
 
@@ -586,10 +586,11 @@ async function deleteArticle(
 
     const confirmed =
         await showConfirm(
-            `Artikel ${articleNumber} wirklich löschen?`,
+            i18n.t("articles.deleteConfirm")
+                .replace("{number}", articleNumber),
             {
-                title: "Artikel löschen",
-                confirmText: "Löschen",
+                title: i18n.t("articles.deleteArticle"),
+                confirmText: i18n.t("common.delete"),
                 danger: true
             }
         );
@@ -694,7 +695,7 @@ async function deleteArticle(
 
         await showAlert(
             result.error
-            || "Artikel konnte nicht gelöscht werden."
+            || i18n.t("articles.deleteFailed")
         );
 
         return;
@@ -765,14 +766,15 @@ async function editArticlePrice(button) {
 
     const newPrice =
         await showPrompt(
-            `Neuer Preis für Artikel ${articleNumber}`,
+            i18n.t("articles.newPricePrompt")
+                .replace("{number}", articleNumber),
             {
-                title: "Preis ändern",
+                title: i18n.t("articles.editPrice"),
                 value:
                     currentPrice && !isNaN(currentPrice)
                         ? currentPrice
                         : "",
-                confirmText: "Speichern"
+                confirmText: i18n.t("common.save")
             }
         );
 
@@ -791,7 +793,7 @@ async function editArticlePrice(button) {
     ) {
 
         await showAlert(
-            "Bitte einen gültigen Preis eingeben."
+            i18n.t("articles.invalidPrice")
         );
 
         return;
@@ -828,7 +830,7 @@ async function editArticlePrice(button) {
 
         await showAlert(
             result.error
-            || "Preis konnte nicht gespeichert werden."
+            || i18n.t("articles.priceSaveFailed")
         );
 
         return;

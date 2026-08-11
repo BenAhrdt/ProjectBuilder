@@ -2,6 +2,13 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.2.10 - 11.08.2026
+### Modificado
+- Los botones, menús, encabezados de tablas, formularios y mensajes de las vistas de artículos, clientes, proyectos y listas de precios están completamente traducidos al alemán, inglés y español.
+- Los diálogos estándar y los diálogos nativos de actualización y selección de carpetas también utilizan ahora el idioma seleccionado.
+### Corregido
+- Las interfaces en inglés y español ya no muestran etiquetas fijas en alemán.
+
 ## 1.2.9 - 11.08.2026
 ### Nuevo
 - La importación reconoce automáticamente nombres de columnas en alemán e inglés, además de variantes habituales de formato.

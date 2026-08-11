@@ -72,29 +72,29 @@ async function renderView() {
                     <input
                         id="customer-number"
                         type="text"
-                        placeholder="Kundennummer"
+                        placeholder="${i18n.t("customers.customerNumber")}"
                     >
 
                     <input
                         id="customer-name"
                         type="text"
-                        placeholder="Name"
+                        placeholder="${i18n.t("customers.name")}"
                     >
 
                     <input
                         id="customer-city"
                         type="text"
-                        placeholder="Stadt"
+                        placeholder="${i18n.t("customers.city")}"
                     >
 
                     <textarea
                         id="customer-additional-info"
-                        placeholder="Zusatzinformationen"
+                        placeholder="${i18n.t("customers.additionalInfo")}"
                     ></textarea>
 
                     <button id="save-customer-button">
 
-                        Speichern
+                        ${i18n.t("common.save")}
 
                     </button>
 

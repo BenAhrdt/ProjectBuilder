@@ -56,6 +56,8 @@ const languageLabels = {
 const languageFlags = { de: "de", en: "gb", es: "es" };
 const selectedLanguage = i18n.getCurrentLanguage();
 
+window.projectBuilder?.setLanguage?.(selectedLanguage).catch(() => {});
+
 languageSelect.querySelector("img").src = `/icons/flags/${languageFlags[selectedLanguage]}.svg`;
 languageSelect.querySelector(".language-current-label").textContent = languageLabels[selectedLanguage];
 languageMenu.querySelector(`[data-language="${selectedLanguage}"]`).setAttribute("aria-selected", "true");

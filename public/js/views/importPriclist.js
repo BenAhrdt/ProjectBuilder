@@ -14,7 +14,7 @@ function renderView() {
         <div id="upload-wrapper">
             <div id="upload-area">
                 <div>
-                    Preisliste auswählen
+                    ${i18n.t("importPricelist.selectFile")}
                 </div>
             </div>
         </div>
@@ -24,17 +24,17 @@ function renderView() {
                 type="checkbox"
                 checked
             >
-            0 € / Auf Anfrage überschreibt keine vorhandenen Preise
+            ${i18n.t("importPricelist.preserveExistingPrices")}
         </label>
         <label id="clear-articles-option">
             <input
                 id="clear-existing-articles-before-import"
                 type="checkbox"
             >
-            Vorhandene Artikel vor dem Import löschen
+            ${i18n.t("importPricelist.clearExistingArticles")}
         </label>
-        <div id="import-status-header">Status:</div>
-        <div id="import-status">Bereit</div>
+        <div id="import-status-header">${i18n.t("importPricelist.status")}:</div>
+        <div id="import-status">${i18n.t("importPricelist.ready")}</div>
         <input type="file" id="price-list-file" accept=".xlsx,.xls" hidden>
         <div id="import-right" class="view-right"/></div>
     `;
@@ -91,7 +91,7 @@ function generateHandler() {
         "change",
         async () => {
             console.log("Change kommt");
-            importStatus.innerHTML = `Import läuft ...`
+            importStatus.textContent = i18n.t("importPricelist.running");
             const file =
                 input.files[0];
 
@@ -147,7 +147,7 @@ function generateHandler() {
             if (!response.ok || result.success === false) {
                 importStatus.textContent =
                     result.error
-                    || "Die Preisliste konnte nicht importiert werden.";
+                    || i18n.t("importPricelist.failed");
                 input.value = "";
                 return;
             }
@@ -160,13 +160,13 @@ function generateHandler() {
             importStatus.innerHTML = `
                     <div class="import-report">
                         <h2>
-                            Import abgeschlossen
+                            ${i18n.t("importPricelist.completed")}
                         </h2>`;
 
             if (result.imported !== 0) {
                 importStatus.innerHTML += `
                             <p>
-                                Importiert:
+                                ${i18n.t("importPricelist.imported")}:
                                 ${result.imported}
                             </p>`;
             }
@@ -174,7 +174,7 @@ function generateHandler() {
             if ((result.deletedExistingArticles ?? 0) !== 0) {
                 importStatus.innerHTML += `
                             <p>
-                                Vorher gelöscht:
+                                ${i18n.t("importPricelist.deleted")}:
                                 ${result.deletedExistingArticles}
                             </p>`;
             }
@@ -182,7 +182,7 @@ function generateHandler() {
             if (result.updated !== 0) {
                 importStatus.innerHTML += `
                             <p>
-                                Aktualisiert:
+                                ${i18n.t("importPricelist.updated")}:
                                 ${result.updated}
                              </p>`;
             }
@@ -190,7 +190,7 @@ function generateHandler() {
             if ((result.preservedPrices ?? 0) !== 0) {
                 importStatus.innerHTML += `
                             <p>
-                                Preise beibehalten:
+                                ${i18n.t("importPricelist.preservedPrices")}:
                                 ${result.preservedPrices}
                             </p>`;
             }
@@ -198,7 +198,7 @@ function generateHandler() {
             if (result.skipped.length !== 0) {
                 importStatus.innerHTML += `
                             <p>
-                                Übersprungen:
+                                ${i18n.t("importPricelist.skipped")}:
                                 ${result.skipped.length}
                             </p>`;
             }

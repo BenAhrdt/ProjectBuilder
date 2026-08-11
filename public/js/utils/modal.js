@@ -1,3 +1,5 @@
+import * as i18n from "./i18n.js";
+
 let activeModal = null;
 
 function escapeHtml(value) {
@@ -53,8 +55,8 @@ function closeActiveModal() {
 function showModal({
     title,
     message,
-    confirmText = "OK",
-    cancelText = "Abbrechen",
+    confirmText = i18n.t("common.ok"),
+    cancelText = i18n.t("common.cancel"),
     showCancel = false,
     input = null,
     danger = false,
@@ -282,10 +284,10 @@ function showAlert(
 
     return showModal({
         title:
-            options.title ?? "Hinweis",
+            options.title ?? i18n.t("common.notice"),
         message,
         confirmText:
-            options.confirmText ?? "OK"
+            options.confirmText ?? i18n.t("common.ok")
     });
 
 }
@@ -297,12 +299,12 @@ function showConfirm(
 
     return showModal({
         title:
-            options.title ?? "Bestätigen",
+            options.title ?? i18n.t("common.confirm"),
         message,
         confirmText:
-            options.confirmText ?? "OK",
+            options.confirmText ?? i18n.t("common.ok"),
         cancelText:
-            options.cancelText ?? "Abbrechen",
+            options.cancelText ?? i18n.t("common.cancel"),
         showCancel:
             true,
         danger:
@@ -318,12 +320,12 @@ function showPrompt(
 
     return showModal({
         title:
-            options.title ?? "Eingabe",
+            options.title ?? i18n.t("common.input"),
         message,
         confirmText:
-            options.confirmText ?? "Speichern",
+            options.confirmText ?? i18n.t("common.save"),
         cancelText:
-            options.cancelText ?? "Abbrechen",
+            options.cancelText ?? i18n.t("common.cancel"),
         showCancel:
             true,
         input: {
@@ -345,10 +347,10 @@ function showChoice(
 
     return showModal({
         title:
-            options.title ?? "Auswählen",
+            options.title ?? i18n.t("common.select"),
         message,
         cancelText:
-            options.cancelText ?? "Schließen",
+            options.cancelText ?? i18n.t("common.close"),
         showCancel:
             true,
         choices:

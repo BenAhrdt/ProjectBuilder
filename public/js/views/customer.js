@@ -52,10 +52,10 @@ async function renderView(
                     <button
                         id="delete-customer"
                         type="button"
-                        title="Kunde löschen"
-                        aria-label="Kunde löschen"
+                        title="${i18n.t("customer.deleteCustomer")}"
+                        aria-label="${i18n.t("customer.deleteCustomer")}"
                     >
-                        Kunde löschen
+                        ${i18n.t("customer.deleteCustomer")}
                     </button>
 
                 </div>
@@ -95,7 +95,7 @@ async function renderView(
                     <div class="customer-discounts-wrapper">
 
                         <h3>
-                            Rabattgruppen
+                            ${i18n.t("customer.discountGroups")}
                         </h3>
 
                         <div class="customer-discounts-grid">
@@ -124,16 +124,16 @@ async function renderView(
 
             <div class="customer-projects-card">
                 <div class="customer-projects-header">
-                    <h2>Projekte</h2>
-                    <span>${projects.length} ${projects.length === 1 ? "Projekt" : "Projekte"}</span>
+                    <h2>${i18n.t("customer.projects")}</h2>
+                    <span>${projects.length} ${projects.length === 1 ? i18n.t("customer.projectSingular") : i18n.t("customer.projectPlural")}</span>
                 </div>
 
                 ${projects.length > 0 ? `
                     <table class="customer-projects-table">
                         <thead>
                             <tr>
-                                <th>Projektname</th>
-                                <th>Beschreibung</th>
+                                <th>${i18n.t("customer.projectName")}</th>
+                                <th>${i18n.t("customer.description")}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -147,7 +147,7 @@ async function renderView(
                     </table>
                 ` : `
                     <div class="customer-projects-empty">
-                        Diesem Kunden sind noch keine Projekte zugeordnet.
+                        ${i18n.t("customer.noProjects")}
                     </div>
                 `}
             </div>
@@ -294,10 +294,11 @@ function registerCustomerDelete(
 
             const confirmed =
                 await showConfirm(
-                    `Kunde "${customer.name ?? ""}" wirklich löschen? Zugeordnete Projekte bleiben erhalten.`,
+                    i18n.t("customer.deleteConfirm")
+                        .replace("{name}", customer.name ?? ""),
                     {
-                        title: "Kunde löschen",
-                        confirmText: "Löschen",
+                        title: i18n.t("customer.deleteCustomer"),
+                        confirmText: i18n.t("common.delete"),
                         danger: true
                     }
                 );
@@ -330,7 +331,7 @@ function registerCustomerDelete(
 
                 await showAlert(
                     result.error
-                    || "Kunde konnte nicht gelöscht werden."
+                    || i18n.t("customer.deleteFailed")
                 );
 
                 return;

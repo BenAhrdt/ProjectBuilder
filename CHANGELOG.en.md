@@ -2,6 +2,13 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.2.10 - 11.08.2026
+### Changed
+- Buttons, menus, table headings, forms and messages in the article, customer, project and pricelist views are now fully localized in German, English and Spanish.
+- Default dialogs and native update and folder dialogs now also use the selected language.
+### Fixed
+- The English and Spanish interfaces no longer display hard-coded German labels.
+
 ## 1.2.9 - 11.08.2026
 ### Added
 - Pricelist imports automatically recognize German and English column names as well as common formatting variants.

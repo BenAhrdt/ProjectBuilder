@@ -2,6 +2,17 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.2.10 - 11.08.2026
+
+### Geändert
+
+- Buttons, Menüs, Tabellenüberschriften, Formulare und Meldungen in den Artikel-, Kunden-, Projekt- und Preislistenansichten sind vollständig auf Deutsch, Englisch und Spanisch lokalisiert.
+- Die Standarddialoge sowie die nativen Update- und Ordnerdialoge verwenden nun ebenfalls die ausgewählte Sprache.
+
+### Behoben
+
+- In der englischen und spanischen Oberfläche werden keine fest eingebauten deutschen Beschriftungen mehr angezeigt.
+
 ## 1.2.9 - 11.08.2026
 
 ### Neu

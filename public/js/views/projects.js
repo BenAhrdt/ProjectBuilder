@@ -104,7 +104,7 @@ async function renderView() {
                     <input
                         id="project-name"
                         type="text"
-                        placeholder="Projektname"
+                        placeholder="${i18n.t("projects.projectname")}"
                     >
 
                     <div class="project-select-wrapper">
@@ -132,12 +132,12 @@ async function renderView() {
                     </div>
                     <textarea
                         id="project-description"
-                        placeholder="Beschreibung"
+                        placeholder="${i18n.t("projects.description")}"
                     ></textarea>
 
                     <button id="save-project-button">
 
-                        Speichern
+                        ${i18n.t("common.save")}
 
                     </button>
 
@@ -470,7 +470,7 @@ async function importProjectFromFile(
             ].join("\n"),
             {
                 title: i18n.t("projects.importPreview"),
-                confirmText: "Importieren"
+                confirmText: i18n.t("common.import")
             }
         );
 

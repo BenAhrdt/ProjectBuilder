@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld("projectBuilder", {
             defaultPath
         ),
     getUpdateStatus: () => ipcRenderer.invoke("update:get-status"),
+    setLanguage: language => ipcRenderer.invoke("app:set-language", language),
     onUpdateStatus: callback => {
         const listener = (_event, status) => callback(status);
         ipcRenderer.on("update:status", listener);

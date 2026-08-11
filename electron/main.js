@@ -12,6 +12,50 @@ const iconPath = path.join(__dirname, "..", "icon.png");
 let mainWindow;
 let expressServer;
 let updateStatus = { state: "idle", percent: 0 };
+let appLanguage = "de";
+
+const nativeTexts = {
+    de: {
+        updateAvailable: "Update verfügbar",
+        updateMessage: version => `ProjectBuilder ${version} ist verfügbar.`,
+        updateDetail: "Soll das Update jetzt heruntergeladen werden? Ihre Datenbank bleibt unverändert.",
+        download: "Herunterladen",
+        later: "Später",
+        updateReady: "Update bereit",
+        downloaded: version => `ProjectBuilder ${version} wurde heruntergeladen.`,
+        restartDetail: "Die Anwendung kann jetzt neu gestartet und aktualisiert werden.",
+        restart: "Jetzt neu starten",
+        backupFolder: "Backup-Ordner auswählen"
+    },
+    en: {
+        updateAvailable: "Update available",
+        updateMessage: version => `ProjectBuilder ${version} is available.`,
+        updateDetail: "Would you like to download the update now? Your database will remain unchanged.",
+        download: "Download",
+        later: "Later",
+        updateReady: "Update ready",
+        downloaded: version => `ProjectBuilder ${version} has been downloaded.`,
+        restartDetail: "The application can now be restarted and updated.",
+        restart: "Restart now",
+        backupFolder: "Select backup folder"
+    },
+    es: {
+        updateAvailable: "Actualización disponible",
+        updateMessage: version => `ProjectBuilder ${version} está disponible.`,
+        updateDetail: "¿Desea descargar la actualización ahora? La base de datos no se modificará.",
+        download: "Descargar",
+        later: "Más tarde",
+        updateReady: "Actualización lista",
+        downloaded: version => `ProjectBuilder ${version} se ha descargado.`,
+        restartDetail: "La aplicación ya se puede reiniciar y actualizar.",
+        restart: "Reiniciar ahora",
+        backupFolder: "Seleccionar carpeta de copia de seguridad"
+    }
+};
+
+function getNativeTexts() {
+    return nativeTexts[appLanguage] ?? nativeTexts.de;
+}
 
 function sendUpdateStatus(status) {
     updateStatus = { ...updateStatus, ...status };
@@ -29,12 +73,13 @@ async function checkForUpdates() {
     autoUpdater.verifyUpdateCodeSignature = async () => null;
 
     autoUpdater.on("update-available", async info => {
+        const texts = getNativeTexts();
         const result = await dialog.showMessageBox(mainWindow, {
             type: "info",
-            title: "Update verfügbar",
-            message: `ProjectBuilder ${info.version} ist verfügbar.`,
-            detail: "Soll das Update jetzt heruntergeladen werden? Ihre Datenbank bleibt unverändert.",
-            buttons: ["Herunterladen", "Später"],
+            title: texts.updateAvailable,
+            message: texts.updateMessage(info.version),
+            detail: texts.updateDetail,
+            buttons: [texts.download, texts.later],
             defaultId: 0,
             cancelId: 1,
             noLink: true
@@ -68,6 +113,7 @@ async function checkForUpdates() {
     });
 
     autoUpdater.on("update-downloaded", async info => {
+        const texts = getNativeTexts();
         mainWindow?.setProgressBar(-1);
         sendUpdateStatus({
             state: "ready",
@@ -77,10 +123,10 @@ async function checkForUpdates() {
         });
         const result = await dialog.showMessageBox(mainWindow, {
             type: "info",
-            title: "Update bereit",
-            message: `ProjectBuilder ${info.version} wurde heruntergeladen.`,
-            detail: "Die Anwendung kann jetzt neu gestartet und aktualisiert werden.",
-            buttons: ["Jetzt neu starten", "Später"],
+            title: texts.updateReady,
+            message: texts.downloaded(info.version),
+            detail: texts.restartDetail,
+            buttons: [texts.restart, texts.later],
             defaultId: 0,
             cancelId: 1,
             noLink: true
@@ -145,7 +191,7 @@ app.whenReady()
             "backup:select-directory",
             async (event, defaultPath) => {
                 const result = await dialog.showOpenDialog(mainWindow, {
-                    title: "Backup-Ordner auswählen",
+                    title: getNativeTexts().backupFolder,
                     defaultPath:
                         typeof defaultPath === "string"
                             ? defaultPath
@@ -159,6 +205,10 @@ app.whenReady()
             }
         );
         ipcMain.handle("update:get-status", () => updateStatus);
+        ipcMain.handle("app:set-language", (_event, language) => {
+            if (Object.hasOwn(nativeTexts, language)) appLanguage = language;
+            return appLanguage;
+        });
         return createWindow();
     })
     .catch(error => {

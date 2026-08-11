@@ -42,6 +42,11 @@ async function renderView() {
             <button id="add-article-button">
                 + Artikel hinzufügen
             </button>
+            ${articles.length > 0 ? `
+                <button id="clear-articles-button" type="button">
+                    ${i18n.t("articles.clearList")}
+                </button>
+            ` : ""}
         </div>
 
         <div id="articles-left" class="view-left"></div>
@@ -231,6 +236,16 @@ function generateHandler() {
         }
     );
 
+    const clearArticlesButton =
+        document.getElementById(
+            "clear-articles-button"
+        );
+
+    clearArticlesButton?.addEventListener(
+        "click",
+        clearArticles
+    );
+
     const saveManualArticleButton =
         document.getElementById(
             "save-manual-article-button"
@@ -378,7 +393,7 @@ async function saveManualArticle() {
 
     }
 
-    await refreshArticles();
+    await renderView();
 
     closeManualArticleForm();
 
@@ -452,12 +467,6 @@ function renderArticles(articles) {
 
 function renderArticleNumber(article) {
 
-    if (article.manufacturerName !== "Manuell") {
-
-        return article.articleNumber ?? "";
-
-    }
-
     return `
         <div class="article-number-actions">
             <span>
@@ -469,7 +478,7 @@ function renderArticleNumber(article) {
                 data-article-number="${article.articleNumber ?? ""}"
                 title="Artikel löschen"
             >
-                Löschen
+                ${i18n.t("articles.remove")}
             </button>
         </div>
     `;
@@ -605,8 +614,27 @@ async function deleteArticle(
         || !result.success
     ) {
 
+        const usageDetails =
+            Array.isArray(result.usages)
+                ? result.usages.map(usage => {
+
+                    const position =
+                        usage.positionName
+                            ? ` – ${usage.positionName}`
+                            : "";
+
+                    return `• ${usage.projectName}: ${usage.path}${position}`;
+
+                })
+                : [];
+
+        const message =
+            usageDetails.length > 0
+                ? `${result.error}\n\n${i18n.t("articles.usedIn")}:\n${usageDetails.join("\n")}`
+                : result.error;
+
         await showAlert(
-            result.error
+            message
             || "Artikel konnte nicht gelöscht werden."
         );
 
@@ -614,7 +642,54 @@ async function deleteArticle(
 
     }
 
-    await refreshArticles();
+    await renderView();
+
+}
+
+async function clearArticles() {
+
+    const confirmed =
+        await showConfirm(
+            i18n.t("articles.clearListConfirm"),
+            {
+                title: i18n.t("articles.clearList"),
+                confirmText: i18n.t("articles.clearList"),
+                danger: true
+            }
+        );
+
+    if (!confirmed) {
+
+        return;
+
+    }
+
+    const response =
+        await fetch(
+            "/api/articles",
+            {
+                method: "DELETE"
+            }
+        );
+
+    const result =
+        await response.json();
+
+    if (
+        !response.ok
+        || !result.success
+    ) {
+
+        await showAlert(
+            result.error
+            || i18n.t("articles.clearListFailed")
+        );
+
+        return;
+
+    }
+
+    await renderView();
 
 }
 

@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { app, BrowserWindow, dialog, Menu, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 import updater from "electron-updater";
 
 const { autoUpdater } = updater;
@@ -81,7 +81,8 @@ async function createWindow() {
         webPreferences: {
             contextIsolation: true,
             nodeIntegration: false,
-            sandbox: true
+            sandbox: true,
+            preload: path.join(__dirname, "preload.cjs")
         }
     });
 
@@ -106,6 +107,23 @@ async function createWindow() {
 app.whenReady()
     .then(() => {
         Menu.setApplicationMenu(null);
+        ipcMain.handle(
+            "backup:select-directory",
+            async (event, defaultPath) => {
+                const result = await dialog.showOpenDialog(mainWindow, {
+                    title: "Backup-Ordner auswählen",
+                    defaultPath:
+                        typeof defaultPath === "string"
+                            ? defaultPath
+                            : undefined,
+                    properties: ["openDirectory", "createDirectory"]
+                });
+
+                return result.canceled
+                    ? null
+                    : result.filePaths[0] ?? null;
+            }
+        );
         return createWindow();
     })
     .catch(error => {

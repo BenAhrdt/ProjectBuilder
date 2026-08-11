@@ -2,6 +2,17 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.2.9 - 11.08.2026
+
+### Neu
+
+- Der Preislistenimport erkennt deutsche und englische Spaltenbezeichnungen sowie unterschiedliche Schreibweisen automatisch.
+- EUR-, GBP-, USD- und AUD-Preislisten übernehmen die Währung direkt aus der jeweiligen Währungsspalte.
+
+### Geändert
+
+- Nicht unterstützte Preislisten zeigen eine verständliche Meldung, wenn keine bekannte Artikelnummernspalte gefunden wird.
+
 ## 1.2.8 - 11.08.2026
 
 ### Geändert

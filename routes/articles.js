@@ -3,6 +3,10 @@ import multer from "multer";
 import XLSX from "xlsx";
 import * as database from "../database/index.js";
 import * as excelValidation from "../utils/excelValidation.js";
+import {
+    resolvePricelistColumns,
+    mapPricelistRow
+} from "../utils/pricelistColumns.js";
 import fs from "fs";
 
 const router = express.Router();
@@ -40,6 +44,18 @@ router.post(
         const data =
             XLSX.utils.sheet_to_json(sheet);
             fs.unlinkSync(req.file.path);
+
+        const pricelistColumns =
+            resolvePricelistColumns(
+                Object.keys(data[0] ?? {})
+            );
+
+        if (!pricelistColumns.articleNumber) {
+            return res.status(400).json({
+                success: false,
+                error: "Keine unterstützte Spalte für die Artikelnummer gefunden."
+            });
+        }
 
         const preserveExistingPricesFromZero =
             req.body.preserveExistingPricesFromZero === "true";
@@ -81,66 +97,21 @@ router.post(
             );
 
         const preparedArticles =
-            data.map(article => ({
+            data.map(row => {
+                const article =
+                    mapPricelistRow(
+                        row,
+                        pricelistColumns
+                    );
 
-                articleNumber:
-                    typeof article.Artikelnummer === "number"
-                        ? String(article.Artikelnummer)
-                            .replace(/\.0$/, "")
-                        : String(article.Artikelnummer ?? "")
-                            .trim(),
-
-                ean:
-                    article.EAN ?? "",
-
-                manufacturerType:
-                    article.Herstellertyp ?? "",
-
-                manufacturerName:
-                    article.Herstellername ?? "",
-
-                originCountry:
-                    article.Ursprungsland ?? "",
-
-                originRegion:
-                    article.Ursprungsregion ?? "",
-
-                intrastatNumber:
-                    article.Intrastatnummer ?? "",
-
-                quantity:
-                    article.Anzahl_Inhaltseinheiten ?? null,
-
-                quantityUnit:
-                    article.Inhaltseinheit ?? "",
-
-                listPrice:
-                    article.Preis_Listenpreis_Preis ?? null,
-
-                listPriceCurrency:
-                    article["Preis_Listenpreis_Währung"] ?? "",
-
-                discountGroup:
-                    article.Rabattgruppe ?? "",
-
-                description:
-                    article[
-                        "Text_Ausschreibungstext_Langtext (Text)"
-                    ] ?? "",
-
-                existsInDatabase:
-                    existingArticleNumbers.has(
-
-                        typeof article.Artikelnummer === "number"
-                            ? String(article.Artikelnummer)
-                                .replace(/\.0$/, "")
-                            : String(
-                                article.Artikelnummer ?? ""
-                            ).trim()
-
-                    )
-
-            }));
+                return {
+                    ...article,
+                    existsInDatabase:
+                        existingArticleNumbers.has(
+                            article.articleNumber
+                        )
+                };
+            });
 
         const validation =
             excelValidation.validateArticles(

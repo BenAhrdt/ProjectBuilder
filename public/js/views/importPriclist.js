@@ -144,6 +144,14 @@ function generateHandler() {
             const result =
                 await response.json();
 
+            if (!response.ok || result.success === false) {
+                importStatus.textContent =
+                    result.error
+                    || "Die Preisliste konnte nicht importiert werden.";
+                input.value = "";
+                return;
+            }
+
             // --------------------------------------------------
             // Report anzeigen
             // --------------------------------------------------

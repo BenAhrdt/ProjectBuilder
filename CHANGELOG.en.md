@@ -2,6 +2,13 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.2.9 - 11.08.2026
+### Added
+- Pricelist imports automatically recognize German and English column names as well as common formatting variants.
+- EUR, GBP, USD and AUD pricelists preserve the currency supplied in each file's currency column.
+### Changed
+- Unsupported pricelists show a clear message when no recognized item-number column is found.
+
 ## 1.2.8 - 11.08.2026
 ### Changed
 - Test release for verifying the automatic update from version 1.2.7 without additional publisher verification.

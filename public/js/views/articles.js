@@ -2,8 +2,10 @@ import * as i18n from "../utils/i18n.js";
 import {
     showAlert,
     showConfirm,
-    showPrompt
+    showPrompt,
+    showChoice
 } from "../utils/modal.js";
+import * as router from "../router.js";
 
 await i18n.loadLanguage();
 
@@ -614,27 +616,84 @@ async function deleteArticle(
         || !result.success
     ) {
 
-        const usageDetails =
+        const usages =
             Array.isArray(result.usages)
-                ? result.usages.map(usage => {
-
-                    const position =
-                        usage.positionName
-                            ? ` – ${usage.positionName}`
-                            : "";
-
-                    return `• ${usage.projectName}: ${usage.path}${position}`;
-
-                })
+                ? result.usages
                 : [];
 
-        const message =
-            usageDetails.length > 0
-                ? `${result.error}\n\n${i18n.t("articles.usedIn")}:\n${usageDetails.join("\n")}`
-                : result.error;
+        if (usages.length > 0) {
+
+            const projectNameCounts =
+                usages.reduce((counts, usage) => {
+
+                    counts.set(
+                        usage.projectName,
+                        (counts.get(usage.projectName) || 0) + 1
+                    );
+
+                    return counts;
+
+                }, new Map());
+
+            const selectedUsage =
+                await showChoice(
+                    i18n.t("articles.usedNavigationHint"),
+                    {
+                        title:
+                            i18n.t("articles.articleInUse"),
+                        cancelText:
+                            i18n.t("articles.close"),
+                        choices:
+                            usages.map(usage => {
+
+                                const hasDuplicateProject =
+                                    projectNameCounts.get(
+                                        usage.projectName
+                                    ) > 1;
+
+                                const positionLabel =
+                                    usage.positionName
+                                    || usage.path
+                                        .split("›")
+                                        .at(-1)
+                                        ?.trim();
+
+                                return {
+                                    label:
+                                        hasDuplicateProject
+                                            ? `${usage.projectName} – ${positionLabel}`
+                                            : usage.projectName,
+                                    value: usage
+                                };
+
+                            })
+                    }
+                );
+
+            if (selectedUsage) {
+
+                sessionStorage.setItem(
+                    "projectbuilder.pendingNodeSearch",
+                    JSON.stringify({
+                        projectId:
+                            selectedUsage.projectId,
+                        nodeId:
+                            selectedUsage.nodeId
+                    })
+                );
+
+                router.navigate(
+                    `/project/${selectedUsage.projectId}`
+                );
+
+            }
+
+            return;
+
+        }
 
         await showAlert(
-            message
+            result.error
             || "Artikel konnte nicht gelöscht werden."
         );
 

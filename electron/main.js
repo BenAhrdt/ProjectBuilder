@@ -11,6 +11,14 @@ const iconPath = path.join(__dirname, "..", "icon.png");
 
 let mainWindow;
 let expressServer;
+let updateStatus = { state: "idle", percent: 0 };
+
+function sendUpdateStatus(status) {
+    updateStatus = { ...updateStatus, ...status };
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send("update:status", updateStatus);
+    }
+}
 
 async function checkForUpdates() {
     if (!app.isPackaged || process.platform !== "win32") return;
@@ -32,16 +40,39 @@ async function checkForUpdates() {
 
         if (result.response === 0) {
             mainWindow.setProgressBar(0);
-            await autoUpdater.downloadUpdate();
+            sendUpdateStatus({
+                state: "downloading",
+                percent: 0,
+                version: info.version,
+                error: null
+            });
+            try {
+                await autoUpdater.downloadUpdate();
+            } catch (error) {
+                sendUpdateStatus({ state: "error", error: error.message });
+            }
         }
     });
 
     autoUpdater.on("download-progress", progress => {
         mainWindow?.setProgressBar(progress.percent / 100);
+        sendUpdateStatus({
+            state: "downloading",
+            percent: Math.max(0, Math.min(100, progress.percent)),
+            transferred: progress.transferred,
+            total: progress.total,
+            bytesPerSecond: progress.bytesPerSecond
+        });
     });
 
     autoUpdater.on("update-downloaded", async info => {
         mainWindow?.setProgressBar(-1);
+        sendUpdateStatus({
+            state: "ready",
+            percent: 100,
+            version: info.version,
+            error: null
+        });
         const result = await dialog.showMessageBox(mainWindow, {
             type: "info",
             title: "Update bereit",
@@ -58,6 +89,7 @@ async function checkForUpdates() {
 
     autoUpdater.on("error", error => {
         mainWindow?.setProgressBar(-1);
+        sendUpdateStatus({ state: "error", error: error.message });
         console.error("Updateprüfung fehlgeschlagen:", error);
     });
 
@@ -124,6 +156,7 @@ app.whenReady()
                     : result.filePaths[0] ?? null;
             }
         );
+        ipcMain.handle("update:get-status", () => updateStatus);
         return createWindow();
     })
     .catch(error => {

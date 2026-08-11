@@ -61,6 +61,13 @@ navbar.innerHTML = `
                 ${utils.icons.book}
             </button>
         </div>
+        <div id="navbar-update-status" class="navbar-information" hidden aria-live="polite">
+            <div class="navbar-update-label">
+                <span id="navbar-update-text"></span>
+                <span id="navbar-update-percent"></span>
+            </div>
+            <progress id="navbar-update-progress" max="100" value="0"></progress>
+        </div>
     </div>
 `;
 
@@ -70,6 +77,39 @@ document.getElementById("navbar-changelog-button").addEventListener(
     "click",
     () => router.navigate("/changelog")
 );
+
+const updateStatusElement = document.getElementById("navbar-update-status");
+const updateTextElement = document.getElementById("navbar-update-text");
+const updatePercentElement = document.getElementById("navbar-update-percent");
+const updateProgressElement = document.getElementById("navbar-update-progress");
+
+function renderUpdateStatus(status = {}) {
+    if (!status.state || status.state === "idle") {
+        updateStatusElement.hidden = true;
+        return;
+    }
+
+    const labels = {
+        downloading: "navbar.updateDownloading",
+        ready: "navbar.updateReady",
+        error: "navbar.updateError"
+    };
+    const progressVisible = status.state === "downloading" || status.state === "ready";
+    const percent = Math.round(Number(status.percent) || 0);
+
+    updateStatusElement.hidden = false;
+    updateStatusElement.dataset.state = status.state;
+    updateStatusElement.title = status.error || "";
+    updateTextElement.textContent = i18n.t(labels[status.state] || "navbar.updatePreparing");
+    updatePercentElement.textContent = progressVisible ? `${percent} %` : "";
+    updateProgressElement.hidden = !progressVisible;
+    updateProgressElement.value = percent;
+}
+
+if (window.projectBuilder?.onUpdateStatus) {
+    window.projectBuilder.onUpdateStatus(renderUpdateStatus);
+    window.projectBuilder.getUpdateStatus?.().then(renderUpdateStatus).catch(() => {});
+}
 
 // Clickhandler
 const navbarItems = document.querySelectorAll(".navbar-item");

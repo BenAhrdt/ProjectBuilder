@@ -208,6 +208,54 @@
     "version"
     "update";    
 }
+
+#navbar-update-status {
+    grid-area: update;
+    align-self: center;
+    box-sizing: border-box;
+    padding: 2px 20px 8px;
+    color: #374151;
+    font-size: 12px;
+}
+
+#navbar-update-status[hidden] {
+    display: none;
+}
+
+.navbar-update-label {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 5px;
+}
+
+#navbar-update-status[data-state="ready"] .navbar-update-label {
+    color: #20733a;
+}
+
+#navbar-update-status[data-state="error"] .navbar-update-label {
+    color: #b42318;
+}
+
+#navbar-update-progress {
+    display: block;
+    width: 100%;
+    height: 7px;
+    overflow: hidden;
+    border: 0;
+    border-radius: 999px;
+    accent-color: #4c8bf5;
+}
+
+#navbar-update-progress::-webkit-progress-bar {
+    border-radius: 999px;
+    background: #e5e7eb;
+}
+
+#navbar-update-progress::-webkit-progress-value {
+    border-radius: 999px;
+    background: #4c8bf5;
+}
 #navbar-information-1 {
     grid-area: information-1;
     border-top: 1px solid #ececec;

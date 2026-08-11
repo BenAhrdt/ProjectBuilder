@@ -2,6 +2,11 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.2.3 - 11.08.2026
+### Modificado
+- La aplicación de Windows y el instalador se firman digitalmente con el certificado de firma de código de ProjectBuilder.
+- El certificado público se adjunta a la versión para su revisión y distribución controlada por el departamento de TI.
+
 ## 1.2.2 - 07.08.2026
 ### Modificado
 - La exportación de licitaciones a Word sigue ahora la plantilla oficial de Janitza, con tipografía Arial compacta, numeración estructurada y sangrías uniformes.

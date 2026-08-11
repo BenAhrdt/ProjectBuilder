@@ -40,6 +40,8 @@ jobs:
         run: npm run dist:win -- --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_LINK: ${{ secrets.WINDOWS_CERTIFICATE }}
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
 
       - name: Update-Dateien vollständig veröffentlichen
         shell: pwsh
@@ -57,6 +59,7 @@ jobs:
             $installerTarget `
             $blockmapTarget `
             "release/latest.yml" `
+            "certificates/ProjectBuilder-CodeSigning.cer" `
             --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

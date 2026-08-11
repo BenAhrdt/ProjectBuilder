@@ -1,6 +1,6 @@
 {
   "name": "projectbuilder",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "type": "module",
   "description": "",
   "main": "electron/main.js",
@@ -38,7 +38,8 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "icon.png"
+      "icon": "icon.png",
+      "signAndEditExecutable": true
     },
     "nsis": {
       "oneClick": false,

@@ -2,6 +2,11 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.2.7 - 11.08.2026
+### Modificado
+- La verificación adicional del editor del actualizador automático se desactiva temporalmente para permitir actualizaciones mientras el certificado firmado internamente aún no sea de confianza central en los equipos de destino.
+- El instalador y la aplicación siguen estando firmados digitalmente; Windows SmartScreen y el software de seguridad continúan comprobándolos sin cambios.
+
 ## 1.2.6 - 11.08.2026
 ### Modificado
 - Versión de prueba para verificar la descarga automática de actualizaciones y la barra de progreso introducida en la versión 1.2.5.

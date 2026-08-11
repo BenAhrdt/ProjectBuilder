@@ -37,13 +37,13 @@ navbar.innerHTML = `
             </div>
         </div>
         <div id="navbar-item-group-3" class="navbar-item-group">
-            <div id="navbar-backups" data-view="backups" class="navbar-item">
-                <span class="navbar-item-icon">${utils.icons.backup}</span>
-                <div class="navbar-item-text">${i18n.t("navbar.backups")}</div>
-            </div>
             <div id="navbar-import-pricelist" data-view="importPricelist" class="navbar-item">
                 <span class="navbar-item-icon">${utils.icons.excel}</span>
                 <div class="navbar-item-text">${i18n.t("navbar.importPricelist")}</div>
+            </div>
+            <div id="navbar-backups" data-view="backups" class="navbar-item">
+                <span class="navbar-item-icon">${utils.icons.backup}</span>
+                <div class="navbar-item-text">${i18n.t("navbar.backups")}</div>
             </div>
         </div>
     </div>

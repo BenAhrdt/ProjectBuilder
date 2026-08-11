@@ -2,6 +2,10 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.2.6 - 11.08.2026
+### Modificado
+- Versión de prueba para verificar la descarga automática de actualizaciones y la barra de progreso introducida en la versión 1.2.5.
+
 ## 1.2.5 - 11.08.2026
 ### Nuevo
 - Las descargas de actualizaciones muestran su estado, una barra de progreso y el porcentaje actual en la parte inferior izquierda.

@@ -2,6 +2,11 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.2.5 - 11.08.2026
+### Added
+- Update downloads show their status, a progress bar and the current percentage in the lower-left navigation area.
+- The interface indicates when an update is ready to install and visibly reports download errors.
+
 ## 1.2.4 - 11.08.2026
 ### Added
 - Articles can be removed individually or cleared completely from the article list.

@@ -2,6 +2,13 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.2.5 - 11.08.2026
+
+### Neu
+
+- Der Update-Download zeigt links unten einen Status, einen Fortschrittsbalken und den aktuellen Prozentwert an.
+- Nach dem Download wird angezeigt, dass das Update zur Installation bereitsteht; Downloadfehler werden ebenfalls sichtbar gemeldet.
+
 ## 1.2.4 - 11.08.2026
 
 ### Neu

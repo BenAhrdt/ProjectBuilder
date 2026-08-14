@@ -2,6 +2,12 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.2.11 - 14.08.2026
+### Changed
+- Detail views use a separate page for each field to keep large distributions readable.
+- Each row displays no more than six meters; additional meters automatically wrap onto further rows.
+- Distributions without fields continue to use their own detail page.
+
 ## 1.2.10 - 11.08.2026
 ### Changed
 - Buttons, menus, table headings, forms and messages in the article, customer, project and pricelist views are now fully localized in German, English and Spanish.

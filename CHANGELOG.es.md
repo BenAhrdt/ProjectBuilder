@@ -2,6 +2,12 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.2.11 - 14.08.2026
+### Modificado
+- Las vistas detalladas utilizan una página independiente por campo para mantener legibles las distribuciones grandes.
+- Cada fila muestra como máximo seis puntos de medición; los puntos adicionales pasan automáticamente a filas nuevas.
+- Las distribuciones sin campos siguen utilizando su propia página detallada.
+
 ## 1.2.10 - 11.08.2026
 ### Modificado
 - Los botones, menús, encabezados de tablas, formularios y mensajes de las vistas de artículos, clientes, proyectos y listas de precios están completamente traducidos al alemán, inglés y español.

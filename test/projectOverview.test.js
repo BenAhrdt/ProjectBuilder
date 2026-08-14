@@ -116,7 +116,7 @@ test(
 );
 
 test(
-    "creates an overview page and one detail page per distribution",
+    "creates an overview page and suitable detail pages",
     () => {
         const documents =
             buildOverviewDocuments({
@@ -195,6 +195,68 @@ test(
         assert.match(
             documents.printablePages.html,
             /Seite 3 \/ 3/
+        );
+    }
+);
+
+test(
+    "creates one detail page per field and wraps meters after six columns",
+    () => {
+        const nodes = [
+            {
+                id: 1,
+                parentId: null,
+                type: "panel",
+                name: "Verteilung"
+            },
+            {
+                id: 2,
+                parentId: 1,
+                type: "field",
+                name: "Feld 1"
+            },
+            ...Array.from(
+                { length: 13 },
+                (_, index) => ({
+                    id: index + 3,
+                    parentId: 2,
+                    type: "meter",
+                    name: `Messstelle ${index + 1}`
+                })
+            )
+        ];
+        const documents =
+            buildOverviewDocuments({
+                project: {
+                    name: "Projekt"
+                },
+                nodes,
+                labels
+            });
+        const detail =
+            documents.detailPages[0];
+        const meterYPositions =
+            [...detail.diagram.svg.matchAll(
+                /<g class="project-overview-card" data-type="meter">\s*<rect\s*x="[^"]+"\s*y="([^"]+)"/g
+            )].map(match =>
+                Number(match[1])
+            );
+
+        assert.equal(
+            documents.detailPages.length,
+            1
+        );
+        assert.equal(
+            detail.title,
+            "Feld: Feld 1"
+        );
+        assert.equal(
+            new Set(meterYPositions).size,
+            3
+        );
+        assert.deepEqual(
+            meterYPositions.slice(0, 6),
+            Array(6).fill(meterYPositions[0])
         );
     }
 );

@@ -2,6 +2,14 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.2.11 - 14.08.2026
+
+### Geändert
+
+- Detailansichten verwenden eine eigene Seite je Feld, damit umfangreiche Verteilungen übersichtlich bleiben.
+- Pro Zeile werden höchstens sechs Messstellen dargestellt; weitere Messstellen werden automatisch in zusätzliche Zeilen umgebrochen.
+- Verteilungen ohne Felder behalten weiterhin eine eigene Detailseite.
+
 ## 1.2.10 - 11.08.2026
 
 ### Geändert

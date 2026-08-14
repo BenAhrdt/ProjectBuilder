@@ -11,6 +11,10 @@ const diagramLayout = {
     articleHeight: 36
 };
 
+const detailPageLayout = {
+    maxMetersPerRow: 6
+};
+
 const printPageLayout = {
     width: 1120,
     height: 790,
@@ -1060,15 +1064,37 @@ function buildDetailPageTrees(
                 node
             ];
 
+            if (node.type === "field") {
+                addPage(
+                    node,
+                    nextPath
+                );
+                return;
+            }
+
             if (
                 node.type === "panel"
                 ||
                 node.type === "generalPosition"
             ) {
-                addPage(
-                    node,
-                    nextPath
-                );
+                const fields =
+                    node.children.filter(child =>
+                        child.type === "field"
+                    );
+
+                if (fields.length > 0) {
+                    fields.forEach(child =>
+                        visit(
+                            child,
+                            nextPath
+                        )
+                    );
+                } else {
+                    addPage(
+                        node,
+                        nextPath
+                    );
+                }
                 return;
             }
 
@@ -1330,6 +1356,20 @@ function renderTreeDiagram(
 function layoutVerticalTree(
     root
 ) {
+    if (
+        root.type === "field"
+        &&
+        root.children.length > 0
+        &&
+        root.children.every(child =>
+            child.type === "meter"
+            &&
+            child.children.length === 0
+        )
+    ) {
+        return layoutFieldMeters(root);
+    }
+
     const depthHeights = [];
 
     const measure =
@@ -1437,6 +1477,116 @@ function layoutVerticalTree(
                 diagramLayout.margin,
                 220
             )
+    };
+}
+
+function layoutFieldMeters(
+    root
+) {
+    const columnCount =
+        Math.min(
+            root.children.length,
+            detailPageLayout.maxMetersPerRow
+        );
+    const rowCount =
+        Math.ceil(
+            root.children.length
+            /
+            detailPageLayout.maxMetersPerRow
+        );
+    const contentWidth =
+        columnCount
+        *
+        diagramLayout.cardWidth
+        +
+        Math.max(columnCount - 1, 0)
+        *
+        diagramLayout.verticalGap;
+    const rowHeights =
+        Array.from(
+            { length: rowCount },
+            () => 0
+        );
+
+    root.children.forEach((child, index) => {
+        const row =
+            Math.floor(
+                index
+                /
+                detailPageLayout.maxMetersPerRow
+            );
+        rowHeights[row] =
+            Math.max(
+                rowHeights[row],
+                child.height
+            );
+    });
+
+    root.depth = 0;
+    root.x =
+        diagramLayout.margin
+        +
+        (contentWidth - diagramLayout.cardWidth) / 2;
+    root.y = diagramLayout.margin;
+
+    let rowTop =
+        root.y
+        +
+        root.height
+        +
+        diagramLayout.horizontalGap;
+
+    root.children.forEach((child, index) => {
+        const row =
+            Math.floor(
+                index
+                /
+                detailPageLayout.maxMetersPerRow
+            );
+        const column =
+            index
+            %
+            detailPageLayout.maxMetersPerRow;
+
+        if (
+            column === 0
+            &&
+            row > 0
+        ) {
+            rowTop +=
+                rowHeights[row - 1]
+                +
+                diagramLayout.horizontalGap;
+        }
+
+        child.depth = row + 1;
+        child.x =
+            diagramLayout.margin
+            +
+            column
+            *
+            (
+                diagramLayout.cardWidth
+                +
+                diagramLayout.verticalGap
+            );
+        child.y = rowTop;
+    });
+
+    return {
+        width:
+            Math.max(
+                contentWidth
+                +
+                diagramLayout.margin * 2,
+                420
+            ),
+        height:
+            rowTop
+            +
+            rowHeights[rowCount - 1]
+            +
+            diagramLayout.margin
     };
 }
 

@@ -2,6 +2,12 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.2.12 - 25.08.2026
+
+### Behoben
+
+- Noch aktive Mengenänderungen werden vor dem Verschieben, Duplizieren, Löschen oder Neuladen gespeichert, sodass Artikelstückzahlen nicht mehr auf `1` zurückspringen.
+
 ## 1.2.11 - 14.08.2026
 
 ### Geändert

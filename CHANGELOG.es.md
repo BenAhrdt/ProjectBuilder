@@ -2,6 +2,10 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.2.12 - 25.08.2026
+### Corregido
+- Los cambios de cantidad activos se guardan antes de mover, duplicar, eliminar o recargar, evitando que las cantidades de artículos vuelvan a `1`.
+
 ## 1.2.11 - 14.08.2026
 ### Modificado
 - Las vistas detalladas utilizan una página independiente por campo para mantener legibles las distribuciones grandes.

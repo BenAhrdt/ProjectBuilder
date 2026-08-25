@@ -2,6 +2,10 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.2.12 - 25.08.2026
+### Fixed
+- Active quantity changes are saved before moving, duplicating, deleting or reloading, preventing article quantities from reverting to `1`.
+
 ## 1.2.11 - 14.08.2026
 ### Changed
 - Detail views use a separate page for each field to keep large distributions readable.

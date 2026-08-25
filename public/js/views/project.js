@@ -6089,6 +6089,15 @@ function registerNodeArticleDragAndDrop(
                 "dragstart",
                 event => {
 
+                    const activeQuantityInput =
+                        document.activeElement?.matches?.(
+                            ".node-article-quantity-input"
+                        )
+                            ? document.activeElement
+                            : null;
+
+                    activeQuantityInput?.blur();
+
                     const nodeId =
                         article.dataset.nodeId;
 
@@ -6577,6 +6586,8 @@ async function moveNodeArticleToNodeAndSave(
     projectId
 ) {
 
+    await waitForPendingNodeArticleQuantities();
+
     const originalNodeId =
         article.dataset.originalNodeId
         ||
@@ -6786,6 +6797,15 @@ async function waitForPendingNodeArticleOrders() {
 }
 
 async function waitForPendingNodeArticleQuantities() {
+
+    const activeQuantityInput =
+        document.activeElement?.matches?.(
+            ".node-article-quantity-input"
+        )
+            ? document.activeElement
+            : null;
+
+    activeQuantityInput?.blur();
 
     if (
         pendingNodeArticleQuantityRequests.size === 0

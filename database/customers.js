@@ -20,6 +20,10 @@ customers.prepare(`
 
         name TEXT,
 
+        street TEXT,
+
+        postalCode TEXT,
+
         city TEXT,
 
         additionalInfo TEXT,
@@ -37,6 +41,28 @@ customers.prepare(`
     )
 
 `).run();
+
+const customerColumns = new Set(
+    customers.prepare("PRAGMA table_info(customers)").all().map(column => column.name)
+);
+
+for (const [name, definition] of [
+    ["street", "TEXT"],
+    ["postalCode", "TEXT"],
+    ["salesforceId", "TEXT"],
+    ["salesforceSyncedAt", "TEXT"],
+    ["salesforceLastModifiedAt", "TEXT"]
+]) {
+    if (!customerColumns.has(name)) {
+        customers.exec(`ALTER TABLE customers ADD COLUMN ${name} ${definition}`);
+    }
+}
+
+customers.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS customers_salesforce_id_unique
+    ON customers (salesforceId)
+    WHERE salesforceId IS NOT NULL
+`);
 
 export {
     customers

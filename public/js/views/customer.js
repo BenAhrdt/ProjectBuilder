@@ -4,6 +4,7 @@ import {
     showAlert,
     showConfirm
 } from "../utils/modal.js";
+import { openSalesforceCustomerDialog } from "../utils/salesforceCustomers.js";
 
 await i18n.loadLanguage();
 
@@ -12,6 +13,11 @@ const view =
         "view"
     );
 let saveTimeout;
+
+function escapeHtml(value) {
+    return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+}
 
 async function renderView(
     customerId
@@ -30,7 +36,7 @@ async function renderView(
 
         <div class="view-header">
 
-            ${customer.name}
+            ${escapeHtml(customer.name)}
 
         </div>
 
@@ -49,14 +55,23 @@ async function renderView(
                         ${i18n.t("customer.customerData")}:
                     </h2>
 
-                    <button
-                        id="delete-customer"
-                        type="button"
-                        title="${i18n.t("customer.deleteCustomer")}"
-                        aria-label="${i18n.t("customer.deleteCustomer")}"
-                    >
-                        ${i18n.t("customer.deleteCustomer")}
-                    </button>
+                    <div class="customer-card-actions">
+                        <button id="salesforce-find-customer" type="button">
+                            ${i18n.t("salesforce.searchAndApply")}
+                        </button>
+                        ${customer.salesforceId ? `
+                            <button id="salesforce-refresh-customer" type="button">
+                                ${i18n.t("salesforce.refreshCustomer")}
+                            </button>` : ""}
+                        <button
+                            id="delete-customer"
+                            type="button"
+                            title="${i18n.t("customer.deleteCustomer")}"
+                            aria-label="${i18n.t("customer.deleteCustomer")}"
+                        >
+                            ${i18n.t("customer.deleteCustomer")}
+                        </button>
+                    </div>
 
                 </div>
 
@@ -67,12 +82,51 @@ async function renderView(
                         <div class="customer-form-row">
 
                             <label>
+                                ${i18n.t("customers.name")}:
+                            </label>
+
+                            <input
+                                id="customer-name"
+                                value="${escapeHtml(customer.name)}"
+                            >
+
+                        </div>
+
+                        <div class="customer-form-row">
+
+                            <label>
+                                ${i18n.t("customers.address")}:
+                            </label>
+
+                            <input
+                                id="customer-street"
+                                value="${escapeHtml(customer.street)}"
+                            >
+
+                        </div>
+
+                        <div class="customer-form-row">
+
+                            <label>
+                                ${i18n.t("customers.postalCode")}:
+                            </label>
+
+                            <input
+                                id="customer-postal-code"
+                                value="${escapeHtml(customer.postalCode)}"
+                            >
+
+                        </div>
+
+                        <div class="customer-form-row">
+
+                            <label>
                                 ${i18n.t("customer.customerNumber")}:
                             </label>
 
                             <input
                                 id="customer-number"
-                                value="${customer.customerNumber ?? ""}"
+                                value="${escapeHtml(customer.customerNumber)}"
                             >
 
                         </div>
@@ -85,10 +139,16 @@ async function renderView(
 
                             <input
                                 id="customer-city"
-                                value="${customer.city ?? ""}"
+                                value="${escapeHtml(customer.city)}"
                             >
 
                         </div>
+
+                        ${customer.salesforceId ? `
+                            <div class="customer-salesforce-state">
+                                ${i18n.t("salesforce.linked")}
+                                ${customer.salesforceSyncedAt ? ` · ${i18n.t("salesforce.lastSync")}: ${new Date(customer.salesforceSyncedAt).toLocaleString()}` : ""}
+                            </div>` : ""}
 
                     </div>
 
@@ -114,7 +174,7 @@ async function renderView(
 
                         <textarea
                             id="customer-additional-info"
-                        >${customer.additionalInfo ?? ""}</textarea>
+                        >${escapeHtml(customer.additionalInfo)}</textarea>
 
                     </div>
 
@@ -160,7 +220,47 @@ async function renderView(
     generateHandler(customerId);
     registerCustomerProjectLinks();
     registerCustomerDelete(customerId, customer);
+    registerSalesforceActions(customerId, customer);
 
+}
+
+function registerSalesforceActions(customerId, customer) {
+    document.getElementById("salesforce-find-customer")?.addEventListener("click", () => {
+        clearTimeout(saveTimeout);
+        openSalesforceCustomerDialog({
+            localCustomerId: customerId,
+            initialFilters: {
+                customerNumber: customer.customerNumber,
+                name: customer.name
+            },
+            autoSearch: true,
+            onComplete: () => renderView(customerId)
+        });
+    });
+
+    document.getElementById("salesforce-refresh-customer")?.addEventListener("click", async event => {
+        clearTimeout(saveTimeout);
+        const button = event.currentTarget;
+        const originalText = button.textContent;
+        button.disabled = true;
+        button.textContent = i18n.t("salesforce.refreshing");
+        try {
+            const response = await fetch(`/api/salesforce/customers/${customerId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({})
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error);
+            await showAlert(i18n.t("salesforce.customerUpdated"));
+            await renderView(customerId);
+        } catch (error) {
+            await showAlert(error.message ?? i18n.t("salesforce.error"));
+        } finally {
+            button.disabled = false;
+            button.textContent = originalText;
+        }
+    });
 }
 
 function registerCustomerProjectLinks() {
@@ -368,6 +468,15 @@ async function saveCustomer(customerId) {
                     document.getElementById(
                         "customer-number"
                     ).value,
+
+                name:
+                    document.getElementById("customer-name").value,
+
+                street:
+                    document.getElementById("customer-street").value,
+
+                postalCode:
+                    document.getElementById("customer-postal-code").value,
 
                 city:
                     document.getElementById(

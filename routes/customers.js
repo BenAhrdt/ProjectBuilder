@@ -28,6 +28,10 @@ router.get(
 
                     name,
 
+                    street,
+
+                    postalCode,
+
                     city,
 
                     additionalInfo
@@ -39,6 +43,10 @@ router.get(
                     customerNumber LIKE @search
 
                     OR name LIKE @search
+
+                    OR street LIKE @search
+
+                    OR postalCode LIKE @search
 
                     OR city LIKE @search
 
@@ -101,6 +109,10 @@ router.post(
 
                     name,
 
+                    street,
+
+                    postalCode,
+
                     city,
 
                     additionalInfo
@@ -112,6 +124,10 @@ router.post(
                     @customerNumber,
 
                     @name,
+
+                    @street,
+
+                    @postalCode,
 
                     @city,
 
@@ -128,6 +144,12 @@ router.post(
 
             name:
                 req.body.name,
+
+            street:
+                req.body.street,
+
+            postalCode:
+                req.body.postalCode,
 
             city:
                 req.body.city,
@@ -164,6 +186,12 @@ router.put(
                 customerNumber =
                     @customerNumber,
 
+                name = @name,
+
+                street = @street,
+
+                postalCode = @postalCode,
+
                 city =
                     @city,
 
@@ -190,6 +218,15 @@ router.put(
 
             customerNumber:
                 req.body.customerNumber,
+
+            name:
+                req.body.name,
+
+            street:
+                req.body.street,
+
+            postalCode:
+                req.body.postalCode,
 
             city:
                 req.body.city,

@@ -2,6 +2,20 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.3.0 - 12.09.2026
+### Nuevo
+- Los clientes pueden buscarse por número, nombre, código postal y ciudad mediante el acceso SSO existente de Salesforce e importarse selectivamente en ProjectBuilder.
+- Los clientes vinculados con Salesforce pueden actualizarse individualmente o en conjunto desde Salesforce.
+- Los datos del cliente incluyen ahora campos separados para dirección, código postal y ciudad, además de la fecha de la última actualización desde Salesforce.
+### Modificado
+- La integración accede a Salesforce en modo de solo lectura; los grupos de descuento y las notas locales se conservan durante las actualizaciones.
+- Si Salesforce no contiene un número de cliente, también se vacía el número local sin provocar conflictos entre clientes sin número.
+- Las conexiones de Salesforce se preparan en segundo plano y se reutilizan para acelerar las consultas posteriores.
+- Los botones de búsqueda y actualización muestran el progreso mientras se ejecutan consultas de Salesforce.
+### Corregido
+- Los diálogos de selección de Salesforce solo se cierran cuando tanto la pulsación como la liberación del ratón ocurren fuera del diálogo.
+- Las acciones de la lista de clientes mantienen espacios consistentes y ya no quedan pegadas al borde derecho.
+
 ## 1.2.12 - 25.08.2026
 ### Corregido
 - Los cambios de cantidad activos se guardan antes de mover, duplicar, eliminar o recargar, evitando que las cantidades de artículos vuelvan a `1`.

@@ -2,9 +2,16 @@ import * as i18n from "../utils/i18n.js";
 await i18n.loadLanguage();
 
 import * as router from "../router.js";
+import { showAlert } from "../utils/modal.js";
+import { openSalesforceCustomerDialog } from "../utils/salesforceCustomers.js";
 
 const view =
     document.getElementById("view");
+
+function escapeHtml(value) {
+    return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+}
 
 async function renderView() {
 
@@ -55,9 +62,17 @@ async function renderView() {
                 ${customers.length}
 
             </div>
-            <button id="add-customer-button">
-                + ${i18n.t("customers.addCustomer")}
-            </button>
+            <div class="customers-header-actions">
+                <button id="salesforce-search-button" class="customers-action-button customers-action-secondary">
+                    ${i18n.t("salesforce.importCustomers")}
+                </button>
+                <button id="salesforce-refresh-button" class="customers-action-button customers-action-secondary">
+                    ${i18n.t("salesforce.refreshLinked")}
+                </button>
+                <button id="add-customer-button" class="customers-action-button customers-action-primary">
+                    + ${i18n.t("customers.addCustomer")}
+                </button>
+            </div>
 
         </div>
 
@@ -79,6 +94,18 @@ async function renderView() {
                         id="customer-name"
                         type="text"
                         placeholder="${i18n.t("customers.name")}"
+                    >
+
+                    <input
+                        id="customer-street"
+                        type="text"
+                        placeholder="${i18n.t("customers.address")}"
+                    >
+
+                    <input
+                        id="customer-postal-code"
+                        type="text"
+                        placeholder="${i18n.t("customers.postalCode")}"
                     >
 
                     <input
@@ -117,11 +144,15 @@ async function renderView() {
                         </th>
 
                         <th>
-                            ${i18n.t("customers.city")}
+                            ${i18n.t("customers.address")}
                         </th>
 
                         <th>
-                            ${i18n.t("customers.additionalInfo")}
+                            ${i18n.t("customers.postalCode")}
+                        </th>
+
+                        <th>
+                            ${i18n.t("customers.city")}
                         </th>
 
                     </tr>
@@ -135,19 +166,23 @@ async function renderView() {
                         <tr class="customer-row" data-id="${customer.id}" tabindex="0" role="link">
 
                             <td>
-                                ${customer.customerNumber ?? ""}
+                                ${escapeHtml(customer.customerNumber)}
                             </td>
 
                             <td>
-                                ${customer.name ?? ""}
+                                ${escapeHtml(customer.name)}
                             </td>
 
                             <td>
-                                ${customer.city ?? ""}
+                                ${escapeHtml(customer.street)}
                             </td>
 
                             <td>
-                                ${customer.additionalInfo ?? ""}
+                                ${escapeHtml(customer.postalCode)}
+                            </td>
+
+                            <td>
+                                ${escapeHtml(customer.city)}
                             </td>
 
                         </tr>
@@ -221,6 +256,29 @@ function generateHandler() {
         }
     );
 
+    document.getElementById("salesforce-search-button").addEventListener("click", () => {
+        openSalesforceCustomerDialog({ onComplete: renderView });
+    });
+
+    document.getElementById("salesforce-refresh-button").addEventListener("click", async event => {
+        const button = event.currentTarget;
+        const originalText = button.textContent;
+        button.disabled = true;
+        button.textContent = i18n.t("salesforce.refreshing");
+        try {
+            const response = await fetch("/api/salesforce/customers/refresh", { method: "POST" });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error);
+            await showAlert(i18n.t("salesforce.refreshComplete").replace("{count}", result.updated));
+            await renderView();
+        } catch (error) {
+            await showAlert(error.message ?? i18n.t("salesforce.error"));
+        } finally {
+            button.disabled = false;
+            button.textContent = originalText;
+        }
+    });
+
 
     // Speicher Button
     const saveCustomerButton =
@@ -247,6 +305,9 @@ function generateHandler() {
                     "customer-city"
                 ).value;
 
+            const street = document.getElementById("customer-street").value;
+            const postalCode = document.getElementById("customer-postal-code").value;
+
             const additionalInfo =
                 document.getElementById(
                     "customer-additional-info"
@@ -267,6 +328,8 @@ function generateHandler() {
                     body: JSON.stringify({
                         customerNumber,
                         name,
+                        street,
+                        postalCode,
                         city,
                         additionalInfo
                     })
@@ -336,19 +399,23 @@ function renderCustomers(customers) {
             <tr class="customer-row" data-id="${customer.id}" tabindex="0" role="link">
 
                 <td>
-                    ${customer.customerNumber ?? ""}
+                    ${escapeHtml(customer.customerNumber)}
                 </td>
 
                 <td>
-                    ${customer.name ?? ""}
+                    ${escapeHtml(customer.name)}
                 </td>
 
                 <td>
-                    ${customer.city ?? ""}
+                    ${escapeHtml(customer.street)}
                 </td>
 
                 <td>
-                    ${customer.additionalInfo ?? ""}
+                    ${escapeHtml(customer.postalCode)}
+                </td>
+
+                <td>
+                    ${escapeHtml(customer.city)}
                 </td>
 
             </tr>

@@ -108,6 +108,32 @@
 
 }
 
+.customer-card-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.customer-card-actions button:not(#delete-customer) {
+    padding: 9px 13px;
+    border: 1px solid #8bb6ee;
+    border-radius: 8px;
+    background: white;
+    color: #175cd3;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.customer-salesforce-state {
+    grid-column: 1 / -1;
+    color: #027a48;
+    font-size: 13px;
+    font-weight: 600;
+}
+
 #delete-customer {
 
     display: inline-flex;

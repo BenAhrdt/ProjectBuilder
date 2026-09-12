@@ -5,7 +5,7 @@
 
 #customers-search {
 
-    margin-left: 50px;
+    margin-left: 0;
 
     width: 200px;
 
@@ -120,6 +120,53 @@
 
 }
 
+#customers-header {
+    gap: 18px;
+    box-sizing: border-box;
+    padding-right: 2%;
+}
+
+#customers-header .header-search {
+    margin-left: clamp(40px, 10vw, 180px);
+}
+
+.customers-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.customers-action-button {
+    min-height: 38px;
+    padding: 8px 13px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.customers-action-secondary {
+    border: 1px solid #8bb6ee;
+    background: white;
+    color: #175cd3;
+}
+
+.customers-action-secondary:hover {
+    background: #eff8ff;
+}
+
+.customers-action-primary {
+    border: 1px solid #6172f3;
+    background: #6172f3;
+    color: white;
+}
+
+.customers-action-button:disabled {
+    cursor: wait;
+    opacity: 0.55;
+}
+
 /* --------------------------------------------------
    Zebra
 -------------------------------------------------- */
@@ -168,34 +215,47 @@
 }
 
 /* --------------------------------------------------
-   Stadt
+   Adresse
 -------------------------------------------------- */
 
 .customers-table th:nth-child(3),
 .customers-table td:nth-child(3) {
 
-    width: 180px;
+    width: 260px;
 
-    min-width: 180px;
+    min-width: 260px;
+
+    white-space: normal;
+
+}
+
+/* --------------------------------------------------
+   PLZ
+-------------------------------------------------- */
+
+.customers-table th:nth-child(4),
+.customers-table td:nth-child(4) {
+
+    width: 90px;
+
+    min-width: 90px;
 
     white-space: nowrap;
 
 }
 
 /* --------------------------------------------------
-   Zusatzinformationen
+   Ort
 -------------------------------------------------- */
 
-.customers-table th:nth-child(4),
-.customers-table td:nth-child(4) {
+.customers-table th:nth-child(5),
+.customers-table td:nth-child(5) {
 
-    width: 100%;
+    width: 180px;
+
+    min-width: 180px;
 
     white-space: normal;
-
-    word-break: break-word;
-
-    overflow-wrap: anywhere;
 
 }
 
@@ -205,7 +265,7 @@
 
 #customers-meta-infomrations {
 
-    margin-left: 30px;
+    margin-left: 0;
 
     font-size: medium;
 
@@ -217,6 +277,70 @@
 
     display: none;
 
+}
+
+.salesforce-dialog-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(16, 24, 40, 0.55);
+}
+
+.salesforce-dialog {
+    display: flex;
+    flex-direction: column;
+    width: min(1180px, 96vw);
+    max-height: 90vh;
+    overflow: hidden;
+    border-radius: 14px;
+    background: white;
+    box-shadow: 0 24px 48px rgba(16, 24, 40, 0.25);
+}
+
+.salesforce-dialog-header,
+.salesforce-dialog-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 22px;
+    border-bottom: 1px solid #e4e7ec;
+}
+
+.salesforce-dialog-header h2,
+.salesforce-dialog-header p { margin: 0; }
+.salesforce-dialog-header p { margin-top: 4px; color: #667085; font-size: 13px; }
+.salesforce-close { border: 0; background: transparent; cursor: pointer; font-size: 28px; }
+.salesforce-header-actions { display: flex; align-items: center; gap: 12px; }
+.salesforce-connect { padding: 9px 13px; border: 1px solid #0176d3; border-radius: 7px; background: white; color: #0176d3; cursor: pointer; font-weight: 700; }
+.salesforce-connect:disabled { opacity: 0.6; cursor: wait; }
+
+.salesforce-filters {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(130px, 1fr)) auto;
+    gap: 10px;
+    padding: 18px 22px;
+}
+
+.salesforce-filters input { padding: 10px 12px; border: 1px solid #d0d5dd; border-radius: 7px; }
+.salesforce-filters button,
+.salesforce-import { padding: 10px 15px; border: 0; border-radius: 7px; background: #0176d3; color: white; cursor: pointer; font-weight: 700; }
+.salesforce-filters button:disabled { opacity: 0.6; cursor: wait; }
+.salesforce-import:disabled { opacity: 0.5; cursor: default; }
+.salesforce-status { padding: 0 22px 14px; color: #475467; }
+.salesforce-results { overflow: auto; min-height: 120px; }
+.salesforce-results-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.salesforce-results-table th,
+.salesforce-results-table td { padding: 11px 12px; border-bottom: 1px solid #eaecf0; text-align: left; }
+.salesforce-results-table th { position: sticky; top: 0; background: #f9fafb; }
+.salesforce-dialog-actions { justify-content: flex-end; border-top: 1px solid #e4e7ec; border-bottom: 0; }
+.salesforce-cancel { padding: 10px 15px; border: 1px solid #d0d5dd; border-radius: 7px; background: white; cursor: pointer; }
+
+@media (max-width: 900px) {
+    .salesforce-filters { grid-template-columns: 1fr 1fr; }
 }
 
 #customer-form-container {

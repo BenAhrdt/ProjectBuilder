@@ -2,6 +2,20 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.3.0 - 12.09.2026
+### Added
+- Customers can be searched by customer number, name, postal code and city through the existing Salesforce SSO login and selectively imported into ProjectBuilder.
+- Salesforce-linked customers can be refreshed individually or together from Salesforce.
+- Customer data now includes separate address, postal-code and city fields as well as the time of the last Salesforce refresh.
+### Changed
+- The Salesforce integration accesses Salesforce in read-only mode; local discount groups and notes are preserved during refreshes.
+- Missing Salesforce customer numbers also clear the local customer number without causing conflicts between customers without a number.
+- Salesforce connections are prepared in the background and reused for fast subsequent requests.
+- Search and refresh buttons display clear progress text while Salesforce requests are running.
+### Fixed
+- Salesforce selection dialogs close only when both mouse-down and mouse-up occur outside the dialog.
+- Customer-list actions use consistent spacing and no longer touch the right edge of the window.
+
 ## 1.2.12 - 25.08.2026
 ### Fixed
 - Active quantity changes are saved before moving, duplicating, deleting or reloading, preventing article quantities from reverting to `1`.

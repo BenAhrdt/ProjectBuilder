@@ -2,6 +2,14 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.4.3 - 13.09.2026
+### Added
+- When several draft quotes belong to the opportunity, the quote to synchronize can be selected by quote number; a single draft is used automatically.
+
+### Fixed
+- A deleted most-recent quote no longer prevents an older quote returned to draft from being synchronized again.
+- The Salesforce synchronization success message identifies the quote number actually used.
+
 ## 1.4.2 - 13.09.2026
 ### Added
 - Before a Salesforce transfer, the contact and delivery time can be selected from the values available for the customer and quote in Salesforce.

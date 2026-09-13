@@ -2,6 +2,14 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.4.3 - 13.09.2026
+### Nuevo
+- Si hay varios borradores de oferta en la oportunidad, se puede seleccionar por número la oferta que se sincronizará; si solo hay uno, se utiliza automáticamente.
+
+### Corregido
+- La eliminación de la última oferta utilizada ya no impide volver a sincronizar una oferta anterior que haya regresado al estado de borrador.
+- El mensaje de éxito de la sincronización con Salesforce indica el número de oferta utilizado.
+
 ## 1.4.2 - 13.09.2026
 ### Nuevo
 - Antes de transferir a Salesforce, se pueden seleccionar el contacto y el plazo de entrega entre los valores disponibles en Salesforce.

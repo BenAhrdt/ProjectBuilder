@@ -795,6 +795,22 @@ function registerProjectSalesforceSync(projectId) {
             await showAlert(error.message, { title: i18n.t("project.salesforceSyncFailed") });
             return;
         }
+        let quoteId = null;
+        if (quoteOptions.draftQuotes.length === 1) {
+            quoteId = quoteOptions.draftQuotes[0].id;
+        } else if (quoteOptions.draftQuotes.length > 1) {
+            quoteId = await showChoice(i18n.t("project.salesforceSelectQuote"), {
+                title: i18n.t("project.salesforceSync"),
+                choices: quoteOptions.draftQuotes.map(quote => ({
+                    value: quote.id,
+                    label: quote.quoteNumber
+                        ? `${i18n.t("project.salesforceQuoteNumber")} ${quote.quoteNumber}${quote.name ? ` – ${quote.name}` : ""}`
+                        : quote.name || i18n.t("project.salesforceQuoteWithoutNumber")
+                })),
+                choiceLayout: "list"
+            });
+            if (!quoteId) return;
+        }
         let contactId = null;
         if (quoteOptions.contactField) {
             if (quoteOptions.contacts.length === 0) {
@@ -845,7 +861,8 @@ function registerProjectSalesforceSync(projectId) {
                     body: JSON.stringify({
                         language: i18n.getCurrentLanguage(),
                         contactId,
-                        deliveryTime
+                        deliveryTime,
+                        quoteId
                     })
                 }
             );
@@ -854,7 +871,8 @@ function registerProjectSalesforceSync(projectId) {
             await showAlert(
                 i18n.t("project.salesforceSyncSuccess")
                     .replace("{positions}", result.positionCount)
-                    .replace("{pricebook}", result.pricebookName),
+                    .replace("{pricebook}", result.pricebookName)
+                    .replace("{quoteNumber}", result.quoteNumber || i18n.t("project.salesforceQuoteWithoutNumber")),
                 { title: i18n.t("project.salesforceSync") }
             );
             await renderView(projectId);

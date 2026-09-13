@@ -120,7 +120,24 @@ router.get("/projects/:projectId/quote-options", async (req, res) => {
                 error: result.error.message
             });
         }
-        res.json({ success: true, ...(await salesforce.getQuoteSyncOptions(result.account.Id)) });
+        const [syncOptions, pricebook, opportunity] = await Promise.all([
+            salesforce.getQuoteSyncOptions(result.account.Id),
+            salesforce.getSalesPricebook(getConfiguredPricebookIdentifier()),
+            salesforce.getOpportunity(result.project.salesforceOpportunityId)
+        ]);
+        const draftQuotes = opportunity?.Pricebook2Id === pricebook.Id
+            ? await salesforce.getDraftQuotes(opportunity.Id, pricebook.Id)
+            : [];
+        res.json({
+            success: true,
+            ...syncOptions,
+            draftQuotes: draftQuotes.map(quote => ({
+                id: quote.Id,
+                name: quote.Name,
+                quoteNumber: quote.QuoteNumber,
+                isSyncing: Boolean(quote.IsSyncing)
+            }))
+        });
     } catch (error) {
         handleError(res, error);
     }
@@ -473,9 +490,25 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
         database.projects.prepare(`
             UPDATE projects SET salesforceOpportunityId = ? WHERE id = ?
         `).run(opportunity.Id, project.id);
-        let reusableQuote = previousQuote;
-        if (previousQuote && previousQuote.Status !== "Draft") {
-            reusableQuote = await salesforce.findDraftQuote(opportunity.Id, pricebook.Id, previousQuote.Id);
+        const draftQuotes = await salesforce.getDraftQuotes(opportunity.Id, pricebook.Id);
+        let reusableQuote = null;
+        if (req.body.quoteId) {
+            reusableQuote = draftQuotes.find(quote => quote.Id === req.body.quoteId) ?? null;
+            if (!reusableQuote) {
+                return res.status(409).json({
+                    success: false,
+                    code: "QUOTE_NOT_AVAILABLE",
+                    error: "Das ausgewählte Salesforce-Angebot ist nicht mehr als Entwurf verfügbar. Bitte die Auswahl neu laden."
+                });
+            }
+        } else if (draftQuotes.length === 1) {
+            [reusableQuote] = draftQuotes;
+        } else if (draftQuotes.length > 1) {
+            return res.status(409).json({
+                success: false,
+                code: "QUOTE_SELECTION_REQUIRED",
+                error: "Für die Opportunity sind mehrere Entwurfsangebote vorhanden. Bitte ein Angebot auswählen."
+            });
         }
         const createNewQuote = !reusableQuote
             || reusableQuote.Pricebook2Id !== pricebook.Id
@@ -514,8 +547,9 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
 
         // Detach the previous synchronized quote before replacing opportunity lines or
         // attaching a newly created/reused draft. Salesforce permits only one at a time.
-        if (previousQuote?.IsSyncing && previousQuote.Id !== quote.Id) {
+        if (opportunity.SyncedQuoteId && opportunity.SyncedQuoteId !== quote.Id) {
             await salesforce.synchronizeQuote(opportunity.Id, null);
+            opportunity.SyncedQuoteId = null;
         }
 
         // Synchronized quotes mirror their line items to the opportunity automatically.
@@ -541,6 +575,7 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
             opportunityId: opportunity.Id,
             opportunityCreated,
             quoteId: quote.Id,
+            quoteNumber: quote.QuoteNumber,
             quoteCreated: createNewQuote,
             quoteSynced: true,
             previousQuoteStatus: previousQuote?.Status ?? null,

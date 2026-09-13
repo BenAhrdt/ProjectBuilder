@@ -420,7 +420,7 @@ export async function getPricebookAvailability(pricebookId, articleNumbers) {
 export async function getOpportunity(id) {
     if (!id) return null;
     const result = await query(`
-        SELECT Id, Pricebook2Id, StageName, CloseDate, CurrencyIsoCode
+        SELECT Id, Pricebook2Id, StageName, CloseDate, CurrencyIsoCode, SyncedQuoteId
         FROM Opportunity
         WHERE Id = '${escapeSoql(id)}'
         LIMIT 1
@@ -467,21 +467,18 @@ export async function getQuote(id) {
     return result.records[0] ?? null;
 }
 
-export async function findDraftQuote(opportunityId, pricebookId, excludedId = null) {
-    const excluded = excludedId
-        ? `AND Id != '${escapeSoql(excludedId)}'`
-        : "";
+export async function getDraftQuotes(opportunityId, pricebookId) {
+    if (!opportunityId || !pricebookId) return [];
     const result = await query(`
-        SELECT Id, Status, QuoteNumber, IsSyncing, Pricebook2Id, OpportunityId
+        SELECT Id, Name, Status, QuoteNumber, IsSyncing, Pricebook2Id, OpportunityId,
+            LastModifiedDate
         FROM Quote
         WHERE OpportunityId = '${escapeSoql(opportunityId)}'
           AND Pricebook2Id = '${escapeSoql(pricebookId)}'
           AND Status = 'Draft'
-          ${excluded}
         ORDER BY LastModifiedDate DESC
-        LIMIT 1
     `);
-    return result.records[0] ?? null;
+    return result.records;
 }
 
 export async function createQuote(fields) {

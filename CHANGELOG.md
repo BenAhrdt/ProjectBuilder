@@ -2,6 +2,17 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.4.3 - 13.09.2026
+
+### Neu
+
+- Sind mehrere Entwurfsangebote mit der Opportunity verknüpft, kann das zu synchronisierende Angebot anhand seiner Angebotsnummer ausgewählt werden; ein einzelner Entwurf wird automatisch verwendet.
+
+### Behoben
+
+- Gelöschte zuletzt verwendete Angebote verhindern nicht mehr, dass ein älteres, wieder auf Entwurf gesetztes Angebot erneut synchronisiert wird.
+- Die Erfolgsmeldung der Salesforce-Synchronisation nennt die tatsächlich verwendete Angebotsnummer.
+
 ## 1.4.2 - 13.09.2026
 
 ### Neu

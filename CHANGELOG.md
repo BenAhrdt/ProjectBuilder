@@ -2,6 +2,12 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.4.1 - 13.09.2026
+
+### Behoben
+
+- Nach der Salesforce-Übertragung wird das Angebot nun als synchronisiertes Angebot der Opportunity gesetzt und kann dadurch zur Genehmigung eingereicht werden.
+
 ## 1.4.0 - 13.09.2026
 
 ### Neu

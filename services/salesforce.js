@@ -402,6 +402,10 @@ export async function updateOpportunity(id, fields) {
     return updateRecord("Opportunity", id, fields);
 }
 
+export async function synchronizeQuote(opportunityId, quoteId) {
+    return updateRecord("Opportunity", opportunityId, { SyncedQuoteId: quoteId });
+}
+
 export async function getQuote(id) {
     if (!id) return null;
     const result = await query(`

@@ -2,6 +2,10 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.4.1 - 13.09.2026
+### Fixed
+- After a Salesforce transfer, the quote is now set as the opportunity's synchronized quote so it can be submitted for approval.
+
 ## 1.4.0 - 13.09.2026
 ### Added
 - Projects can synchronize their regular, optional and alternative article positions to Salesforce as an opportunity and quote.

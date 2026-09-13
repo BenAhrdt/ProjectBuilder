@@ -478,6 +478,10 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
             salesforce.replaceLineItems("QuoteLineItem", "QuoteId", quote.Id, quoteLineItems)
         ]);
 
+        // Linking the quote alone does not make it the opportunity's synchronized quote.
+        // Salesforce requires this relationship before the quote can enter approval.
+        await salesforce.synchronizeQuote(opportunity.Id, quote.Id);
+
         database.projects.prepare(`
             UPDATE projects SET salesforceOpportunityId = ?, salesforceQuoteId = ?, salesforceSyncedAt = ?
             WHERE id = ?
@@ -489,6 +493,7 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
             opportunityCreated,
             quoteId: quote.Id,
             quoteCreated: createNewQuote,
+            quoteSynced: true,
             previousQuoteStatus: previousQuote?.Status ?? null,
             positionCount: quoteLineItems.length,
             pricebookName: pricebook.Name

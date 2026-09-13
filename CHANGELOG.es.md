@@ -2,6 +2,10 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.4.1 - 13.09.2026
+### Corregido
+- Tras la transferencia a Salesforce, la oferta se establece ahora como oferta sincronizada de la oportunidad para que pueda enviarse a aprobación.
+
 ## 1.4.0 - 13.09.2026
 ### Nuevo
 - Los proyectos pueden sincronizar sus posiciones de artículos regulares, opcionales y alternativos con Salesforce como oportunidad y oferta.

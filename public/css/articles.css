@@ -384,6 +384,17 @@
 
     gap: 8px;
 
+    flex-wrap: nowrap;
+
+    white-space: nowrap;
+
+}
+
+.article-price-editor > span,
+.article-gridvis-items-editor > span,
+.article-price-edit-button,
+.article-gridvis-items-edit-button {
+    flex: 0 0 auto;
 }
 
 .article-price-edit-button,
@@ -488,17 +499,38 @@
 }
 
 /* --------------------------------------------------
-   Preis
+   GridVis-Items
 -------------------------------------------------- */
 
 .articles-table th:nth-child(5),
 .articles-table td:nth-child(5) {
 
-    width: 60px;
+    width: 120px;
 
-    min-width: 60px;
+    min-width: 120px;
 
     white-space: nowrap;
+
+    font-weight: 600;
+
+}
+
+/* --------------------------------------------------
+   Preis
+-------------------------------------------------- */
+
+.articles-table th:nth-child(6),
+.articles-table td:nth-child(6) {
+
+    width: 165px;
+
+    min-width: 165px;
+
+    white-space: nowrap;
+
+    word-break: normal;
+
+    overflow-wrap: normal;
 
     font-weight: 600;
 

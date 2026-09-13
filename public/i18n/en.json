@@ -278,7 +278,7 @@
     "project.salesforceDocumentOverview": "Overview plan",
     "project.salesforceDocumentExcel": "Excel",
     "project.salesforceDocumentWord": "Bill of quantities in Word",
-    "project.salesforceDocumentGaeb": "GAEB",
+    "project.salesforceDocumentGaeb": "Bill of quantities in GAEB",
     "project.salesforceDocumentErrors": "Synchronization succeeded, but these documents could not be uploaded:",
     "project.salesforceSyncStart": "Synchronize",
     "project.salesforceSyncRunning": "Synchronizing…",

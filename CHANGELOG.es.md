@@ -2,6 +2,11 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.1 - 13.09.2026
+### Modificado
+- Los elementos GridVis y los precios tienen columnas suficientemente anchas para mostrar los valores y botones de edición sin saltos de línea.
+- El diálogo de sincronización con Salesforce es más ancho y denomina la opción GAEB «Pliego en GAEB».
+
 ## 1.5.0 - 13.09.2026
 ### Nuevo
 - Los proyectos se pueden duplicar con toda su estructura y posiciones tanto desde la vista general de proyectos como desde la vista de un cliente abierto.

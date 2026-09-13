@@ -278,7 +278,7 @@
     "project.salesforceDocumentOverview": "Übersichtsplan",
     "project.salesforceDocumentExcel": "Excel",
     "project.salesforceDocumentWord": "LV in Word",
-    "project.salesforceDocumentGaeb": "GAEB",
+    "project.salesforceDocumentGaeb": "LV in GAEB",
     "project.salesforceDocumentErrors": "Die Synchronisierung war erfolgreich, aber folgende Dokumente konnten nicht hochgeladen werden:",
     "project.salesforceSyncStart": "Synchronisieren",
     "project.salesforceSyncRunning": "Wird synchronisiert…",

@@ -2,6 +2,11 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.1 - 13.09.2026
+### Changed
+- GridVis items and prices have sufficiently wide columns so values and edit buttons remain readable without wrapping.
+- The Salesforce synchronization dialog is wider and labels the GAEB document option as “Bill of quantities in GAEB”.
+
 ## 1.5.0 - 13.09.2026
 ### Added
 - Projects can be duplicated with their complete structure and article positions from both the project overview and an open customer view.

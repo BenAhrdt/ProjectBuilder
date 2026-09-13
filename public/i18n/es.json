@@ -278,7 +278,7 @@
     "project.salesforceDocumentOverview": "Plano general",
     "project.salesforceDocumentExcel": "Excel",
     "project.salesforceDocumentWord": "Pliego en Word",
-    "project.salesforceDocumentGaeb": "GAEB",
+    "project.salesforceDocumentGaeb": "Pliego en GAEB",
     "project.salesforceDocumentErrors": "La sincronización se realizó, pero no se pudieron cargar estos documentos:",
     "project.salesforceSyncStart": "Sincronizar",
     "project.salesforceSyncRunning": "Sincronizando…",

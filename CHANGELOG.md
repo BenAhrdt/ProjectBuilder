@@ -2,6 +2,13 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.1 - 13.09.2026
+
+### Geändert
+
+- GridVis-Items und Preise besitzen ausreichend breite Spalten, sodass Werte und Ändern-Schaltflächen ohne Umbruch lesbar bleiben.
+- Der Salesforce-Synchronisierungsdialog ist breiter und bezeichnet die GAEB-Dokumentauswahl als „LV in GAEB“.
+
 ## 1.5.0 - 13.09.2026
 
 ### Neu

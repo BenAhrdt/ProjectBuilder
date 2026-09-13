@@ -2,6 +2,10 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.4.4 - 13.09.2026
+### Corregido
+- Se reutiliza el borrador sincronizado. Si la oferta sincronizada tiene otro estado, se crea un borrador nuevo; si no hay oferta sincronizada, se utiliza automáticamente el borrador más reciente.
+
 ## 1.4.3 - 13.09.2026
 ### Nuevo
 - Si hay varios borradores de oferta en la oportunidad, se puede seleccionar por número la oferta que se sincronizará; si solo hay uno, se utiliza automáticamente.

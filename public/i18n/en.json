@@ -261,8 +261,6 @@
     "project.salesforceSelectDeliveryTime": "Which delivery time should be used for the quote?",
     "project.salesforceNoContacts": "No contacts are available for this Salesforce customer.",
     "project.salesforceNoDeliveryTimes": "No selectable delivery times are configured in Salesforce.",
-    "project.salesforceSelectQuote": "Which draft quote of the opportunity should be synchronized?",
-    "project.salesforceQuoteNumber": "Quote",
     "project.salesforceQuoteWithoutNumber": "Quote without number",
     "project.salesforceSyncSuccess": "Salesforce quote {quoteNumber} was synchronized with {positions} items using price book “{pricebook}”.",
     "project.tenderTitle": "Create tender",

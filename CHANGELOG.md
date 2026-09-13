@@ -2,6 +2,12 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.4.4 - 13.09.2026
+
+### Behoben
+
+- Ein synchronisiertes Entwurfsangebot wird weiterverwendet. Hat das synchronisierte Angebot einen anderen Status, wird ein neuer Entwurf erzeugt; ohne synchronisiertes Angebot wird automatisch der jüngste Entwurf verwendet.
+
 ## 1.4.3 - 13.09.2026
 
 ### Neu

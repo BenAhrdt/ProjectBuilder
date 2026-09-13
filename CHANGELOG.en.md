@@ -2,6 +2,10 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.4.4 - 13.09.2026
+### Fixed
+- A synchronized draft quote is reused. If the synchronized quote has another status, a new draft is created; without a synchronized quote, the newest draft is selected automatically.
+
 ## 1.4.3 - 13.09.2026
 ### Added
 - When several draft quotes belong to the opportunity, the quote to synchronize can be selected by quote number; a single draft is used automatically.

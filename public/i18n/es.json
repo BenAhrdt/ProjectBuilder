@@ -261,8 +261,6 @@
     "project.salesforceSelectDeliveryTime": "¿Qué plazo de entrega debe utilizarse para la oferta?",
     "project.salesforceNoContacts": "No hay contactos disponibles para este cliente de Salesforce.",
     "project.salesforceNoDeliveryTimes": "No hay plazos de entrega seleccionables configurados en Salesforce.",
-    "project.salesforceSelectQuote": "¿Qué borrador de oferta de la oportunidad debe sincronizarse?",
-    "project.salesforceQuoteNumber": "Oferta",
     "project.salesforceQuoteWithoutNumber": "Oferta sin número",
     "project.salesforceSyncSuccess": "La oferta de Salesforce {quoteNumber} se sincronizó con {positions} posiciones usando la lista de precios «{pricebook}».",
     "project.tenderTitle": "Crear licitación",

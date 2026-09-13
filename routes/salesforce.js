@@ -6,6 +6,7 @@ import {
     buildSalesforcePositions
 } from "../utils/salesforcePositions.js";
 import { inferGridVisItems } from "../utils/gridVisItems.js";
+import { selectReusableSalesforceQuote } from "../utils/salesforceQuoteSelection.js";
 
 const router = express.Router();
 
@@ -120,24 +121,7 @@ router.get("/projects/:projectId/quote-options", async (req, res) => {
                 error: result.error.message
             });
         }
-        const [syncOptions, pricebook, opportunity] = await Promise.all([
-            salesforce.getQuoteSyncOptions(result.account.Id),
-            salesforce.getSalesPricebook(getConfiguredPricebookIdentifier()),
-            salesforce.getOpportunity(result.project.salesforceOpportunityId)
-        ]);
-        const draftQuotes = opportunity?.Pricebook2Id === pricebook.Id
-            ? await salesforce.getDraftQuotes(opportunity.Id, pricebook.Id)
-            : [];
-        res.json({
-            success: true,
-            ...syncOptions,
-            draftQuotes: draftQuotes.map(quote => ({
-                id: quote.Id,
-                name: quote.Name,
-                quoteNumber: quote.QuoteNumber,
-                isSyncing: Boolean(quote.IsSyncing)
-            }))
-        });
+        res.json({ success: true, ...(await salesforce.getQuoteSyncOptions(result.account.Id)) });
     } catch (error) {
         handleError(res, error);
     }
@@ -490,26 +474,20 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
         database.projects.prepare(`
             UPDATE projects SET salesforceOpportunityId = ? WHERE id = ?
         `).run(opportunity.Id, project.id);
-        const draftQuotes = await salesforce.getDraftQuotes(opportunity.Id, pricebook.Id);
-        let reusableQuote = null;
-        if (req.body.quoteId) {
-            reusableQuote = draftQuotes.find(quote => quote.Id === req.body.quoteId) ?? null;
-            if (!reusableQuote) {
-                return res.status(409).json({
-                    success: false,
-                    code: "QUOTE_NOT_AVAILABLE",
-                    error: "Das ausgewählte Salesforce-Angebot ist nicht mehr als Entwurf verfügbar. Bitte die Auswahl neu laden."
-                });
-            }
-        } else if (draftQuotes.length === 1) {
-            [reusableQuote] = draftQuotes;
-        } else if (draftQuotes.length > 1) {
-            return res.status(409).json({
-                success: false,
-                code: "QUOTE_SELECTION_REQUIRED",
-                error: "Für die Opportunity sind mehrere Entwurfsangebote vorhanden. Bitte ein Angebot auswählen."
-            });
-        }
+        const synchronizedQuote = opportunity.SyncedQuoteId
+            ? previousQuote?.Id === opportunity.SyncedQuoteId
+                ? previousQuote
+                : await salesforce.getQuote(opportunity.SyncedQuoteId)
+            : null;
+        const draftQuotes = synchronizedQuote
+            ? []
+            : await salesforce.getDraftQuotes(opportunity.Id, pricebook.Id);
+        const reusableQuote = selectReusableSalesforceQuote({
+            synchronizedQuote,
+            draftQuotes,
+            opportunityId: opportunity.Id,
+            pricebookId: pricebook.Id
+        });
         const createNewQuote = !reusableQuote
             || reusableQuote.Pricebook2Id !== pricebook.Id
             || reusableQuote.OpportunityId !== opportunity.Id;

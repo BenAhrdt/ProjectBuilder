@@ -261,8 +261,6 @@
     "project.salesforceSelectDeliveryTime": "Welche Lieferzeit soll für das Angebot verwendet werden?",
     "project.salesforceNoContacts": "Für diesen Salesforce-Kunden sind keine Kontakte verfügbar.",
     "project.salesforceNoDeliveryTimes": "In Salesforce sind keine auswählbaren Lieferzeiten konfiguriert.",
-    "project.salesforceSelectQuote": "Welches Entwurfsangebot der Opportunity soll synchronisiert werden?",
-    "project.salesforceQuoteNumber": "Angebot",
     "project.salesforceQuoteWithoutNumber": "Angebot ohne Nummer",
     "project.salesforceSyncSuccess": "Das Salesforce-Angebot {quoteNumber} wurde mit {positions} Positionen über das Preisbuch „{pricebook}“ synchronisiert.",
     "project.tenderTitle": "Ausschreibung erstellen",

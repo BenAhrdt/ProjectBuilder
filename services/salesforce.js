@@ -471,12 +471,12 @@ export async function getDraftQuotes(opportunityId, pricebookId) {
     if (!opportunityId || !pricebookId) return [];
     const result = await query(`
         SELECT Id, Name, Status, QuoteNumber, IsSyncing, Pricebook2Id, OpportunityId,
-            LastModifiedDate
+            CreatedDate
         FROM Quote
         WHERE OpportunityId = '${escapeSoql(opportunityId)}'
           AND Pricebook2Id = '${escapeSoql(pricebookId)}'
           AND Status = 'Draft'
-        ORDER BY LastModifiedDate DESC
+        ORDER BY CreatedDate DESC
     `);
     return result.records;
 }

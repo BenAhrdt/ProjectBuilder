@@ -10,6 +10,7 @@ import * as router from "../router.js";
 await i18n.loadLanguage();
 
 const view = document.getElementById("view");
+let salesforceAvailability = null;
 
 async function renderView() {
 
@@ -44,6 +45,16 @@ async function renderView() {
             <button id="add-article-button">
                 + ${i18n.t("articles.addArticle")}
             </button>
+            <button id="import-salesforce-pricebook" type="button">
+                <span class="article-salesforce-button-icon">SF</span>
+                ${i18n.t("articles.importSalesforcePricebook")}
+            </button>
+            ${articles.length > 0 ? `
+                <button id="check-salesforce-availability" type="button">
+                    <span class="article-salesforce-button-icon">SF</span>
+                    ${i18n.t("articles.checkSalesforceAvailability")}
+                </button>
+            ` : ""}
             ${articles.length > 0 ? `
                 <button id="clear-articles-button" type="button">
                     ${i18n.t("articles.clearList")}
@@ -128,6 +139,8 @@ async function renderView() {
                             ${i18n.t("articles.discountGroup")}
                         </th>
 
+                        <th>${i18n.t("articles.gridVisItems")}</th>
+
                         <th>
                             ${i18n.t("articles.price")}
                         </th>
@@ -157,6 +170,8 @@ async function renderView() {
                             <td>
                                 ${article.discountGroup ?? ""}
                             </td>
+
+                            <td>${renderGridVisItems(article)}</td>
 
                             <td>
                                 ${renderArticlePrice(article)}
@@ -248,6 +263,16 @@ function generateHandler() {
         clearArticles
     );
 
+    document.getElementById("check-salesforce-availability")?.addEventListener(
+        "click",
+        checkSalesforceAvailability
+    );
+
+    document.getElementById("import-salesforce-pricebook")?.addEventListener(
+        "click",
+        importSalesforcePricebook
+    );
+
     const saveManualArticleButton =
         document.getElementById(
             "save-manual-article-button"
@@ -269,6 +294,7 @@ function generateHandler() {
     );
 
     attachArticlePriceHandlers();
+    attachGridVisItemHandlers();
     attachArticleDeleteHandlers();
 
 }
@@ -454,6 +480,8 @@ function renderArticles(articles) {
                     ${article.discountGroup ?? ""}
                 </td>
 
+                <td>${renderGridVisItems(article)}</td>
+
                 <td>
                     ${renderArticlePrice(article)}
                 </td>
@@ -463,17 +491,45 @@ function renderArticles(articles) {
         `).join("");
 
     attachArticlePriceHandlers();
+    attachGridVisItemHandlers();
     attachArticleDeleteHandlers();
 
 }
 
 function renderArticleNumber(article) {
 
+    const liveAvailability = salesforceAvailability?.get(String(article.articleNumber));
+    let storedCurrencies = [];
+    try {
+        storedCurrencies = JSON.parse(article.salesforceCurrencies || "[]");
+    } catch {
+        storedCurrencies = [];
+    }
+    const currencies = liveAvailability?.currencies ?? storedCurrencies;
+    const wasChecked = Boolean(
+        salesforceAvailability
+        || article.salesforceAvailabilityCheckedAt
+        || article.salesforceImportedAt
+    );
+    const isAvailable = Boolean(liveAvailability) || (
+        !salesforceAvailability
+        && wasChecked
+        && Number(article.salesforceActive) === 1
+    );
+    const badge = isAvailable
+        ? `<span class="article-salesforce-badge article-salesforce-badge-available"
+                 title="${i18n.t("articles.salesforceAvailable").replace("{currencies}", currencies.join(", ") || "–")}">SF</span>`
+        : wasChecked
+            ? `<span class="article-salesforce-badge article-salesforce-badge-missing"
+                     title="${i18n.t("articles.salesforceMissing")}">SF</span>`
+            : "";
+
     return `
         <div class="article-number-actions">
             <span>
                 ${article.articleNumber ?? ""}
             </span>
+            ${badge}
             <button
                 class="article-delete-button"
                 type="button"
@@ -485,6 +541,151 @@ function renderArticleNumber(article) {
         </div>
     `;
 
+}
+
+async function checkSalesforceAvailability() {
+    const button = document.getElementById("check-salesforce-availability");
+    if (!button) return;
+
+    const originalContent = button.innerHTML;
+    button.disabled = true;
+    button.textContent = i18n.t("articles.checkingSalesforceAvailability");
+    try {
+        const articles = await fetch("/api/articles").then(response => response.json());
+        const response = await fetch("/api/salesforce/articles/availability", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                articleNumbers: articles.map(article => article.articleNumber),
+                language: i18n.getCurrentLanguage()
+            })
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || i18n.t("articles.salesforceCheckFailed"));
+
+        salesforceAvailability = new Map(
+            result.available.map(item => [String(item.articleNumber), item])
+        );
+        await refreshArticles();
+        await showAlert(
+            i18n.t("articles.salesforceCheckResult")
+                .replace("{available}", result.available.length)
+                .replace("{checked}", result.checked)
+                .replace("{missing}", result.missing.length)
+                .replace("{pricebook}", result.pricebookName)
+        );
+    } catch (error) {
+        await showAlert(error.message || i18n.t("articles.salesforceCheckFailed"));
+    } finally {
+        button.disabled = false;
+        button.innerHTML = originalContent;
+    }
+}
+
+async function importSalesforcePricebook() {
+    const button = document.getElementById("import-salesforce-pricebook");
+    if (!button) return;
+
+    const originalContent = button.innerHTML;
+    button.disabled = true;
+    button.textContent = i18n.t("articles.loadingSalesforcePricebooks");
+    try {
+        const response = await fetch("/api/salesforce/pricebooks");
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || i18n.t("articles.salesforceImportFailed"));
+
+        const recommendedPricebook = result.pricebooks.find(
+            book => book.name === "Janitza Electronics (1100)"
+        );
+        if (!recommendedPricebook) {
+            throw new Error(i18n.t("articles.defaultSalesforcePricebookMissing"));
+        }
+
+        let pricebook = recommendedPricebook;
+        let currencyIsoCode = "EUR";
+        if (i18n.getCurrentLanguage() !== "de") {
+            const pricebooks = [...result.pricebooks].sort((first, second) =>
+                Number(second.id === recommendedPricebook.id) - Number(first.id === recommendedPricebook.id)
+            );
+            const pricebookId = await showChoice(
+                i18n.t("articles.selectSalesforcePricebook"),
+                {
+                    title: i18n.t("articles.importSalesforcePricebook"),
+                    choiceLayout: "list",
+                    choices: pricebooks.map(book => ({
+                        label: `${book.name}${book.id === recommendedPricebook.id ? ` (${i18n.t("common.recommended")})` : ""}`,
+                        value: book.id
+                    }))
+                }
+            );
+            if (!pricebookId) return;
+            pricebook = pricebooks.find(book => book.id === pricebookId);
+
+            const preferredCurrency = result.selectedCurrency || "EUR";
+            const currencies = [...pricebook.currencies].sort((first, second) =>
+                Number(second.currency === preferredCurrency) - Number(first.currency === preferredCurrency)
+            );
+            currencyIsoCode = await showChoice(
+                i18n.t("articles.selectSalesforceCurrency"),
+                {
+                    title: pricebook.name,
+                    choices: currencies.map(item => ({
+                        label: `${item.currency} · ${item.articleCount} ${i18n.t("articles.articles")}`,
+                        value: item.currency
+                    }))
+                }
+            );
+            if (!currencyIsoCode) return;
+        } else if (result.selectedPricebookId) {
+            pricebook = result.pricebooks.find(
+                book => book.id === result.selectedPricebookId
+            ) ?? recommendedPricebook;
+            const storedCurrencyExists = pricebook.currencies.some(
+                item => item.currency === result.selectedCurrency
+            );
+            currencyIsoCode = storedCurrencyExists ? result.selectedCurrency : "EUR";
+        }
+
+        const confirmed = await showConfirm(
+            i18n.t("articles.salesforceImportConfirm")
+                .replace("{pricebook}", pricebook.name)
+                .replace("{currency}", currencyIsoCode),
+            {
+                title: i18n.t("articles.importSalesforcePricebook"),
+                confirmText: i18n.t("articles.import")
+            }
+        );
+        if (!confirmed) return;
+
+        button.textContent = i18n.t("articles.importingSalesforcePricebook");
+        const importResponse = await fetch("/api/salesforce/articles/import", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ pricebookId: pricebook.id, currencyIsoCode })
+        });
+        const importResult = await importResponse.json();
+        if (!importResponse.ok) {
+            throw new Error(importResult.error || i18n.t("articles.salesforceImportFailed"));
+        }
+
+        salesforceAvailability = null;
+        await renderView();
+        await showAlert(
+            i18n.t("articles.salesforceImportResult")
+                .replace("{imported}", importResult.imported)
+                .replace("{updated}", importResult.updated)
+                .replace("{total}", importResult.total)
+                .replace("{pricebook}", importResult.pricebookName)
+                .replace("{currency}", importResult.currencyIsoCode)
+        );
+    } catch (error) {
+        await showAlert(error.message || i18n.t("articles.salesforceImportFailed"));
+    } finally {
+        if (button.isConnected) {
+            button.disabled = false;
+            button.innerHTML = originalContent;
+        }
+    }
 }
 
 function renderArticlePrice(article) {
@@ -702,8 +903,61 @@ async function deleteArticle(
 
     }
 
+    salesforceAvailability = null;
     await renderView();
 
+}
+
+function renderGridVisItems(article) {
+    const hasValue = article.gridVisItems !== null && article.gridVisItems !== undefined;
+    const value = hasValue
+        ? Number(article.gridVisItems).toLocaleString(i18n.getCurrentLanguage(), { maximumFractionDigits: 2 })
+        : i18n.t("articles.gridVisItemsUnchecked");
+    const source = Number(article.gridVisItemsManual) === 1
+        ? i18n.t("articles.gridVisItemsManual")
+        : i18n.t("articles.gridVisItemsAutomatic");
+
+    return `<div class="article-gridvis-items-editor">
+        <span title="${source}">${value}</span>
+        <button class="article-gridvis-items-edit-button" type="button"
+            data-article-number="${article.articleNumber ?? ""}"
+            data-current-items="${hasValue ? article.gridVisItems : ""}">
+            ${i18n.t("common.edit")}
+        </button>
+    </div>`;
+}
+
+function attachGridVisItemHandlers() {
+    document.querySelectorAll(".article-gridvis-items-edit-button").forEach(button => {
+        button.addEventListener("click", async event => {
+            event.stopPropagation();
+            const rawValue = await showPrompt(
+                i18n.t("articles.gridVisItemsPrompt").replace("{number}", button.dataset.articleNumber),
+                {
+                    title: i18n.t("articles.gridVisItems"),
+                    value: button.dataset.currentItems,
+                    confirmText: i18n.t("common.save")
+                }
+            );
+            if (rawValue === null) return;
+            const normalized = String(rawValue).trim().replace(",", ".");
+            if (normalized !== "" && (!Number.isFinite(Number(normalized)) || Number(normalized) < 0)) {
+                await showAlert(i18n.t("articles.invalidGridVisItems"));
+                return;
+            }
+            const response = await fetch(`/api/articles/${encodeURIComponent(button.dataset.articleNumber)}/gridvis-items`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ gridVisItems: normalized === "" ? null : Number(normalized) })
+            });
+            const result = await response.json();
+            if (!response.ok) {
+                await showAlert(result.error || i18n.t("articles.gridVisItemsSaveFailed"));
+                return;
+            }
+            await refreshArticles();
+        });
+    });
 }
 
 async function clearArticles() {
@@ -740,6 +994,48 @@ async function clearArticles() {
         || !result.success
     ) {
 
+        if (result.code === "ARTICLES_IN_USE") {
+            if (result.unusedArticleCount <= 0) {
+                await showAlert(
+                    i18n.t("articles.noUnusedArticles")
+                        .replace("{used}", result.usedArticleCount)
+                        .replace("{positions}", result.positionCount)
+                );
+                return;
+            }
+
+            const deleteUnused = await showConfirm(
+                i18n.t("articles.deleteUnusedConfirm")
+                    .replace("{unused}", result.unusedArticleCount)
+                    .replace("{used}", result.usedArticleCount)
+                    .replace("{positions}", result.positionCount),
+                {
+                    title: i18n.t("articles.deleteUnused"),
+                    confirmText: i18n.t("articles.deleteUnused"),
+                    danger: true
+                }
+            );
+            if (!deleteUnused) return;
+
+            const unusedResponse = await fetch("/api/articles?unused=true", {
+                method: "DELETE"
+            });
+            const unusedResult = await unusedResponse.json();
+            if (!unusedResponse.ok || !unusedResult.success) {
+                await showAlert(unusedResult.error || i18n.t("articles.clearListFailed"));
+                return;
+            }
+
+            salesforceAvailability = null;
+            await renderView();
+            await showAlert(
+                i18n.t("articles.deleteUnusedResult")
+                    .replace("{deleted}", unusedResult.deletedArticles)
+                    .replace("{protected}", unusedResult.protectedArticles)
+            );
+            return;
+        }
+
         await showAlert(
             result.error
             || i18n.t("articles.clearListFailed")
@@ -749,6 +1045,7 @@ async function clearArticles() {
 
     }
 
+    salesforceAvailability = null;
     await renderView();
 
 }

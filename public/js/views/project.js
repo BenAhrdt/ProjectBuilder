@@ -433,9 +433,14 @@ async function renderView(
 
         <div class="view-header project-view-header">
 
-            <span class="project-view-title">
-                ${project.name}
-            </span>
+            <div class="project-view-heading">
+                <span class="project-view-title">${project.name}</span>
+                ${project.customerId ? `
+                    <button id="back-to-project-customer" type="button">
+                        ← ${i18n.t("project.backToCustomer")}
+                    </button>
+                ` : ""}
+            </div>
 
             <div
                 id="project-price-summary"
@@ -503,6 +508,16 @@ async function renderView(
                         >
                             <span class="export-project-tender-icon">LV</span>
                             <span>${i18n.t("project.exportTender")}</span>
+                        </button>
+
+                        <button
+                            id="sync-project-salesforce"
+                            type="button"
+                            title="${i18n.t("project.salesforceSync")}"
+                            aria-label="${i18n.t("project.salesforceSync")}"
+                        >
+                            <span class="project-salesforce-icon">SF</span>
+                            <span>${i18n.t("project.salesforceSync")}</span>
                         </button>
 
                         <button
@@ -727,9 +742,14 @@ async function renderView(
     `;
 
     generateHandler(projectId);
+    document.getElementById("back-to-project-customer")?.addEventListener(
+        "click",
+        () => router.navigate(`/customer/${project.customerId}`)
+    );
     registerProjectOverview(projectId);
     registerProjectExport(projectId);
     registerProjectTenderExport(projectId);
+    registerProjectSalesforceSync(projectId);
     registerProjectDelete(projectId, project);
     registerProjectDescriptionPersistence(projectId);
     registerProjectStructurePriceToggle(projectId);
@@ -756,6 +776,51 @@ async function renderView(
         target?.classList.add("project-node-search-target");
         setTimeout(() => target?.classList.remove("project-node-search-target"), 2400);
     }
+}
+
+function registerProjectSalesforceSync(projectId) {
+    const button = document.getElementById("sync-project-salesforce");
+    if (!button) return;
+
+    button.addEventListener("click", async () => {
+        clearTimeout(saveTimeout);
+        await saveProject(projectId);
+        const confirmed = await showConfirm(
+            i18n.t("project.salesforceSyncConfirm"),
+            {
+                title: i18n.t("project.salesforceSync"),
+                confirmText: i18n.t("project.salesforceSyncStart")
+            }
+        );
+        if (!confirmed) return;
+
+        button.disabled = true;
+        const originalText = button.innerHTML;
+        button.textContent = i18n.t("project.salesforceSyncRunning");
+        try {
+            const response = await fetch(
+                `/api/salesforce/projects/${projectId}/opportunity-quote`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ language: i18n.getCurrentLanguage() })
+                }
+            );
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || i18n.t("project.salesforceSyncFailed"));
+            await showAlert(
+                i18n.t("project.salesforceSyncSuccess")
+                    .replace("{positions}", result.positionCount)
+                    .replace("{pricebook}", result.pricebookName),
+                { title: i18n.t("project.salesforceSync") }
+            );
+            await renderView(projectId);
+        } catch (error) {
+            await showAlert(error.message, { title: i18n.t("project.salesforceSyncFailed") });
+            button.disabled = false;
+            button.innerHTML = originalText;
+        }
+    });
 }
 
 function getPendingNodeSearch(projectId) {
@@ -1986,6 +2051,16 @@ function calculateProjectTotals(
 
                     }
 
+                    if (
+                        article?.gridVisItems === null
+                        || article?.gridVisItems === undefined
+                    ) {
+                        totals.gridVisUncheckedPositions += 1;
+                    } else {
+                        totals.gridVisItems +=
+                            Number(article.gridVisItems) * quantity;
+                    }
+
                     totals.listPrice +=
                         listTotal;
 
@@ -2008,7 +2083,9 @@ function calculateProjectTotals(
                     optionalListTotal: 0,
                     optionalDiscountedTotal: 0,
                     alternativeListTotal: 0,
-                    alternativeDiscountedTotal: 0
+                    alternativeDiscountedTotal: 0,
+                    gridVisItems: 0,
+                    gridVisUncheckedPositions: 0
                 }
             );
 
@@ -2096,6 +2173,22 @@ function renderProjectPriceSummary(
 
             <strong>
                 ${formatCurrency(totals.discountedPrice)}
+            </strong>
+
+        </div>
+
+        <div class="project-price-summary-item project-price-summary-special project-gridvis-summary">
+
+            <span class="project-gridvis-summary-label">
+                <span>${i18n.t("project.required")}</span>
+                <span>${i18n.t("project.gridVisItems")}</span>
+            </span>
+
+            <strong>
+                ${formatQuantity(totals.gridVisItems ?? 0)}
+                ${totals.gridVisUncheckedPositions
+                    ? ` + ${totals.gridVisUncheckedPositions} ${i18n.t("project.gridVisUnchecked")}`
+                    : ""}
             </strong>
 
         </div>

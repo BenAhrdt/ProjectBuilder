@@ -2,6 +2,31 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.4.0 - 13.09.2026
+### Nuevo
+- Los proyectos pueden sincronizar sus posiciones de artículos regulares, opcionales y alternativos con Salesforce como oportunidad y oferta.
+- La vista de artículos puede comprobar todos los números de artículo en la lista de precios activa de Salesforce y muestra la disponibilidad junto a cada número.
+- Al vaciar la lista se pueden eliminar todos los artículos no utilizados mientras se protegen los artículos referenciados por proyectos.
+- Los indicadores de disponibilidad de Salesforce se conservan tras reiniciar junto con la fecha de comprobación y las monedas; los artículos importados se marcan inmediatamente como disponibles.
+- Al cambiar la lista de precios de Salesforce seleccionada se crean, cuando es necesario, una nueva oportunidad y una nueva oferta en lugar de modificar registros existentes con una lista incompatible.
+- Los artículos activos pueden importarse directamente desde una lista de precios de Salesforce y en una moneda seleccionables.
+- La interfaz alemana utiliza por defecto «Janitza Electronics (1100)» y EUR cuando no hay una selección guardada; una combinación elegida previamente en la interfaz inglesa o española se conserva al cambiar de idioma.
+- Las importaciones de Salesforce y Excel combinan los artículos existentes por campo; los valores vacíos de Excel no eliminan datos y los textos detallados de Excel se conservan al actualizar desde Salesforce.
+- La importación de Excel identifica claramente los precios vacíos y cero protegidos como ignorados en lugar de describirlos de forma ambigua como conservados.
+- ProjectBuilder calcula y suma los ítems de GridVis necesarios para medidores y módulos. Los valores automáticos se guardan y pueden sobrescribirse por artículo.
+- La vista del proyecto ofrece un acceso directo al cliente asignado debajo del nombre del proyecto.
+### Modificado
+- Los datos maestros de clientes y productos permanecen en modo de solo lectura; los productos de oportunidad y las posiciones de oferta se sincronizan mediante la lista de precios alemana de Janitza.
+- Las ofertas en borrador se actualizan; si una oferta ya ha avanzado, se crea automáticamente un nuevo borrador.
+- Las posiciones de oferta siguen el orden del resumen comercial de Excel y reciben una posición consecutiva en Salesforce.
+- Los descuentos de cliente se guardan en los productos de oportunidad y se reflejan en el precio de venta de las posiciones; el descuento del proyecto se guarda por separado en la cabecera de la oferta.
+- Las posiciones de Salesforce se transfieren por lotes, reduciendo considerablemente el número de solicitudes API.
+- Las consultas independientes de Salesforce se ejecutan en paralelo y las ofertas sincronizadas utilizan la transferencia automática de posiciones a la oportunidad para reducir aún más las solicitudes API.
+- El resumen del proyecto aprovecha el espacio horizontal y muestra por separado los ítems de GridVis necesarios.
+- La búsqueda, los metadatos y las acciones de clientes permanecen compactos en ventanas pequeñas.
+### Corregido
+- Los accesorios CT24, transformadores de corriente pasivos, fuentes de alimentación, módulos de comunicación y el UMG 800 ya no se contabilizan incorrectamente como ítems de GridVis.
+
 ## 1.3.0 - 12.09.2026
 ### Nuevo
 - Los clientes pueden buscarse por número, nombre, código postal y ciudad mediante el acceso SSO existente de Salesforce e importarse selectivamente en ProjectBuilder.

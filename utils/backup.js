@@ -13,14 +13,20 @@ const tableColumns = {
     articles: [
         "id", "articleNumber", "ean", "manufacturerType", "manufacturerName",
         "originCountry", "originRegion", "intrastatNumber", "quantity",
-        "quantityUnit", "listPrice", "listPriceCurrency", "discountGroup", "description"
+        "quantityUnit", "listPrice", "listPriceCurrency", "discountGroup", "description",
+        "salesforceProductId", "salesforcePricebookId", "salesforceActive",
+        "salesforceFamily", "salesforceProductType", "salesforceLastModifiedAt",
+        "salesforceImportedAt", "salesforceAvailabilityCheckedAt", "salesforceCurrencies"
     ],
     customers: [
         "id", "customerNumber", "name", "street", "postalCode", "city", "additionalInfo",
         "salesforceId", "salesforceSyncedAt", "salesforceLastModifiedAt",
         "pg1", "pg2", "pg3", "pg4", "pg5", "pg6", "pg7", "pg8", "pg9", "pg10"
     ],
-    projects: ["id", "customerId", "name", "description", "projectDiscount"],
+    projects: [
+        "id", "customerId", "name", "description", "projectDiscount",
+        "salesforceOpportunityId", "salesforceQuoteId", "salesforceSyncedAt"
+    ],
     projectNodes: [
         "id", "projectId", "parentId", "type", "name", "sortOrder",
         "physicalQuantity", "deviceDesignation", "dataCollectionLocation",

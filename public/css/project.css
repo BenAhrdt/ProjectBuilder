@@ -17,6 +17,31 @@
     white-space: nowrap;
 }
 
+.project-view-heading {
+    display: flex;
+    flex: 0 1 420px;
+    min-width: 180px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 7px;
+}
+
+#back-to-project-customer {
+    padding: 4px 9px;
+    border: 1px solid #c8d5e6;
+    border-radius: 6px;
+    background: #fff;
+    color: #1f5e88;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+#back-to-project-customer:hover {
+    border-color: #4c8bf5;
+    background: #f4f8fd;
+}
+
 .project-card {
 
     background: var(--color-accent);
@@ -69,6 +94,7 @@
 #show-project-overview,
 #export-project-excel,
 #export-project-tender,
+#sync-project-salesforce,
 #delete-project {
 
     display: inline-flex;
@@ -96,6 +122,23 @@
     box-shadow:
         0 1px 2px rgba(31,94,56,0.08);
 
+}
+
+#sync-project-salesforce {
+    border-color: #9dc9e8;
+    color: #176b9b;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+#sync-project-salesforce:hover {
+    border-color: #1684c4;
+    background: #f2f9fd;
+}
+
+.project-salesforce-icon {
+    font-size: 11px;
+    font-weight: 800;
 }
 
 #show-project-overview {
@@ -578,13 +621,14 @@
 
     grid-template-columns:
         repeat(
-            6,
+            7,
             minmax(108px, 1fr)
         );
 
     gap: 0;
 
-    width: min(940px, 76%);
+    width: min(1080px, 78%);
+    flex-shrink: 0;
 
     margin: 8px 0;
 
@@ -1161,6 +1205,16 @@ body.project-overview-open {
 
 .project-price-summary-special {
     background: rgba(76, 139, 245, 0.04);
+}
+
+.project-gridvis-summary-label {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.05;
+}
+
+.project-gridvis-summary-label > span {
+    white-space: nowrap;
 }
 
 @media (max-width: 1250px) {

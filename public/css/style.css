@@ -120,6 +120,25 @@
 
 }
 
+.app-modal-choice-list .app-modal {
+    width: min(560px, 100%);
+}
+
+.app-modal-choice-list .app-modal-actions {
+    align-items: stretch;
+    flex-direction: column;
+}
+
+.app-modal-choice-list .app-modal-choice {
+    width: 100%;
+    text-align: left;
+    white-space: normal;
+}
+
+.app-modal-choice-list .app-modal-cancel {
+    align-self: flex-end;
+}
+
 .app-modal-actions button {
 
     padding: 9px 14px;

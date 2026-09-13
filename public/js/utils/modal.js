@@ -60,7 +60,8 @@ function showModal({
     showCancel = false,
     input = null,
     danger = false,
-    choices = []
+    choices = [],
+    choiceLayout = "buttons"
 }) {
 
     closeActiveModal();
@@ -75,8 +76,7 @@ function showModal({
                 "div"
             );
 
-        overlay.className =
-            "app-modal-overlay";
+        overlay.className = `app-modal-overlay${choiceLayout === "list" ? " app-modal-choice-list" : ""}`;
 
         overlay.innerHTML = `
             <div
@@ -354,7 +354,9 @@ function showChoice(
         showCancel:
             true,
         choices:
-            options.choices ?? []
+            options.choices ?? [],
+        choiceLayout:
+            options.choiceLayout ?? "buttons"
     });
 
 }

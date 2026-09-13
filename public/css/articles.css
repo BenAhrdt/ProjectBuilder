@@ -59,6 +59,57 @@
 
 }
 
+#check-salesforce-availability,
+#import-salesforce-pricebook {
+    margin-left: 8px;
+    padding: 10px 14px;
+    border: 1px solid #9dc9e8;
+    border-radius: 8px;
+    background: #f2f9fd;
+    color: #176b9b;
+    cursor: pointer;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+#check-salesforce-availability:hover:not(:disabled),
+#import-salesforce-pricebook:hover:not(:disabled) {
+    border-color: #1684c4;
+    background: #e5f4fc;
+}
+
+#check-salesforce-availability:disabled,
+#import-salesforce-pricebook:disabled {
+    cursor: wait;
+    opacity: 0.7;
+}
+
+.article-salesforce-button-icon,
+.article-salesforce-badge {
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.article-salesforce-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 9px;
+    box-sizing: border-box;
+    color: white;
+}
+
+.article-salesforce-badge-available {
+    background: #168447;
+}
+
+.article-salesforce-badge-missing {
+    background: #c4322b;
+}
+
 .hidden {
 
     display: none;
@@ -324,7 +375,8 @@
 
 }
 
-.article-price-editor {
+.article-price-editor,
+.article-gridvis-items-editor {
 
     display: flex;
 
@@ -334,7 +386,8 @@
 
 }
 
-.article-price-edit-button {
+.article-price-edit-button,
+.article-gridvis-items-edit-button {
 
     padding: 4px 8px;
 
@@ -354,7 +407,8 @@
 
 }
 
-.article-price-edit-button:hover {
+.article-price-edit-button:hover,
+.article-gridvis-items-edit-button:hover {
 
     background: #dfeaff;
 

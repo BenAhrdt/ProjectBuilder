@@ -55,13 +55,19 @@ function getTokenConnection() {
     return cachedTokenConnection;
 }
 
-async function tokenRequest(requestPath) {
+async function tokenRequest(requestPath, options = {}) {
     const connection = getTokenConnection();
     if (!connection) throw new Error("Keine Salesforce-Anmeldung vorhanden.");
     const response = await fetch(`${connection.instanceUrl}/services/data/${API_VERSION}${requestPath}`, {
-        headers: { Authorization: `Bearer ${connection.accessToken}` }
+        method: options.method ?? "GET",
+        headers: {
+            Authorization: `Bearer ${connection.accessToken}`,
+            ...(options.body ? { "Content-Type": "application/json" } : {})
+        },
+        body: options.body ? JSON.stringify(options.body) : undefined
     });
-    const body = await response.json();
+    const text = await response.text();
+    const body = text ? JSON.parse(text) : null;
     if (!response.ok) {
         if (response.status === 401) cachedTokenConnection = null;
         throw new Error(body?.[0]?.message ?? body?.message ?? "Salesforce-Abfrage fehlgeschlagen");
@@ -76,6 +82,88 @@ async function query(soql) {
     const connection = await getCoreConnection();
     if (!connection) throw new Error("Keine Salesforce-Anmeldung vorhanden.");
     return connection.query(soql);
+}
+
+async function queryAll(soql) {
+    let result = await query(soql);
+    const records = [...result.records];
+    while (!result.done && result.nextRecordsUrl) {
+        if (getTokenConnection()) {
+            result = await tokenRequest(result.nextRecordsUrl.replace(`/services/data/${API_VERSION}`, ""));
+        } else {
+            const connection = await getCoreConnection();
+            result = await connection.queryMore(result.nextRecordsUrl);
+        }
+        records.push(...result.records);
+    }
+    return records;
+}
+
+async function createRecord(objectName, fields) {
+    if (getTokenConnection()) {
+        return tokenRequest(`/sobjects/${objectName}`, { method: "POST", body: fields });
+    }
+    const connection = await getCoreConnection();
+    if (!connection) throw new Error("Keine Salesforce-Anmeldung vorhanden.");
+    const result = await connection.sobject(objectName).create(fields);
+    if (!result.success) throw new Error(result.errors?.join(", ") || `${objectName} konnte nicht angelegt werden.`);
+    return result;
+}
+
+async function updateRecord(objectName, id, fields) {
+    if (getTokenConnection()) {
+        await tokenRequest(`/sobjects/${objectName}/${id}`, { method: "PATCH", body: fields });
+        return;
+    }
+    const connection = await getCoreConnection();
+    if (!connection) throw new Error("Keine Salesforce-Anmeldung vorhanden.");
+    const result = await connection.sobject(objectName).update({ Id: id, ...fields });
+    if (!result.success) throw new Error(result.errors?.join(", ") || `${objectName} konnte nicht aktualisiert werden.`);
+}
+
+async function createRecords(objectName, records) {
+    if (records.length === 0) return [];
+    const results = [];
+    for (let offset = 0; offset < records.length; offset += 200) {
+        const chunk = records.slice(offset, offset + 200);
+        let chunkResults;
+        if (getTokenConnection()) {
+            chunkResults = await tokenRequest("/composite/sobjects", {
+                method: "POST",
+                body: {
+                    allOrNone: true,
+                    records: chunk.map(fields => ({ attributes: { type: objectName }, ...fields }))
+                }
+            });
+        } else {
+            const connection = await getCoreConnection();
+            if (!connection) throw new Error("Keine Salesforce-Anmeldung vorhanden.");
+            chunkResults = await connection.sobject(objectName).create(chunk, { allOrNone: true });
+        }
+        const list = Array.isArray(chunkResults) ? chunkResults : [chunkResults];
+        const failed = list.find(result => !result.success);
+        if (failed) throw new Error(failed.errors?.map(error => error.message ?? error).join(", ") || `${objectName} konnte nicht angelegt werden.`);
+        results.push(...list);
+    }
+    return results;
+}
+
+async function deleteRecords(objectName, ids) {
+    for (let offset = 0; offset < ids.length; offset += 200) {
+        const chunk = ids.slice(offset, offset + 200);
+        if (getTokenConnection()) {
+            await tokenRequest(`/composite/sobjects?ids=${encodeURIComponent(chunk.join(","))}&allOrNone=true`, {
+                method: "DELETE"
+            });
+        } else {
+            const connection = await getCoreConnection();
+            if (!connection) throw new Error("Keine Salesforce-Anmeldung vorhanden.");
+            const chunkResults = await connection.sobject(objectName).destroy(chunk);
+            const list = Array.isArray(chunkResults) ? chunkResults : [chunkResults];
+            const failed = list.find(result => !result.success);
+            if (failed) throw new Error(failed.errors?.join(", ") || `${objectName} konnte nicht gelöscht werden.`);
+        }
+    }
 }
 
 export function loginWithBrowser() {
@@ -157,4 +245,187 @@ export async function getCustomersByIds(ids) {
 export async function getCustomerById(id) {
     const customers = await getCustomersByIds([id]);
     return customers[0] ?? null;
+}
+
+const SALES_PRICEBOOK_NAME = process.env.SALESFORCE_PRICEBOOK_NAME ?? "Janitza Electronics (1100)";
+
+export async function findAccountByCustomerNumber(customerNumber) {
+    const value = String(customerNumber ?? "").trim();
+    if (!value) return null;
+    const result = await query(`
+        SELECT Id, Name, ExtID__c, CurrencyIsoCode
+        FROM Account
+        WHERE ExtID__c = '${escapeSoql(value)}'
+        LIMIT 2
+    `);
+    if (result.records.length > 1) throw new Error(`Die Kundennummer ${value} ist in Salesforce nicht eindeutig.`);
+    return result.records[0] ?? null;
+}
+
+export async function getAccountById(id) {
+    if (!id) return null;
+    const result = await query(`
+        SELECT Id, Name, ExtID__c, CurrencyIsoCode
+        FROM Account
+        WHERE Id = '${escapeSoql(id)}'
+        LIMIT 1
+    `);
+    return result.records[0] ?? null;
+}
+
+export async function getSalesPricebook(identifier = SALES_PRICEBOOK_NAME) {
+    const byId = /^[a-zA-Z0-9]{15,18}$/.test(String(identifier));
+    const result = await query(`
+        SELECT Id, Name
+        FROM Pricebook2
+        WHERE ${byId ? "Id" : "Name"} = '${escapeSoql(identifier)}' AND IsActive = true
+        LIMIT 2
+    `);
+    if (result.records.length !== 1) {
+        throw new Error(`Das aktive Salesforce-Preisbuch „${identifier}“ wurde nicht eindeutig gefunden.`);
+    }
+    return result.records[0];
+}
+
+export async function getActivePricebooks() {
+    const [books, currencyGroups] = await Promise.all([
+        query("SELECT Id, Name, IsStandard FROM Pricebook2 WHERE IsActive = true ORDER BY Name"),
+        query(`
+            SELECT Pricebook2Id, CurrencyIsoCode, COUNT(Id) amount
+            FROM PricebookEntry
+            WHERE IsActive = true AND Product2.IsActive = true AND Pricebook2.IsActive = true
+            GROUP BY Pricebook2Id, CurrencyIsoCode
+        `)
+    ]);
+    const currencies = new Map();
+    for (const group of currencyGroups.records) {
+        if (!currencies.has(group.Pricebook2Id)) currencies.set(group.Pricebook2Id, []);
+        currencies.get(group.Pricebook2Id).push({
+            currency: group.CurrencyIsoCode,
+            articleCount: group.amount
+        });
+    }
+    return books.records.map(book => ({
+        id: book.Id,
+        name: book.Name,
+        isStandard: book.IsStandard,
+        currencies: (currencies.get(book.Id) ?? []).sort((a, b) => a.currency.localeCompare(b.currency))
+    }));
+}
+
+export async function getPricebookProducts(pricebookId, currencyIsoCode) {
+    return queryAll(`
+        SELECT Id, UnitPrice, CurrencyIsoCode, LastModifiedDate,
+            Product2.Id, Product2.ProductCode, Product2.Name, Product2.Description,
+            Product2.Family, Product2.QuantityUnitOfMeasure, Product2.ProductType__c,
+            Product2.IsActive, Product2.LastModifiedDate
+        FROM PricebookEntry
+        WHERE Pricebook2Id = '${escapeSoql(pricebookId)}'
+          AND CurrencyIsoCode = '${escapeSoql(currencyIsoCode)}'
+          AND IsActive = true
+          AND Product2.IsActive = true
+        ORDER BY Product2.ProductCode
+    `);
+}
+
+export async function getPricebookEntries(pricebookId, articleNumbers, currencyIsoCode) {
+    const numbers = [...new Set(articleNumbers.map(value => String(value).trim()).filter(Boolean))];
+    const records = [];
+    for (let offset = 0; offset < numbers.length; offset += 100) {
+        const values = numbers.slice(offset, offset + 100).map(value => `'${escapeSoql(value)}'`).join(", ");
+        const result = await query(`
+            SELECT Id, Product2Id, Product2.ProductCode, UnitPrice
+            FROM PricebookEntry
+            WHERE Pricebook2Id = '${escapeSoql(pricebookId)}'
+              AND IsActive = true
+              AND Product2.IsActive = true
+              AND CurrencyIsoCode = '${escapeSoql(currencyIsoCode)}'
+              AND Product2.ProductCode IN (${values})
+        `);
+        records.push(...result.records);
+    }
+    return records;
+}
+
+export async function getPricebookAvailability(pricebookId, articleNumbers) {
+    const numbers = [...new Set(articleNumbers.map(value => String(value).trim()).filter(Boolean))];
+    const chunks = [];
+    for (let offset = 0; offset < numbers.length; offset += 100) {
+        const values = numbers.slice(offset, offset + 100)
+            .map(value => `'${escapeSoql(value)}'`)
+            .join(", ");
+        chunks.push(query(`
+            SELECT Product2Id, Product2.ProductCode, CurrencyIsoCode
+            FROM PricebookEntry
+            WHERE Pricebook2Id = '${escapeSoql(pricebookId)}'
+              AND IsActive = true
+              AND Product2.IsActive = true
+              AND Product2.ProductCode IN (${values})
+        `));
+    }
+    const results = await Promise.all(chunks);
+    return results.flatMap(result => result.records);
+}
+
+export async function getOpportunity(id) {
+    if (!id) return null;
+    const result = await query(`
+        SELECT Id, Pricebook2Id, StageName, CloseDate, CurrencyIsoCode
+        FROM Opportunity
+        WHERE Id = '${escapeSoql(id)}'
+        LIMIT 1
+    `);
+    return result.records[0] ?? null;
+}
+
+export async function findRecentEmptyOpportunity(accountId, name, pricebookId) {
+    const earliest = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+    const result = await query(`
+        SELECT Id, Pricebook2Id, StageName, CloseDate, CreatedDate,
+            (SELECT Id FROM OpportunityLineItems LIMIT 1)
+        FROM Opportunity
+        WHERE AccountId = '${escapeSoql(accountId)}'
+          AND Name = '${escapeSoql(name)}'
+          AND Pricebook2Id = '${escapeSoql(pricebookId)}'
+          AND CreatedDate >= ${earliest}
+        ORDER BY CreatedDate DESC
+        LIMIT 2
+    `);
+    return result.records.find(record => !record.OpportunityLineItems?.records?.length) ?? null;
+}
+
+export async function createOpportunity(fields) {
+    return createRecord("Opportunity", fields);
+}
+
+export async function updateOpportunity(id, fields) {
+    return updateRecord("Opportunity", id, fields);
+}
+
+export async function getQuote(id) {
+    if (!id) return null;
+    const result = await query(`
+        SELECT Id, Status, QuoteNumber, IsSyncing, Pricebook2Id, OpportunityId
+        FROM Quote
+        WHERE Id = '${escapeSoql(id)}'
+        LIMIT 1
+    `);
+    return result.records[0] ?? null;
+}
+
+export async function createQuote(fields) {
+    return createRecord("Quote", fields);
+}
+
+export async function updateQuote(id, fields) {
+    return updateRecord("Quote", id, fields);
+}
+
+export async function replaceLineItems(objectName, parentField, parentId, items) {
+    if (!new Set(["OpportunityLineItem", "QuoteLineItem"]).has(objectName)) {
+        throw new Error("Ungültiger Salesforce-Positionstyp.");
+    }
+    const existing = await query(`SELECT Id FROM ${objectName} WHERE ${parentField} = '${escapeSoql(parentId)}'`);
+    await deleteRecords(objectName, existing.records.map(record => record.Id));
+    await createRecords(objectName, items.map(item => ({ [parentField]: parentId, ...item })));
 }

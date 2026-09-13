@@ -2,6 +2,31 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.4.0 - 13.09.2026
+### Added
+- Projects can synchronize their regular, optional and alternative article positions to Salesforce as an opportunity and quote.
+- The article overview can check all article numbers against the active Salesforce price book and displays availability next to each article number.
+- Clearing the article list can remove all unused articles while referenced project articles remain protected.
+- Salesforce availability badges persist across restarts together with the check time and currencies; imported Salesforce articles are marked as available immediately.
+- Changing the selected Salesforce price book creates a new opportunity and quote when required instead of modifying existing Salesforce records with an incompatible price book.
+- Active articles can be imported directly from a selectable Salesforce price book in a selectable currency.
+- The German interface defaults to “Janitza Electronics (1100)” and EUR when no selection is stored; a combination previously selected in the English or Spanish interface remains active across languages.
+- Salesforce and Excel imports merge existing articles by field; empty Excel values no longer remove existing data and detailed Excel text is retained during Salesforce updates.
+- The Excel import labels protected empty and zero prices as ignored instead of ambiguously describing them as generally retained.
+- ProjectBuilder calculates and totals required GridVis items for meters and modules. Automatic values are persisted and can be overridden per article.
+- The project view provides a direct link back to the assigned customer below the project name.
+### Changed
+- Customer and product master data remains read-only; opportunity products and quote lines are synchronized through the German Janitza price book.
+- Draft quotes are updated, while quotes that have progressed beyond draft cause a new draft to be created.
+- Quote lines follow the order of the commercial Excel overview and receive a sequential Salesforce position.
+- Customer discounts are stored on opportunity products and reflected in quote-line sales prices; the project discount is stored separately on the quote header.
+- Salesforce line items are transferred in batches, substantially reducing the number of API requests.
+- Independent Salesforce queries run concurrently, and synchronized quotes rely on Salesforce's automatic opportunity-line mirroring to reduce API requests further.
+- The project summary uses the available horizontal space and displays required GridVis items separately.
+- Customer search, metadata and action buttons remain compact in smaller windows.
+### Fixed
+- CT24 accessories, passive current transformers, power supplies, communication modules and the UMG 800 are no longer incorrectly counted as GridVis items.
+
 ## 1.3.0 - 12.09.2026
 ### Added
 - Customers can be searched by customer number, name, postal code and city through the existing Salesforce SSO login and selectively imported into ProjectBuilder.

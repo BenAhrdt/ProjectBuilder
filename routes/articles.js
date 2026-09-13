@@ -8,6 +8,10 @@ import {
     mapPricelistRow
 } from "../utils/pricelistColumns.js";
 import fs from "fs";
+import {
+    inferGridVisItems,
+    normalizeGridVisItems
+} from "../utils/gridVisItems.js";
 
 const router = express.Router();
 
@@ -121,7 +125,7 @@ router.post(
         const insertArticle =
             database.articles.prepare(`
 
-                INSERT OR REPLACE INTO articles (
+                INSERT INTO articles (
 
                     articleNumber,
                     ean,
@@ -142,7 +146,9 @@ router.post(
 
                     discountGroup,
 
-                    description
+                    description,
+                    gridVisItems,
+                    gridVisItemsManual
 
                 )
 
@@ -167,9 +173,36 @@ router.post(
 
                     @discountGroup,
 
-                    @description
+                    @description,
+                    @gridVisItems,
+                    0
 
                 )
+
+                ON CONFLICT(articleNumber) DO UPDATE SET
+                    ean = CASE WHEN TRIM(excluded.ean) <> '' THEN excluded.ean ELSE articles.ean END,
+                    manufacturerType = CASE
+                        WHEN articles.salesforceProductId IS NOT NULL THEN articles.manufacturerType
+                        WHEN TRIM(excluded.manufacturerType) <> '' THEN excluded.manufacturerType
+                        ELSE articles.manufacturerType END,
+                    manufacturerName = CASE WHEN TRIM(excluded.manufacturerName) <> '' THEN excluded.manufacturerName ELSE articles.manufacturerName END,
+                    originCountry = CASE WHEN TRIM(excluded.originCountry) <> '' THEN excluded.originCountry ELSE articles.originCountry END,
+                    originRegion = CASE WHEN TRIM(excluded.originRegion) <> '' THEN excluded.originRegion ELSE articles.originRegion END,
+                    intrastatNumber = CASE WHEN TRIM(excluded.intrastatNumber) <> '' THEN excluded.intrastatNumber ELSE articles.intrastatNumber END,
+                    quantity = COALESCE(excluded.quantity, articles.quantity),
+                    quantityUnit = CASE WHEN TRIM(excluded.quantityUnit) <> '' THEN excluded.quantityUnit ELSE articles.quantityUnit END,
+                    listPrice = CASE
+                        WHEN articles.salesforceProductId IS NOT NULL THEN articles.listPrice
+                        ELSE COALESCE(excluded.listPrice, articles.listPrice) END,
+                    listPriceCurrency = CASE
+                        WHEN articles.salesforceProductId IS NOT NULL THEN articles.listPriceCurrency
+                        WHEN TRIM(excluded.listPriceCurrency) <> '' THEN excluded.listPriceCurrency
+                        ELSE articles.listPriceCurrency END,
+                    discountGroup = CASE WHEN TRIM(excluded.discountGroup) <> '' THEN excluded.discountGroup ELSE articles.discountGroup END,
+                    description = CASE WHEN TRIM(excluded.description) <> '' THEN excluded.description ELSE articles.description END,
+                    gridVisItems = CASE
+                        WHEN COALESCE(articles.gridVisItemsManual, 0) = 1 THEN articles.gridVisItems
+                        ELSE excluded.gridVisItems END
 
             `);
 
@@ -195,7 +228,10 @@ router.post(
             of validation.imported
         ) {
 
-            insertArticle.run(article);
+            insertArticle.run({
+                ...article,
+                gridVisItems: inferGridVisItems(article)
+            });
 
         }
 
@@ -230,7 +266,10 @@ router.post(
 
             }
 
-            insertArticle.run(article);
+            insertArticle.run({
+                ...article,
+                gridVisItems: inferGridVisItems(article)
+            });
 
         }
 
@@ -355,7 +394,15 @@ router.get("/", (req, res) => {
                 discountGroup,
                 listPrice,
                 listPriceCurrency,
-                manufacturerName
+                manufacturerName,
+                salesforceProductId,
+                salesforcePricebookId,
+                salesforceActive,
+                salesforceAvailabilityCheckedAt,
+                salesforceImportedAt,
+                salesforceCurrencies,
+                gridVisItems,
+                gridVisItemsManual
 
             FROM articles
 
@@ -486,7 +533,9 @@ router.post("/", (req, res) => {
                 listPrice,
                 listPriceCurrency,
                 discountGroup,
-                description
+                description,
+                gridVisItems,
+                gridVisItemsManual
 
             )
 
@@ -504,7 +553,9 @@ router.post("/", (req, res) => {
                 @listPrice,
                 @listPriceCurrency,
                 @discountGroup,
-                @description
+                @description,
+                @gridVisItems,
+                0
 
             )
 
@@ -514,7 +565,11 @@ router.post("/", (req, res) => {
             listPrice,
             listPriceCurrency,
             discountGroup,
-            description
+            description,
+            gridVisItems: inferGridVisItems({
+                manufacturerType,
+                description
+            })
         });
 
         res.json({
@@ -612,16 +667,42 @@ router.patch("/:articleNumber/price", (req, res) => {
 
 });
 
+router.patch("/:articleNumber/gridvis-items", (req, res) => {
+    const articleNumber = req.params.articleNumber;
+    const gridVisItems = normalizeGridVisItems(req.body.gridVisItems);
+
+    if (Number.isNaN(gridVisItems)) {
+        return res.status(400).json({
+            ok: false,
+            error: "Ungültige GridVis-Itemzahl"
+        });
+    }
+
+    const result = database.articles.prepare(`
+        UPDATE articles
+        SET gridVisItems = @gridVisItems, gridVisItemsManual = 1
+        WHERE articleNumber = @articleNumber
+    `).run({ articleNumber, gridVisItems });
+
+    if (result.changes === 0) {
+        return res.status(404).json({ ok: false, error: "Artikel nicht gefunden" });
+    }
+
+    res.json({ ok: true, articleNumber, gridVisItems });
+});
+
 // --------------------------------------------------
 // Artikel löschen
 // --------------------------------------------------
 
 router.delete("/", (req, res) => {
 
-    const usage =
+    const counts =
         database.projectNodeArticles.prepare(`
 
-            SELECT COUNT(*) AS count
+            SELECT
+                COUNT(*) AS positionCount,
+                COUNT(DISTINCT articleNumber) AS usedArticleCount
 
             FROM projectNodeArticles
 
@@ -634,27 +715,40 @@ router.delete("/", (req, res) => {
 
         `).get();
 
-    if (usage.count > 0) {
+    const totalArticleCount = database.articles.prepare(
+        "SELECT COUNT(*) AS count FROM articles"
+    ).get().count;
+    const unusedArticleCount = totalArticleCount - counts.usedArticleCount;
+
+    if (counts.positionCount > 0 && req.query.unused !== "true") {
 
         res.status(409).json({
             success: false,
-            error: `Die Artikelliste kann nicht geleert werden, weil Artikel in ${usage.count} Projektposition(en) verwendet werden.`
+            code: "ARTICLES_IN_USE",
+            positionCount: counts.positionCount,
+            usedArticleCount: counts.usedArticleCount,
+            unusedArticleCount,
+            error: `Die Artikelliste kann nicht vollständig geleert werden, weil ${counts.usedArticleCount} Artikel in ${counts.positionCount} Projektposition(en) verwendet werden.`
         });
 
         return;
 
     }
 
-    const result =
-        database.articles.prepare(`
-
+    const result = req.query.unused === "true"
+        ? database.articles.prepare(`
             DELETE FROM articles
-
-        `).run();
+            WHERE NOT EXISTS (
+                SELECT 1 FROM projectNodeArticles
+                WHERE projectNodeArticles.articleNumber = articles.articleNumber
+            )
+        `).run()
+        : database.articles.prepare("DELETE FROM articles").run();
 
     res.json({
         success: true,
-        deletedArticles: result.changes
+        deletedArticles: result.changes,
+        protectedArticles: req.query.unused === "true" ? counts.usedArticleCount : 0
     });
 
 });

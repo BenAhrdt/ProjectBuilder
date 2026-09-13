@@ -2,6 +2,37 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.4.0 - 13.09.2026
+
+### Neu
+
+- Projekte können ihre regulären, optionalen und alternativen Artikelpositionen als Opportunity und Angebot in Salesforce synchronisieren.
+- Die Artikelübersicht kann alle Artikelnummern gegen das aktive Salesforce-Preisbuch prüfen und zeigt die Verfügbarkeit direkt an der Artikelnummer an.
+- Beim Leeren der Artikelliste können alle nicht verwendeten Artikel gezielt entfernt werden, während referenzierte Projektartikel geschützt bleiben.
+- Salesforce-Verfügbarkeitskennzeichen bleiben einschließlich Prüfzeitpunkt und verfügbarer Währungen nach einem Neustart erhalten; importierte Salesforce-Artikel werden unmittelbar als verfügbar markiert.
+- Ein Wechsel des ausgewählten Salesforce-Preisbuchs erzeugt bei Bedarf eine neue Opportunity und ein neues Angebot, statt bestehende Salesforce-Datensätze mit inkompatiblem Preisbuch zu verändern.
+- Aktive Artikel lassen sich direkt aus einem auswählbaren Salesforce-Preisbuch und in einer auswählbaren Währung importieren.
+- In der deutschen Oberfläche werden ohne gespeicherte Auswahl automatisch „Janitza Electronics (1100)“ und EUR verwendet; eine zuvor in der englischen oder spanischen Oberfläche gewählte Kombination bleibt sprachübergreifend erhalten.
+- Salesforce- und Excel-Import ergänzen bestehende Artikel feldbezogen; leere Excel-Werte entfernen keine vorhandenen Angaben und ausführliche Excel-Texte bleiben bei Salesforce-Aktualisierungen erhalten.
+- Der Excel-Import bezeichnet geschützte Leer- und Nullpreise eindeutig als ignoriert statt missverständlich als allgemein beibehalten.
+- ProjectBuilder ermittelt und summiert benötigte GridVis-Items für Messgeräte und Module. Automatische Werte werden persistent gespeichert und können je Artikel manuell überschrieben werden.
+- Die Projektansicht bietet unter dem Projektnamen einen direkten Rücksprung zum zugeordneten Kunden.
+
+### Geändert
+
+- Kunden- und Produktstammdaten werden ausschließlich gelesen; Opportunity-Produkte und Angebotspositionen werden über das deutsche Janitza-Preisbuch synchronisiert.
+- Entwurfsangebote werden aktualisiert. Bei bereits weiterbearbeiteten Angeboten wird automatisch ein neuer Entwurf angelegt.
+- Angebotspositionen übernehmen die Reihenfolge der kaufmännischen Excel-Übersicht und erhalten eine fortlaufende Salesforce-Position.
+- Kundenrabatte werden an Opportunity-Produkten und als Verkaufspreis der Angebotsposition abgebildet; der Projektrabatt wird getrennt am Angebotskopf gespeichert.
+- Salesforce-Positionen werden gesammelt übertragen, wodurch die Synchronisation deutlich weniger API-Aufrufe benötigt.
+- Unabhängige Salesforce-Abfragen und die Positionsübertragung an Opportunity und Angebot laufen parallel, um die Synchronisation zu beschleunigen.
+- Die Projektzusammenfassung nutzt den verfügbaren Platz in einer Zeile und weist die benötigten GridVis-Items separat aus.
+- Die Kundenübersicht ordnet Suche, Metadaten und Aktionsschaltflächen auch in kleineren Fenstern kompakt an.
+
+### Behoben
+
+- CT24-Zubehör, passive Stromwandler, Netzteile, Kommunikationsmodule und das UMG 800 werden nicht mehr fälschlich als itempflichtige GridVis-Geräte gezählt.
+
 ## 1.3.0 - 12.09.2026
 
 ### Neu

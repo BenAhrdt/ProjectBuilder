@@ -127,13 +127,17 @@
 }
 
 #customers-header .header-search {
-    margin-left: clamp(40px, 10vw, 180px);
+    margin-left: clamp(12px, 3vw, 48px);
+    flex: 0 1 260px;
+    min-width: 170px;
 }
 
 .customers-header-actions {
     display: flex;
     align-items: center;
     gap: 8px;
+    margin-left: auto;
+    min-width: 0;
 }
 
 .customers-action-button {
@@ -472,7 +476,7 @@
 
 #add-customer-button {
 
-    margin-left: 20px;
+    margin-left: 4px;
 
     padding:
         10px 14px;
@@ -489,6 +493,27 @@
 
     cursor: pointer;
 
+}
+
+@media (max-width: 1450px) {
+    #customers-header {
+        gap: 10px;
+    }
+
+    #customers-header .header-search {
+        margin-left: 0;
+    }
+
+    .customers-header-actions {
+        gap: 6px;
+    }
+
+    .customers-action-button,
+    #add-customer-button {
+        padding-left: 10px;
+        padding-right: 10px;
+        margin-left: 0;
+    }
 }
 
 #add-customer-button:hover {

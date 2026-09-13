@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Vorhandener Release-Tag (z. B. v1.4.2)"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -11,10 +17,14 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
 
     steps:
       - name: Repository auschecken
         uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref }}
 
       - name: Node.js einrichten
         uses: actions/setup-node@v6
@@ -26,8 +36,8 @@ jobs:
         shell: pwsh
         run: |
           $packageVersion = node -p "require('./package.json').version"
-          if ($env:GITHUB_REF_NAME -ne "v$packageVersion") {
-            throw "Tag $env:GITHUB_REF_NAME passt nicht zu package.json Version $packageVersion"
+          if ($env:RELEASE_TAG -ne "v$packageVersion") {
+            throw "Tag $env:RELEASE_TAG passt nicht zu package.json Version $packageVersion"
           }
 
       - name: Abhängigkeiten installieren
@@ -54,14 +64,19 @@ jobs:
           Copy-Item -LiteralPath $installer -Destination $installerTarget -Force
           Copy-Item -LiteralPath $blockmap -Destination $blockmapTarget -Force
 
-          gh release view $env:GITHUB_REF_NAME *> $null
+          gh release view $env:RELEASE_TAG *> $null
           if ($LASTEXITCODE -ne 0) {
-            gh release create $env:GITHUB_REF_NAME `
-              --title $version `
-              --generate-notes
+            for ($attempt = 1; $attempt -le 4; $attempt++) {
+              gh release create $env:RELEASE_TAG `
+                --title $version `
+                --generate-notes
+              if ($LASTEXITCODE -eq 0) { break }
+              if ($attempt -eq 4) { throw "Release konnte nach vier Versuchen nicht angelegt werden." }
+              Start-Sleep -Seconds (5 * $attempt)
+            }
           }
 
-          gh release upload $env:GITHUB_REF_NAME `
+          gh release upload $env:RELEASE_TAG `
             $installerTarget `
             $blockmapTarget `
             "release/latest.yml" `

@@ -13,7 +13,8 @@ import {
 import {
     showAlert,
     showConfirm,
-    showChoice
+    showChoice,
+    showSelectForm
 } from "../utils/modal.js";
 
 let collapsedNodes = new Set();
@@ -795,43 +796,46 @@ function registerProjectSalesforceSync(projectId) {
             await showAlert(error.message, { title: i18n.t("project.salesforceSyncFailed") });
             return;
         }
-        let contactId = null;
-        if (quoteOptions.contactField) {
-            if (quoteOptions.contacts.length === 0) {
-                await showAlert(i18n.t("project.salesforceNoContacts"), { title: i18n.t("project.salesforceSyncFailed") });
-                return;
-            }
-            contactId = await showChoice(i18n.t("project.salesforceSelectContact"), {
-                title: i18n.t("project.salesforceSync"),
-                choices: quoteOptions.contacts.map(contact => ({
-                    value: contact.id,
-                    label: contact.email ? `${contact.name} (${contact.email})` : contact.name
-                })),
-                choiceLayout: "list"
-            });
-            if (!contactId) return;
-        }
-        let deliveryTime = null;
-        if (quoteOptions.deliveryField) {
-            if (quoteOptions.deliveryTimes.length === 0) {
-                await showAlert(i18n.t("project.salesforceNoDeliveryTimes"), { title: i18n.t("project.salesforceSyncFailed") });
-                return;
-            }
-            deliveryTime = await showChoice(i18n.t("project.salesforceSelectDeliveryTime"), {
-                title: i18n.t("project.salesforceSync"),
-                choices: quoteOptions.deliveryTimes.map(item => ({ value: item.value, label: item.label })),
-                choiceLayout: "list"
-            });
-            if (!deliveryTime) return;
-        }
-        const confirmed = await showConfirm(
-            i18n.t("project.salesforceSyncConfirm"),
-            {
-                title: i18n.t("project.salesforceSync"),
-                confirmText: i18n.t("project.salesforceSyncStart")
-            }
-        );
-        if (!confirmed) return;
+        const contactExists = quoteOptions.contacts.some(item => item.id === quoteOptions.saved.contactId);
+        const deliveryExists = quoteOptions.deliveryTimes.some(item => item.value === quoteOptions.saved.deliveryTime);
+        const selection = await showSelectForm(i18n.t("project.salesforceSyncSettingsHint"), {
+            title: i18n.t("project.salesforceSync"),
+            confirmText: i18n.t("project.salesforceSyncStart"),
+            fields: [
+                ...(quoteOptions.contactField ? [{
+                    name: "contactId", label: i18n.t("project.salesforceContact"), required: false,
+                    value: contactExists ? quoteOptions.saved.contactId : "",
+                    options: [{ value: "", label: i18n.t("project.salesforceNoSelection") }, ...quoteOptions.contacts.map(contact => ({
+                        value: contact.id, label: contact.email ? `${contact.name} (${contact.email})` : contact.name
+                    }))]
+                }] : []),
+                ...(quoteOptions.deliveryField ? [{
+                    name: "deliveryTime", label: i18n.t("project.salesforceDeliveryTime"), required: false,
+                    value: deliveryExists ? quoteOptions.saved.deliveryTime : "",
+                    options: [{ value: "", label: i18n.t("project.salesforceNoSelection") }, ...quoteOptions.deliveryTimes]
+                }] : []),
+                { name: "articleMode", label: i18n.t("project.salesforceArticleMode"), value: quoteOptions.saved.articleMode, options: [
+                    ["commercial_total", "project.salesforceModeTotal"], ["commercial_building", "project.salesforceModeBuilding"],
+                    ["commercial_panel", "project.salesforceModePanel"], ["commercial_field", "project.salesforceModeField"],
+                    ["commercial_meter", "project.salesforceModeMeter"], ["projected", "project.salesforceModeProjected"]
+                ].map(([value, key]) => ({ value, label: i18n.t(key) })) },
+                { name: "syncScope", label: i18n.t("project.salesforceSyncScope"), value: quoteOptions.saved.syncScope, options: [
+                    { value: "opportunity_quote", label: i18n.t("project.salesforceScopeBoth") },
+                    { value: "opportunity", label: i18n.t("project.salesforceScopeOpportunity") }
+                ] },
+                { type: "checkboxes", name: "documents", label: i18n.t("project.salesforceDocuments"), value: quoteOptions.saved.documents, options: [
+                    { value: "overview", label: i18n.t("project.salesforceDocumentOverview") },
+                    { value: "excel", label: i18n.t("project.salesforceDocumentExcel") },
+                    { value: "word", label: i18n.t("project.salesforceDocumentWord") },
+                    { value: "gaeb", label: i18n.t("project.salesforceDocumentGaeb") }
+                ] }
+            ],
+            validate: values => values.syncScope === "opportunity_quote" && quoteOptions.contactField && !values.contactId
+                ? i18n.t("project.salesforceContactRequired")
+                : values.syncScope === "opportunity_quote" && quoteOptions.deliveryField && !values.deliveryTime
+                    ? i18n.t("project.salesforceDeliveryRequired") : ""
+        });
+        if (!selection) return;
 
         button.disabled = true;
         const originalText = button.innerHTML;
@@ -844,18 +848,21 @@ function registerProjectSalesforceSync(projectId) {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         language: i18n.getCurrentLanguage(),
-                        contactId,
-                        deliveryTime
+                        ...selection
                     })
                 }
             );
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || i18n.t("project.salesforceSyncFailed"));
+            const documentWarning = result.errors?.length
+                ? `\n\n${i18n.t("project.salesforceDocumentErrors")} ${result.errors.map(item => `${item.type}: ${item.error}`).join("; ")}`
+                : "";
             await showAlert(
-                i18n.t("project.salesforceSyncSuccess")
+                i18n.t(result.quoteSynced ? "project.salesforceSyncSuccess" : "project.salesforceOpportunitySyncSuccess")
                     .replace("{positions}", result.positionCount)
                     .replace("{pricebook}", result.pricebookName)
-                    .replace("{quoteNumber}", result.quoteNumber || i18n.t("project.salesforceQuoteWithoutNumber")),
+                    .replace("{quoteNumber}", result.quoteNumber || i18n.t("project.salesforceQuoteWithoutNumber"))
+                    + documentWarning,
                 { title: i18n.t("project.salesforceSync") }
             );
             await renderView(projectId);
@@ -3556,14 +3563,14 @@ function openTenderExportModal() {
                 <fieldset class="project-tender-gaeb-types">
                     <legend>${i18n.t("project.tenderGaebType")}</legend>
                     <label><input type="radio" name="gaebType" value="81"> X81 – ${i18n.t("project.tenderX81")}</label>
-                    <label><input type="radio" name="gaebType" value="82"> X82 – ${i18n.t("project.tenderX82")}</label>
-                    <label><input type="radio" name="gaebType" value="83" checked> X83 – ${i18n.t("project.tenderX83")}</label>
+                    <label><input type="radio" name="gaebType" value="82" checked> X82 – ${i18n.t("project.tenderX82")}</label>
+                    <label><input type="radio" name="gaebType" value="83"> X83 – ${i18n.t("project.tenderX83")}</label>
                     <label><input type="radio" name="gaebType" value="84"> X84 – ${i18n.t("project.tenderX84")}</label>
                 </fieldset>
                 <fieldset>
                     <legend>${i18n.t("project.tenderPrices")}</legend>
-                    <label><input type="radio" name="prices" value="none" checked> ${i18n.t("project.tenderNoPrices")}</label>
-                    <label><input type="radio" name="prices" value="list"> ${i18n.t("project.tenderListPrices")}</label>
+                    <label><input type="radio" name="prices" value="none"> ${i18n.t("project.tenderNoPrices")}</label>
+                    <label><input type="radio" name="prices" value="list" checked> ${i18n.t("project.tenderListPrices")}</label>
                     <label><input type="radio" name="prices" value="discounted"> ${i18n.t("project.tenderDiscountedPrices")}</label>
                 </fieldset>
                 <p class="project-tender-hint">${i18n.t("project.tenderHint")}</p>

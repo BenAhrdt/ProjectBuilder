@@ -120,6 +120,13 @@
 
 }
 
+.app-modal-form { max-width: 34rem; }
+.app-modal-field { display: grid; gap: .4rem; margin-top: 1rem; font-weight: 600; }
+.app-modal-field select { padding: .7rem; border: 1px solid var(--border-color, #bbb); border-radius: .35rem; background: var(--background-color, #fff); color: inherit; font: inherit; }
+.app-modal-form-error { min-height: 1.25rem; color: #b42318; }
+.app-modal-checkboxes { border: 0; padding: 0; }
+.app-modal-checkboxes label { display: flex; gap: .5rem; align-items: center; font-weight: 400; }
+
 .app-modal-choice-list .app-modal {
     width: min(560px, 100%);
 }

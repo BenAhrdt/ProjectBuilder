@@ -46,7 +46,12 @@ if (!columns.includes("projectDiscount")) {
 for (const [name, definition] of [
     ["salesforceOpportunityId", "TEXT"],
     ["salesforceQuoteId", "TEXT"],
-    ["salesforceSyncedAt", "TEXT"]
+    ["salesforceSyncedAt", "TEXT"],
+    ["salesforceContactId", "TEXT"],
+    ["salesforceDeliveryTime", "TEXT"],
+    ["salesforceArticleMode", "TEXT DEFAULT 'commercial_total'"],
+    ["salesforceSyncScope", "TEXT DEFAULT 'opportunity_quote'"],
+    ["salesforceDocuments", "TEXT DEFAULT '[\"overview\"]'"]
 ]) {
     if (!columns.includes(name)) {
         projects.exec(`ALTER TABLE projects ADD COLUMN ${name} ${definition}`);

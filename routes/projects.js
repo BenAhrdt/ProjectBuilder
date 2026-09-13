@@ -807,6 +807,45 @@ router.post(
     }
 );
 
+router.post("/:id/duplicate", (req, res) => {
+    const source = database.projects.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id);
+    if (!source) return res.status(404).json({ success: false, error: "Projekt nicht gefunden" });
+
+    const duplicate = database.projects.transaction(() => {
+        const existingNames = new Set(database.projects.prepare("SELECT name FROM projects").all().map(item => item.name));
+        const suffix = String(req.body?.copySuffix || "Kopie").trim() || "Kopie";
+        const baseName = String(source.name || "Projekt").replace(new RegExp(`\\s+${suffix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:\\s+\\d+)?$`, "i"), "");
+        let name = `${baseName} ${suffix}`;
+        for (let number = 2; existingNames.has(name); number += 1) name = `${baseName} ${suffix} ${number}`;
+
+        const excludedProjectColumns = new Set(["id", "name", "salesforceOpportunityId", "salesforceQuoteId", "salesforceSyncedAt"]);
+        const projectColumns = database.projects.prepare("PRAGMA table_info(projects)").all()
+            .map(column => column.name).filter(column => !excludedProjectColumns.has(column));
+        const projectResult = database.projects.prepare(`INSERT INTO projects (name, ${projectColumns.join(", ")}) VALUES (@name, ${projectColumns.map(column => `@${column}`).join(", ")})`)
+            .run({ ...source, name });
+        const projectId = Number(projectResult.lastInsertRowid);
+
+        const nodeColumns = database.projects.prepare("PRAGMA table_info(projectNodes)").all().map(column => column.name)
+            .filter(column => !new Set(["id", "projectId", "parentId"]).has(column));
+        const articleColumns = database.projects.prepare("PRAGMA table_info(projectNodeArticles)").all().map(column => column.name)
+            .filter(column => !new Set(["id", "projectNodeId"]).has(column));
+        const nodes = database.projects.prepare("SELECT * FROM projectNodes WHERE projectId = ? ORDER BY id").all(source.id);
+        const insertNode = database.projects.prepare(`INSERT INTO projectNodes (projectId, parentId, ${nodeColumns.join(", ")}) VALUES (@projectId, @parentId, ${nodeColumns.map(column => `@${column}`).join(", ")})`);
+        const insertArticle = database.projects.prepare(`INSERT INTO projectNodeArticles (projectNodeId, ${articleColumns.join(", ")}) VALUES (@projectNodeId, ${articleColumns.map(column => `@${column}`).join(", ")})`);
+        const nodeIdMap = new Map();
+        for (const node of nodes) {
+            const result = insertNode.run({ ...node, projectId, parentId: node.parentId == null ? null : nodeIdMap.get(Number(node.parentId)) ?? null });
+            const newNodeId = Number(result.lastInsertRowid);
+            nodeIdMap.set(Number(node.id), newNodeId);
+            const articles = database.projects.prepare("SELECT * FROM projectNodeArticles WHERE projectNodeId = ? ORDER BY id").all(node.id);
+            for (const article of articles) insertArticle.run({ ...article, projectNodeId: newNodeId });
+        }
+        return { id: projectId, name };
+    });
+
+    res.json({ success: true, project: duplicate() });
+});
+
 router.put(
     "/:id",
     (req, res) => {
@@ -937,7 +976,7 @@ router.delete(
     }
 );
 
-function buildProjectExportData(
+export function buildProjectExportData(
     project,
     nodes,
     nodeArticles
@@ -1916,7 +1955,7 @@ function buildProjectWorkbook(
 
 }
 
-async function buildProjectWorkbookBuffer(
+export async function buildProjectWorkbookBuffer(
     exportData
 ) {
 
@@ -2013,7 +2052,7 @@ async function buildProjectWorkbookBuffer(
 
 }
 
-async function buildWordTenderBuffer(exportData, priceMode) {
+export async function buildWordTenderBuffer(exportData, priceMode) {
     const { project, positions } = exportData;
     const showPrices = priceMode !== "none";
     const children = [janitzaHeading("1", project.name || "Projekt", 20)];
@@ -2340,7 +2379,7 @@ function tenderCell(text, width = 25) {
     });
 }
 
-function buildGaebTenderXml(exportData, priceMode, gaebType) {
+export function buildGaebTenderXml(exportData, priceMode, gaebType) {
     const { project, positions } = exportData;
     const priced = priceMode !== "none";
     const dataType = gaebType;
@@ -6259,6 +6298,13 @@ function getExportIconName(
 
     return "";
 
+}
+
+export function getExportArticleIconDataUri(article = {}) {
+    const iconName = getExportIconName(article) || "article.png";
+    const iconPath = path.join(publicIconsDirectory, iconName);
+    if (!fs.existsSync(iconPath)) return "";
+    return `data:image/png;base64,${fs.readFileSync(iconPath).toString("base64")}`;
 }
 
 function isDlArticle(

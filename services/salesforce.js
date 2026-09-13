@@ -452,6 +452,27 @@ export async function updateOpportunity(id, fields) {
     return updateRecord("Opportunity", id, fields);
 }
 
+export async function uploadOpportunityFile(opportunityId, { title, filename, data }) {
+    const existing = await query(`
+        SELECT ContentDocumentId
+        FROM ContentDocumentLink
+        WHERE LinkedEntityId = '${escapeSoql(opportunityId)}'
+          AND ContentDocument.Title = '${escapeSoql(title)}'
+        ORDER BY ContentDocument.CreatedDate DESC
+        LIMIT 1
+    `);
+    const fields = {
+        Title: title,
+        PathOnClient: filename,
+        VersionData: Buffer.from(data).toString("base64")
+    };
+    const contentDocumentId = existing.records[0]?.ContentDocumentId;
+    if (contentDocumentId) fields.ContentDocumentId = contentDocumentId;
+    else fields.FirstPublishLocationId = opportunityId;
+    const result = await createRecord("ContentVersion", fields);
+    return { id: result.id, versioned: Boolean(contentDocumentId) };
+}
+
 export async function synchronizeQuote(opportunityId, quoteId) {
     return updateRecord("Opportunity", opportunityId, { SyncedQuoteId: quoteId });
 }

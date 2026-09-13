@@ -2,6 +2,15 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.0 - 13.09.2026
+### Nuevo
+- Los proyectos se pueden duplicar con toda su estructura y posiciones tanto desde la vista general de proyectos como desde la vista de un cliente abierto.
+- La sincronización con Salesforce ofrece ajustes persistentes para el contacto, el plazo de entrega, la agrupación de artículos y el envío solo de la oportunidad o junto con una oferta.
+- El plano general, Excel, el pliego en Word y GAEB pueden enviarse individualmente a la oportunidad; los reenvíos crean versiones y los archivos desmarcados se conservan.
+- El plano general está seleccionado por defecto; GAEB usa por defecto una estimación de costes X82 con precios de lista.
+- El plano general enviado a Salesforce es un PDF A4 horizontal completo con la primera página general y todas las páginas detalladas; muestra los precios descontados.
+- El plano general en PDF utiliza los mismos nombres de nodos, rutas de estructura e imágenes de artículos que la vista del proyecto.
+
 ## 1.4.4 - 13.09.2026
 ### Corregido
 - Se reutiliza el borrador sincronizado. Si la oferta sincronizada tiene otro estado, se crea un borrador nuevo; si no hay oferta sincronizada, se utiliza automáticamente el borrador más reciente.

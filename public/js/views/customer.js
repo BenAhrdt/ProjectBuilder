@@ -194,6 +194,7 @@ async function renderView(
                             <tr>
                                 <th>${i18n.t("customer.projectName")}</th>
                                 <th>${i18n.t("customer.description")}</th>
+                                <th>${i18n.t("common.actions")}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -201,6 +202,7 @@ async function renderView(
                                 <tr class="customer-project-row" data-id="${project.id}" tabindex="0" role="link">
                                     <td>${project.name ?? ""}</td>
                                     <td>${project.description ?? ""}</td>
+                                    <td class="customer-project-actions"><button type="button" class="duplicate-customer-project" data-id="${project.id}">${i18n.t("common.duplicate")}</button></td>
                                 </tr>
                             `).join("")}
                         </tbody>
@@ -218,7 +220,7 @@ async function renderView(
 
     `;
     generateHandler(customerId);
-    registerCustomerProjectLinks();
+    registerCustomerProjectLinks(customerId);
     registerCustomerDelete(customerId, customer);
     registerSalesforceActions(customerId, customer);
 
@@ -263,11 +265,30 @@ function registerSalesforceActions(customerId, customer) {
     });
 }
 
-function registerCustomerProjectLinks() {
+function registerCustomerProjectLinks(customerId) {
+    document.querySelectorAll(".duplicate-customer-project").forEach(button => {
+        button.addEventListener("click", async event => {
+            event.stopPropagation();
+            button.disabled = true;
+            try {
+                const response = await fetch(`/api/projects/${button.dataset.id}/duplicate`, {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ copySuffix: i18n.t("common.copySuffix") })
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || i18n.t("projects.duplicateFailed"));
+                await renderView(customerId);
+            } catch (error) {
+                await showAlert(error.message || i18n.t("projects.duplicateFailed"));
+                button.disabled = false;
+            }
+        });
+    });
     document.querySelectorAll(".customer-project-row").forEach(row => {
         const openProject = () => router.navigate(`/project/${row.dataset.id}`);
         row.addEventListener("click", openProject);
         row.addEventListener("keydown", event => {
+            if (event.target.closest("button")) return;
             if (event.key === "Enter" || event.key === " ") {
                 event.preventDefault();
                 openProject();

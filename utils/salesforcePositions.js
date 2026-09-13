@@ -30,7 +30,14 @@ function orderProjectNodes(nodes) {
     return ordered;
 }
 
-export function buildSalesforcePositions(nodes, nodeArticles) {
+const GROUP_NODE_TYPES = {
+    commercial_building: "building",
+    commercial_panel: "panel",
+    commercial_field: "field",
+    commercial_meter: "meter"
+};
+
+export function buildSalesforcePositions(nodes, nodeArticles, mode = "commercial_total") {
     const byNode = new Map();
     for (const position of nodeArticles) {
         const key = String(position.projectNodeId);
@@ -39,6 +46,17 @@ export function buildSalesforcePositions(nodes, nodeArticles) {
     }
     for (const positions of byNode.values()) positions.sort(compareSortOrder);
 
+    const nodeById = new Map(nodes.map(node => [String(node.id), node]));
+    const groupType = GROUP_NODE_TYPES[mode];
+    const groupForNode = node => {
+        if (!groupType) return "total";
+        let current = node;
+        while (current) {
+            if (current.type === groupType) return String(current.id);
+            current = current.parentId == null ? null : nodeById.get(String(current.parentId));
+        }
+        return `ungrouped:${node?.id ?? "unknown"}`;
+    };
     const summaries = new Map();
     for (const node of orderProjectNodes(nodes)) {
         for (const position of byNode.get(String(node.id)) ?? []) {
@@ -48,7 +66,8 @@ export function buildSalesforcePositions(nodes, nodeArticles) {
             const articleNumber = String(position.articleNumber);
             const isOptional = Boolean(position.isOptional);
             const isAlternative = Boolean(position.isAlternative);
-            const key = `${articleNumber}\0${Number(isOptional)}\0${Number(isAlternative)}`;
+            const group = mode === "projected" ? `position:${position.id}` : groupForNode(node);
+            const key = `${group}\0${articleNumber}\0${Number(isOptional)}\0${Number(isAlternative)}`;
             if (!summaries.has(key)) {
                 summaries.set(key, {
                     articleNumber,

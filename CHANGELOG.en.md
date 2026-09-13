@@ -2,6 +2,15 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.0 - 13.09.2026
+### Added
+- Projects can be duplicated with their complete structure and article positions from both the project overview and an open customer view.
+- Salesforce synchronization now provides persistent settings for contact, delivery time, item grouping, and sending the opportunity alone or together with a quote.
+- Overview plan, Excel, Word bill of quantities, and GAEB can be sent individually to the opportunity; repeated uploads create file versions and deselected files are retained.
+- The overview plan is selected by default; GAEB defaults to an X82 cost estimate with list prices.
+- The overview plan sent to Salesforce is a complete landscape A4 PDF with the initial overview page and all detail pages; discounted prices are displayed.
+- The PDF overview plan uses the same node names, structure paths, and article images as the project view.
+
 ## 1.4.4 - 13.09.2026
 ### Fixed
 - A synchronized draft quote is reused. If the synchronized quote has another status, a new draft is created; without a synchronized quote, the newest draft is selected automatically.

@@ -1,4 +1,6 @@
 import express from "express";
+import PDFDocument from "pdfkit";
+import SVGtoPDF from "svg-to-pdfkit";
 import * as database from "../database/index.js";
 import * as salesforce from "../services/salesforce.js";
 import {
@@ -7,6 +9,14 @@ import {
 } from "../utils/salesforcePositions.js";
 import { inferGridVisItems } from "../utils/gridVisItems.js";
 import { selectReusableSalesforceQuote } from "../utils/salesforceQuoteSelection.js";
+import {
+    buildGaebTenderXml,
+    buildProjectExportData,
+    buildProjectWorkbookBuffer,
+    buildWordTenderBuffer,
+    getExportArticleIconDataUri
+} from "./projects.js";
+import { buildOverviewDocuments } from "../public/js/views/projectOverview.js";
 
 const router = express.Router();
 
@@ -23,6 +33,102 @@ function saveSetting(key, value) {
 
 function getConfiguredPricebookIdentifier() {
     return getSetting("salesforcePricebookId", process.env.SALESFORCE_PRICEBOOK_NAME ?? "Janitza Electronics (1100)");
+}
+
+const SALESFORCE_DOCUMENT_TYPES = new Set(["overview", "excel", "word", "gaeb"]);
+
+function parseSavedDocuments(value) {
+    try {
+        return JSON.parse(value == null ? '["overview"]' : value)
+            .filter(item => SALESFORCE_DOCUMENT_TYPES.has(item));
+    } catch {
+        return [];
+    }
+}
+
+function overviewLabels() {
+    return {
+        project: "Projekt", empty: "Leer", noStructure: "Keine Projektstruktur",
+        overviewView: "Übersichtsplan", detailView: "Detailansicht", page: "Seite",
+        summaryFields: "Felder", summaryMeters: "Messgruppen", summaryPositions: "Positionen",
+        prices: "Preise", withoutPrices: "Ohne Preise", withPrices: "Mit Preisen",
+        priceBasis: "Preisbasis", price: "Preis", listPrices: "Listenpreise",
+        discountedPrices: "Rabattierte Preise",
+        nodeTypes: { building: "Gebäude", generalPosition: "Allgemeine Position", panel: "Verteilung", field: "Feld", meter: "Messgruppe" }
+    };
+}
+
+function buildOverviewPdf(documents, project) {
+    const pages = [
+        { title: "Gesamtübersicht", breadcrumb: project.name ?? "", diagram: documents.overviewDiagram },
+        ...documents.detailPages
+    ];
+    const pdf = new PDFDocument({ autoFirstPage: false, compress: true });
+    const chunks = [];
+    pdf.on("data", chunk => chunks.push(chunk));
+    const completed = new Promise((resolve, reject) => {
+        pdf.on("end", () => resolve(Buffer.concat(chunks)));
+        pdf.on("error", reject);
+    });
+    pages.forEach((page, index) => {
+        pdf.addPage({ size: "A4", layout: "landscape", margin: 28 });
+        pdf.font("Helvetica-Bold").fontSize(13).fillColor("#1f3552").text(page.title || "Detailseite", 28, 24);
+        pdf.font("Helvetica").fontSize(8).fillColor("#526173").text(page.breadcrumb || "", 28, 42);
+        pdf.text(`Seite ${index + 1} / ${pages.length}`, 730, 24, { width: 84, align: "right" });
+        const availableWidth = 785;
+        const availableHeight = 515;
+        const scale = Math.min(
+            availableWidth / Math.max(Number(page.diagram.width) || 1, 1),
+            availableHeight / Math.max(Number(page.diagram.height) || 1, 1)
+        );
+        const width = (Number(page.diagram.width) || 1) * scale;
+        const height = (Number(page.diagram.height) || 1) * scale;
+        SVGtoPDF(pdf, page.diagram.svg, 28 + (availableWidth - width) / 2, 62 + (availableHeight - height) / 2, {
+            width, height, preserveAspectRatio: "xMidYMid meet"
+        });
+    });
+    pdf.end();
+    return completed;
+}
+
+async function synchronizeProjectDocuments(opportunityId, project, nodes, nodeArticles, selected) {
+    if (selected.length === 0) return { uploaded: [], errors: [] };
+    const exportData = buildProjectExportData(project, nodes, nodeArticles);
+    const baseName = String(project.name || "Projekt").replace(/[\\/:*?"<>|]/g, "_").slice(0, 100);
+    const generators = {
+        overview: async () => {
+            const documents = buildOverviewDocuments({
+                project, customer: { name: project.customerName }, nodes, nodeArticles,
+                articles: nodeArticles, labels: overviewLabels(), showPrices: true,
+                priceMode: "discounted",
+                getArticleIcon: getExportArticleIconDataUri,
+                getArticleDiscountPercent: article => {
+                    const group = String(article.discountGroup ?? "").match(/\d+/)?.[0];
+                    return group ? normalizePercent(project[`pg${group}`]) : 0;
+                }
+            });
+            return {
+                title: "ProjectBuilder - Übersichtsplan",
+                filename: `${baseName}-Übersichtsplan.pdf`,
+                data: await buildOverviewPdf(documents, project)
+            };
+        },
+        excel: async () => ({ title: "ProjectBuilder - Excel", filename: `${baseName}.xlsx`, data: await buildProjectWorkbookBuffer(exportData) }),
+        word: async () => ({ title: "ProjectBuilder - LV Word", filename: `${baseName}-LV.docx`, data: await buildWordTenderBuffer(exportData, "none") }),
+        gaeb: async () => ({ title: "ProjectBuilder - LV GAEB", filename: `${baseName}-LV.x82`, data: buildGaebTenderXml(exportData, "list", "82") })
+    };
+    const uploaded = [];
+    const errors = [];
+    for (const type of selected) {
+        try {
+            const file = await generators[type]();
+            await salesforce.uploadOpportunityFile(opportunityId, file);
+            uploaded.push(type);
+        } catch (error) {
+            errors.push({ type, error: error?.message ?? String(error) });
+        }
+    }
+    return { uploaded, errors };
 }
 
 function syncCustomer(customer, localId = null) {
@@ -121,7 +227,18 @@ router.get("/projects/:projectId/quote-options", async (req, res) => {
                 error: result.error.message
             });
         }
-        res.json({ success: true, ...(await salesforce.getQuoteSyncOptions(result.account.Id)) });
+        const options = await salesforce.getQuoteSyncOptions(result.account.Id);
+        res.json({
+            success: true,
+            ...options,
+            saved: {
+                contactId: result.project.salesforceContactId ?? "",
+                deliveryTime: result.project.salesforceDeliveryTime ?? "",
+                articleMode: result.project.salesforceArticleMode ?? "commercial_total",
+                syncScope: result.project.salesforceSyncScope ?? "opportunity_quote",
+                documents: parseSavedDocuments(result.project.salesforceDocuments)
+            }
+        });
     } catch (error) {
         handleError(res, error);
     }
@@ -387,18 +504,34 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
             return res.status(409).json({ success: false, error: "Für den Salesforce-Kunden ist keine Währung hinterlegt." });
         }
 
+        const articleModes = new Set(["commercial_total", "commercial_building", "commercial_panel", "commercial_field", "commercial_meter", "projected"]);
+        const articleMode = articleModes.has(req.body.articleMode) ? req.body.articleMode : "commercial_total";
+        const syncScope = req.body.syncScope === "opportunity" ? "opportunity" : "opportunity_quote";
+        const documents = [...new Set(Array.isArray(req.body.documents) ? req.body.documents : [])]
+            .filter(item => SALESFORCE_DOCUMENT_TYPES.has(item));
+        const syncOptions = syncScope === "opportunity_quote"
+            ? await salesforce.getQuoteSyncOptions(accountId)
+            : null;
+        if (syncOptions?.contactField && !syncOptions.contacts.some(item => item.id === req.body.contactId)) {
+            return res.status(400).json({ success: false, error: "Bitte einen Kontakt des Salesforce-Kunden auswählen." });
+        }
+        if (syncOptions?.deliveryField && !syncOptions.deliveryTimes.some(item => item.value === req.body.deliveryTime)) {
+            return res.status(400).json({ success: false, error: "Bitte eine Lieferzeit auswählen." });
+        }
         const nodes = database.projectNodes.prepare(`
-            SELECT id, parentId, sortOrder FROM projectNodes
+            SELECT id, parentId, type, name, sortOrder FROM projectNodes
             WHERE projectId = ?
         `).all(project.id);
         const nodeArticles = database.projectNodeArticles.prepare(`
-            SELECT projectNodeArticles.*, articles.discountGroup
+            SELECT projectNodeArticles.*, articles.ean, articles.manufacturerType,
+                articles.manufacturerName, articles.quantityUnit, articles.listPrice,
+                articles.listPriceCurrency, articles.discountGroup, articles.description
             FROM projectNodeArticles
             INNER JOIN projectNodes ON projectNodes.id = projectNodeArticles.projectNodeId
             LEFT JOIN articles ON articles.articleNumber = projectNodeArticles.articleNumber
             WHERE projectNodes.projectId = ?
         `).all(project.id);
-        const positions = buildSalesforcePositions(nodes, nodeArticles);
+        const positions = buildSalesforcePositions(nodes, nodeArticles, articleMode);
         if (positions.length === 0) {
             return res.status(400).json({ success: false, error: "Das Projekt enthält keine Artikelpositionen mit einer Menge größer als null." });
         }
@@ -474,6 +607,29 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
         database.projects.prepare(`
             UPDATE projects SET salesforceOpportunityId = ? WHERE id = ?
         `).run(opportunity.Id, project.id);
+        if (syncScope === "opportunity") {
+            if (opportunity.SyncedQuoteId) {
+                await salesforce.synchronizeQuote(opportunity.Id, null);
+            }
+            await salesforce.replaceLineItems("OpportunityLineItem", "OpportunityId", opportunity.Id, opportunityLineItems);
+            const documentResult = await synchronizeProjectDocuments(opportunity.Id, project, nodes, nodeArticles, documents);
+            database.projects.prepare(`
+                UPDATE projects SET salesforceOpportunityId = ?, salesforceSyncedAt = ?,
+                    salesforceContactId = ?, salesforceDeliveryTime = ?,
+                    salesforceArticleMode = ?, salesforceSyncScope = ?, salesforceDocuments = ?
+                WHERE id = ?
+            `).run(opportunity.Id, new Date().toISOString(), req.body.contactId ?? null,
+                req.body.deliveryTime ?? null, articleMode, syncScope, JSON.stringify(documents), project.id);
+            return res.json({
+                success: true,
+                opportunityId: opportunity.Id,
+                opportunityCreated,
+                quoteSynced: false,
+                positionCount: opportunityLineItems.length,
+                pricebookName: pricebook.Name,
+                ...documentResult
+            });
+        }
         const synchronizedQuote = opportunity.SyncedQuoteId
             ? previousQuote?.Id === opportunity.SyncedQuoteId
                 ? previousQuote
@@ -501,7 +657,6 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
             DiscountAdd__c: normalizePercent(project.projectDiscount),
             ShowDiscount__c: normalizePercent(project.projectDiscount) > 0
         };
-        const syncOptions = await salesforce.getQuoteSyncOptions(accountId);
         if (syncOptions.contactField) {
             const contact = syncOptions.contacts.find(item => item.id === req.body.contactId);
             if (!contact) return res.status(400).json({ success: false, error: "Bitte einen Kontakt des Salesforce-Kunden auswählen." });
@@ -542,11 +697,15 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
         // Linking the quote alone does not make it the opportunity's synchronized quote.
         // Salesforce requires this relationship before the quote can enter approval.
         await salesforce.synchronizeQuote(opportunity.Id, quote.Id);
+        const documentResult = await synchronizeProjectDocuments(opportunity.Id, project, nodes, nodeArticles, documents);
 
         database.projects.prepare(`
-            UPDATE projects SET salesforceOpportunityId = ?, salesforceQuoteId = ?, salesforceSyncedAt = ?
+            UPDATE projects SET salesforceOpportunityId = ?, salesforceQuoteId = ?, salesforceSyncedAt = ?,
+                salesforceContactId = ?, salesforceDeliveryTime = ?, salesforceArticleMode = ?, salesforceSyncScope = ?,
+                salesforceDocuments = ?
             WHERE id = ?
-        `).run(opportunity.Id, quote.Id, new Date().toISOString(), project.id);
+        `).run(opportunity.Id, quote.Id, new Date().toISOString(), req.body.contactId ?? null,
+            req.body.deliveryTime ?? null, articleMode, syncScope, JSON.stringify(documents), project.id);
 
         res.json({
             success: true,
@@ -558,7 +717,8 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
             quoteSynced: true,
             previousQuoteStatus: previousQuote?.Status ?? null,
             positionCount: quoteLineItems.length,
-            pricebookName: pricebook.Name
+            pricebookName: pricebook.Name,
+            ...documentResult
         });
     } catch (error) {
         handleError(res, error);

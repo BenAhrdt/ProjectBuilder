@@ -39,6 +39,29 @@ test("aggregates only positions with the same article and commercial role", () =
     ]);
 });
 
+test("aggregates commercial positions at the selected project level", () => {
+    const nodes = [
+        { id: 1, parentId: null, type: "building", sortOrder: 1 },
+        { id: 2, parentId: 1, type: "panel", sortOrder: 1 },
+        { id: 3, parentId: 1, type: "panel", sortOrder: 2 }
+    ];
+    const articles = [
+        { id: 1, projectNodeId: 2, articleNumber: "A", quantity: 2 },
+        { id: 2, projectNodeId: 3, articleNumber: "A", quantity: 3 }
+    ];
+    assert.deepEqual(buildSalesforcePositions(nodes, articles, "commercial_building").map(item => item.quantity), [5]);
+    assert.deepEqual(buildSalesforcePositions(nodes, articles, "commercial_panel").map(item => item.quantity), [2, 3]);
+});
+
+test("keeps every position in project order when using as projected", () => {
+    const nodes = [{ id: 1, parentId: null, type: "field", sortOrder: 1 }];
+    const positions = buildSalesforcePositions(nodes, [
+        { id: 2, projectNodeId: 1, sortOrder: 2, articleNumber: "A", quantity: 3 },
+        { id: 1, projectNodeId: 1, sortOrder: 1, articleNumber: "A", quantity: 2 }
+    ], "projected");
+    assert.deepEqual(positions.map(item => item.quantity), [2, 3]);
+});
+
 test("maps Salesforce flags and leaves optional opportunity items unmarked", () => {
     const { opportunityLineItems, quoteLineItems } = buildSalesforceLineItems([
         {

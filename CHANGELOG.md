@@ -2,6 +2,17 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.0 - 13.09.2026
+
+### Neu
+
+- Projekte können sowohl in der Projektübersicht als auch in der geöffneten Kundenansicht einschließlich ihrer vollständigen Struktur und Artikelpositionen dupliziert werden.
+- Die Salesforce-Synchronisierung bietet einen persistenten Einstellungsdialog für Kontakt, Lieferzeit, Artikelgruppierung und die Übertragung nur der Opportunity oder zusätzlich des Angebots.
+- Übersichtsplan, Excel, Word-LV und GAEB können einzeln zur Opportunity übertragen werden; erneute Übertragungen erzeugen Dateiversionen, abgewählte Dateien werden nicht gelöscht.
+- Standardmäßig ist der Übersichtsplan ausgewählt; GAEB wird standardmäßig als X82-Kostenanschlag mit Listenpreisen erstellt.
+- Der an Salesforce übertragene Übersichtsplan ist ein vollständiges A4-Querformat-PDF mit erster Gesamtübersichtsseite und allen Detailseiten; rabattierte Preise sind eingeblendet.
+- Der PDF-Übersichtsplan übernimmt Knotennamen, Strukturpfade und Artikelbilder identisch aus der Projektansicht.
+
 ## 1.4.4 - 13.09.2026
 
 ### Behoben

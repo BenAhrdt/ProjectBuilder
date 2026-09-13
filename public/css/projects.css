@@ -174,11 +174,9 @@
 .projects-table th:nth-child(3),
 .projects-table td:nth-child(3) {
 
-    width: 180px;
+    width: 100%;
 
-    min-width: 180px;
-
-    white-space: nowrap;
+    white-space: normal;
 
 }
 
@@ -189,7 +187,9 @@
 .projects-table th:nth-child(4),
 .projects-table td:nth-child(4) {
 
-    width: 100%;
+    width: 130px;
+
+    min-width: 130px;
 
     white-space: normal;
 
@@ -198,6 +198,17 @@
     overflow-wrap: anywhere;
 
 }
+
+.projects-table .table-actions button {
+    border: 1px solid #b8c5d8;
+    border-radius: 6px;
+    background: #fff;
+    color: #1f3552;
+    padding: 7px 10px;
+    cursor: pointer;
+}
+
+.projects-table .table-actions button:hover { background: #edf5ff; }
 
 /* --------------------------------------------------
    Meta Informationen

@@ -361,9 +361,65 @@ function showChoice(
 
 }
 
+function showSelectForm(message, options = {}) {
+    closeActiveModal();
+    const root = ensureModalRoot();
+    return new Promise(resolve => {
+        const overlay = document.createElement("div");
+        overlay.className = "app-modal-overlay app-modal-form-overlay";
+        overlay.innerHTML = `
+            <form class="app-modal app-modal-form" role="dialog" aria-modal="true" aria-labelledby="app-modal-title">
+                <div class="app-modal-header"><h2 id="app-modal-title">${escapeHtml(options.title ?? i18n.t("common.select"))}</h2></div>
+                <div class="app-modal-body">
+                    <div class="app-modal-message"><p>${escapeHtml(message)}</p></div>
+                    ${options.fields.map(field => field.type === "checkboxes" ? `
+                        <fieldset class="app-modal-field app-modal-checkboxes">
+                            <legend>${escapeHtml(field.label)}</legend>
+                            ${(field.options ?? []).map(item => `<label><input type="checkbox" name="${escapeHtml(field.name)}" value="${escapeHtml(item.value)}" ${(field.value ?? []).map(String).includes(String(item.value)) ? "checked" : ""}> ${escapeHtml(item.label)}</label>`).join("")}
+                        </fieldset>
+                    ` : `
+                        <label class="app-modal-field">
+                            <span>${escapeHtml(field.label)}</span>
+                            <select name="${escapeHtml(field.name)}" ${field.required ? "required" : ""}>
+                                ${(field.options ?? []).map(item => `<option value="${escapeHtml(item.value)}" ${String(item.value) === String(field.value ?? "") ? "selected" : ""}>${escapeHtml(item.label)}</option>`).join("")}
+                            </select>
+                        </label>
+                    `).join("")}
+                    <p class="app-modal-form-error" role="alert"></p>
+                </div>
+                <div class="app-modal-actions">
+                    <button class="app-modal-cancel" type="button">${escapeHtml(options.cancelText ?? i18n.t("common.cancel"))}</button>
+                    <button class="app-modal-confirm" type="submit">${escapeHtml(options.confirmText ?? i18n.t("common.ok"))}</button>
+                </div>
+            </form>`;
+        const finish = value => { closeActiveModal(); resolve(value); };
+        const form = overlay.querySelector("form");
+        form.addEventListener("submit", event => {
+            event.preventDefault();
+            const formData = new FormData(form);
+            const values = Object.fromEntries(formData);
+            for (const field of options.fields.filter(item => item.type === "checkboxes")) {
+                values[field.name] = formData.getAll(field.name);
+            }
+            const error = options.validate?.(values);
+            if (error) {
+                overlay.querySelector(".app-modal-form-error").textContent = error;
+                return;
+            }
+            finish(values);
+        });
+        overlay.querySelector(".app-modal-cancel").addEventListener("click", () => finish(null));
+        overlay.addEventListener("keydown", event => { if (event.key === "Escape") finish(null); });
+        root.appendChild(overlay);
+        activeModal = overlay;
+        overlay.querySelector("select")?.focus();
+    });
+}
+
 export {
     showAlert,
     showConfirm,
     showPrompt,
-    showChoice
+    showChoice,
+    showSelectForm
 };

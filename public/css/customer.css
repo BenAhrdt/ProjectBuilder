@@ -70,6 +70,24 @@
     font-weight: 700;
 }
 
+.customer-projects-table th:last-child,
+.customer-projects-table td:last-child {
+    width: 130px;
+    white-space: nowrap;
+}
+
+.customer-project-actions button {
+    padding: 7px 10px;
+    border: 1px solid #b8c5d8;
+    border-radius: 6px;
+    background: #fff;
+    color: #1f3552;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.customer-project-actions button:hover { background: #edf5ff; }
+
 .customer-project-row {
     cursor: pointer;
     transition: background-color 0.16s ease, box-shadow 0.16s ease;

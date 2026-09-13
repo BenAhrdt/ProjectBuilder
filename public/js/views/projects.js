@@ -163,6 +163,8 @@ async function renderView() {
                             ${i18n.t("projects.description")}
                         </th>
 
+                        <th class="table-actions-heading">${i18n.t("common.actions")}</th>
+
                     </tr>
 
                 </thead>
@@ -189,6 +191,8 @@ async function renderView() {
                             <td>
                                 ${project.description ?? ""}
                             </td>
+
+                            <td class="table-actions"><button type="button" class="duplicate-project" data-id="${project.id}">${i18n.t("common.duplicate")}</button></td>
 
                         </tr>
 
@@ -372,6 +376,25 @@ function generateHandler() {
 
 function attachProjectRowHandlers() {
 
+    document.querySelectorAll(".duplicate-project").forEach(button => {
+        button.addEventListener("click", async event => {
+            event.stopPropagation();
+            button.disabled = true;
+            try {
+                const response = await fetch(`/api/projects/${button.dataset.id}/duplicate`, {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ copySuffix: i18n.t("common.copySuffix") })
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || i18n.t("projects.duplicateFailed"));
+                await renderView();
+            } catch (error) {
+                await showAlert(error.message || i18n.t("projects.duplicateFailed"));
+                button.disabled = false;
+            }
+        });
+    });
+
     document
         .querySelectorAll(
             ".project-row"
@@ -395,6 +418,7 @@ function attachProjectRowHandlers() {
             row.addEventListener(
                 "keydown",
                 event => {
+                    if (event.target.closest("button")) return;
                     if (event.key === "Enter" || event.key === " ") {
                         event.preventDefault();
                         router.navigate(`/project/${row.dataset.id}`);
@@ -555,6 +579,8 @@ function renderProjects(projects) {
                 <td>
                     ${project.description ?? ""}
                 </td>
+
+                <td class="table-actions"><button type="button" class="duplicate-project" data-id="${project.id}">${i18n.t("common.duplicate")}</button></td>
 
             </tr>
 

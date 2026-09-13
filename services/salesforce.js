@@ -9,6 +9,14 @@ let cachedTokenConnection = null;
 let cachedCoreConnection = null;
 let loginPromise = null;
 
+function salesforceErrorMessage(errors, fallback) {
+    const list = Array.isArray(errors) ? errors : [errors];
+    const messages = list
+        .map(error => typeof error === "string" ? error : error?.message ?? error?.errorCode)
+        .filter(Boolean);
+    return messages.join(", ") || fallback;
+}
+
 function getAlias() {
     const alias = process.env.SALESFORCE_CLI_ALIAS ?? "janitza-readonly";
     if (!/^[a-zA-Z0-9_.@-]+$/.test(alias)) throw new Error("Ungültiger Salesforce-Alias");
@@ -84,6 +92,15 @@ async function query(soql) {
     return connection.query(soql);
 }
 
+async function describe(objectName) {
+    if (getTokenConnection()) {
+        return tokenRequest(`/sobjects/${encodeURIComponent(objectName)}/describe`);
+    }
+    const connection = await getCoreConnection();
+    if (!connection) throw new Error("Keine Salesforce-Anmeldung vorhanden.");
+    return connection.sobject(objectName).describe();
+}
+
 async function queryAll(soql) {
     let result = await query(soql);
     const records = [...result.records];
@@ -106,7 +123,7 @@ async function createRecord(objectName, fields) {
     const connection = await getCoreConnection();
     if (!connection) throw new Error("Keine Salesforce-Anmeldung vorhanden.");
     const result = await connection.sobject(objectName).create(fields);
-    if (!result.success) throw new Error(result.errors?.join(", ") || `${objectName} konnte nicht angelegt werden.`);
+    if (!result.success) throw new Error(salesforceErrorMessage(result.errors, `${objectName} konnte nicht angelegt werden.`));
     return result;
 }
 
@@ -118,7 +135,7 @@ async function updateRecord(objectName, id, fields) {
     const connection = await getCoreConnection();
     if (!connection) throw new Error("Keine Salesforce-Anmeldung vorhanden.");
     const result = await connection.sobject(objectName).update({ Id: id, ...fields });
-    if (!result.success) throw new Error(result.errors?.join(", ") || `${objectName} konnte nicht aktualisiert werden.`);
+    if (!result.success) throw new Error(salesforceErrorMessage(result.errors, `${objectName} konnte nicht aktualisiert werden.`));
 }
 
 async function createRecords(objectName, records) {
@@ -142,7 +159,7 @@ async function createRecords(objectName, records) {
         }
         const list = Array.isArray(chunkResults) ? chunkResults : [chunkResults];
         const failed = list.find(result => !result.success);
-        if (failed) throw new Error(failed.errors?.map(error => error.message ?? error).join(", ") || `${objectName} konnte nicht angelegt werden.`);
+        if (failed) throw new Error(salesforceErrorMessage(failed.errors, `${objectName} konnte nicht angelegt werden.`));
         results.push(...list);
     }
     return results;
@@ -161,7 +178,7 @@ async function deleteRecords(objectName, ids) {
             const chunkResults = await connection.sobject(objectName).destroy(chunk);
             const list = Array.isArray(chunkResults) ? chunkResults : [chunkResults];
             const failed = list.find(result => !result.success);
-            if (failed) throw new Error(failed.errors?.join(", ") || `${objectName} konnte nicht gelöscht werden.`);
+            if (failed) throw new Error(salesforceErrorMessage(failed.errors, `${objectName} konnte nicht gelöscht werden.`));
         }
     }
 }
@@ -271,6 +288,39 @@ export async function getAccountById(id) {
         LIMIT 1
     `);
     return result.records[0] ?? null;
+}
+
+export async function getQuoteSyncOptions(accountId) {
+    const [quoteDescription, contactsResult] = await Promise.all([
+        describe("Quote"),
+        query(`
+            SELECT Id, Name, Email
+            FROM Contact
+            WHERE AccountId = '${escapeSoql(accountId)}'
+            ORDER BY Name
+        `)
+    ]);
+    const fields = quoteDescription.fields ?? [];
+    const contactField = fields.find(field => field.name === "ContactId" && field.createable && field.updateable);
+    const configuredDeliveryField = process.env.SALESFORCE_QUOTE_DELIVERY_FIELD;
+    const selectableDeliveryFields = fields.filter(field =>
+        field.createable && field.updateable && field.type === "picklist"
+    );
+    const deliveryField = selectableDeliveryFields.find(field => configuredDeliveryField && field.name === configuredDeliveryField)
+        ?? selectableDeliveryFields.find(field => /lieferzeit|delivery\s*time/i.test(`${field.label ?? ""} ${field.name ?? ""}`));
+
+    return {
+        contactField: contactField?.name ?? null,
+        contacts: contactsResult.records.map(contact => ({
+            id: contact.Id,
+            name: contact.Name,
+            email: contact.Email ?? ""
+        })),
+        deliveryField: deliveryField?.name ?? null,
+        deliveryTimes: (deliveryField?.picklistValues ?? [])
+            .filter(value => value.active)
+            .map(value => ({ value: value.value, label: value.label }))
+    };
 }
 
 export async function getSalesPricebook(identifier = SALES_PRICEBOOK_NAME) {
@@ -412,6 +462,23 @@ export async function getQuote(id) {
         SELECT Id, Status, QuoteNumber, IsSyncing, Pricebook2Id, OpportunityId
         FROM Quote
         WHERE Id = '${escapeSoql(id)}'
+        LIMIT 1
+    `);
+    return result.records[0] ?? null;
+}
+
+export async function findDraftQuote(opportunityId, pricebookId, excludedId = null) {
+    const excluded = excludedId
+        ? `AND Id != '${escapeSoql(excludedId)}'`
+        : "";
+    const result = await query(`
+        SELECT Id, Status, QuoteNumber, IsSyncing, Pricebook2Id, OpportunityId
+        FROM Quote
+        WHERE OpportunityId = '${escapeSoql(opportunityId)}'
+          AND Pricebook2Id = '${escapeSoql(pricebookId)}'
+          AND Status = 'Draft'
+          ${excluded}
+        ORDER BY LastModifiedDate DESC
         LIMIT 1
     `);
     return result.records[0] ?? null;

@@ -65,7 +65,13 @@ function syncCustomer(customer, localId = null) {
 }
 
 function handleError(res, error) {
-    let message = error.message;
+    const stringifyError = value => {
+        if (typeof value === "string") return value;
+        if (value?.message) return stringifyError(value.message);
+        try { return JSON.stringify(value); }
+        catch { return String(value); }
+    };
+    let message = stringifyError(error) || "Salesforce-Abfrage fehlgeschlagen.";
     if (message.includes("customers.customerNumber")) {
         message = "Diese Kundennummer ist bereits einem anderen lokalen Kunden zugeordnet.";
     } else if (message.includes("customers.salesforceId")) {
@@ -73,6 +79,52 @@ function handleError(res, error) {
     }
     res.status(502).json({ success: false, error: message });
 }
+
+async function getProjectAccount(projectId) {
+    const project = database.projects.prepare(`
+        SELECT projects.*, customers.name AS customerName,
+            customers.customerNumber, customers.salesforceId AS customerSalesforceId,
+            customers.pg1, customers.pg2, customers.pg3, customers.pg4, customers.pg5,
+            customers.pg6, customers.pg7, customers.pg8, customers.pg9, customers.pg10
+        FROM projects
+        LEFT JOIN customers ON customers.id = projects.customerId
+        WHERE projects.id = ?
+    `).get(projectId);
+    if (!project) return { error: { status: 404, message: "Projekt nicht gefunden." } };
+    if (!project.customerId) return { error: { status: 400, message: "Dem Projekt ist kein Kunde zugeordnet." } };
+
+    let account = await salesforce.getAccountById(project.customerSalesforceId);
+    if (!account) account = await salesforce.findAccountByCustomerNumber(project.customerNumber);
+    if (!account) {
+        return { error: {
+            status: 409,
+            code: "CUSTOMER_NOT_FOUND",
+            message: `Der Kunde ${project.customerNumber || project.customerName || ""} wurde in Salesforce nicht gefunden.`
+        } };
+    }
+    if (account.Id !== project.customerSalesforceId) {
+        database.customers.prepare(`
+            UPDATE customers SET salesforceId = ?, salesforceSyncedAt = ? WHERE id = ?
+        `).run(account.Id, new Date().toISOString(), project.customerId);
+    }
+    return { project, account };
+}
+
+router.get("/projects/:projectId/quote-options", async (req, res) => {
+    try {
+        const result = await getProjectAccount(req.params.projectId);
+        if (result.error) {
+            return res.status(result.error.status).json({
+                success: false,
+                code: result.error.code,
+                error: result.error.message
+            });
+        }
+        res.json({ success: true, ...(await salesforce.getQuoteSyncOptions(result.account.Id)) });
+    } catch (error) {
+        handleError(res, error);
+    }
+});
 
 function normalizePercent(value) {
     const number = Number(value);
@@ -325,32 +377,9 @@ router.post("/articles/availability", async (req, res) => {
 
 router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
     try {
-        const project = database.projects.prepare(`
-            SELECT projects.*, customers.name AS customerName,
-                customers.customerNumber, customers.salesforceId AS customerSalesforceId,
-                customers.pg1, customers.pg2, customers.pg3, customers.pg4, customers.pg5,
-                customers.pg6, customers.pg7, customers.pg8, customers.pg9, customers.pg10
-            FROM projects
-            LEFT JOIN customers ON customers.id = projects.customerId
-            WHERE projects.id = ?
-        `).get(req.params.projectId);
-        if (!project) return res.status(404).json({ success: false, error: "Projekt nicht gefunden." });
-        if (!project.customerId) return res.status(400).json({ success: false, error: "Dem Projekt ist kein Kunde zugeordnet." });
-
-        let account = await salesforce.getAccountById(project.customerSalesforceId);
-        if (!account) {
-            account = await salesforce.findAccountByCustomerNumber(project.customerNumber);
-            if (!account) {
-                return res.status(409).json({
-                    success: false,
-                    code: "CUSTOMER_NOT_FOUND",
-                    error: `Der Kunde ${project.customerNumber || project.customerName || ""} wurde in Salesforce nicht gefunden.`
-                });
-            }
-            database.customers.prepare(`
-                UPDATE customers SET salesforceId = ?, salesforceSyncedAt = ? WHERE id = ?
-            `).run(account.Id, new Date().toISOString(), project.customerId);
-        }
+        const lookup = await getProjectAccount(req.params.projectId);
+        if (lookup.error) return res.status(lookup.error.status).json({ success: false, code: lookup.error.code, error: lookup.error.message });
+        const { project, account } = lookup;
         const accountId = account.Id;
         const currencyIsoCode = account.CurrencyIsoCode;
         if (!currencyIsoCode) {
@@ -444,11 +473,14 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
         database.projects.prepare(`
             UPDATE projects SET salesforceOpportunityId = ? WHERE id = ?
         `).run(opportunity.Id, project.id);
-        const createNewQuote = !previousQuote
-            || previousQuote.Status !== "Draft"
-            || previousQuote.Pricebook2Id !== pricebook.Id
-            || previousQuote.OpportunityId !== opportunity.Id;
-        let quote = previousQuote;
+        let reusableQuote = previousQuote;
+        if (previousQuote && previousQuote.Status !== "Draft") {
+            reusableQuote = await salesforce.findDraftQuote(opportunity.Id, pricebook.Id, previousQuote.Id);
+        }
+        const createNewQuote = !reusableQuote
+            || reusableQuote.Pricebook2Id !== pricebook.Id
+            || reusableQuote.OpportunityId !== opportunity.Id;
+        let quote = reusableQuote;
         const quoteFields = {
             Name: project.name || `ProjectBuilder ${project.id}`,
             OpportunityId: opportunity.Id,
@@ -458,6 +490,17 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
             DiscountAdd__c: normalizePercent(project.projectDiscount),
             ShowDiscount__c: normalizePercent(project.projectDiscount) > 0
         };
+        const syncOptions = await salesforce.getQuoteSyncOptions(accountId);
+        if (syncOptions.contactField) {
+            const contact = syncOptions.contacts.find(item => item.id === req.body.contactId);
+            if (!contact) return res.status(400).json({ success: false, error: "Bitte einen Kontakt des Salesforce-Kunden auswählen." });
+            quoteFields[syncOptions.contactField] = contact.id;
+        }
+        if (syncOptions.deliveryField) {
+            const deliveryTime = syncOptions.deliveryTimes.find(item => item.value === req.body.deliveryTime);
+            if (!deliveryTime) return res.status(400).json({ success: false, error: "Bitte eine Lieferzeit auswählen." });
+            quoteFields[syncOptions.deliveryField] = deliveryTime.value;
+        }
         if (createNewQuote) {
             const result = await salesforce.createQuote(quoteFields);
             quote = await salesforce.getQuote(result.id)
@@ -467,6 +510,12 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
             `).run(quote.Id, project.id);
         } else {
             await salesforce.updateQuote(quote.Id, quoteFields);
+        }
+
+        // Detach the previous synchronized quote before replacing opportunity lines or
+        // attaching a newly created/reused draft. Salesforce permits only one at a time.
+        if (previousQuote?.IsSyncing && previousQuote.Id !== quote.Id) {
+            await salesforce.synchronizeQuote(opportunity.Id, null);
         }
 
         // Synchronized quotes mirror their line items to the opportunity automatically.

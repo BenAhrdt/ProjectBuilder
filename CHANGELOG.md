@@ -2,6 +2,17 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.4.2 - 13.09.2026
+
+### Neu
+
+- Vor der Salesforce-Übertragung lassen sich Kontakt und Lieferzeit direkt aus den für den Kunden beziehungsweise das Angebot verfügbaren Salesforce-Werten auswählen.
+
+### Behoben
+
+- Beim Wechsel auf einen neuen Angebotsentwurf wird das bisher synchronisierte Angebot sauber getrennt; ein später wieder auf Entwurf gesetztes Angebot kann erneut verwendet werden.
+- Strukturierte Salesforce-Fehler werden mit ihrer tatsächlichen Meldung statt als `[object Object]` angezeigt.
+
 ## 1.4.1 - 13.09.2026
 
 ### Behoben

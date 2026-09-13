@@ -12,7 +12,8 @@ import {
 } from "./projectPricing.js";
 import {
     showAlert,
-    showConfirm
+    showConfirm,
+    showChoice
 } from "../utils/modal.js";
 
 let collapsedNodes = new Set();
@@ -785,6 +786,44 @@ function registerProjectSalesforceSync(projectId) {
     button.addEventListener("click", async () => {
         clearTimeout(saveTimeout);
         await saveProject(projectId);
+        let quoteOptions;
+        try {
+            const optionsResponse = await fetch(`/api/salesforce/projects/${projectId}/quote-options`);
+            quoteOptions = await optionsResponse.json();
+            if (!optionsResponse.ok) throw new Error(quoteOptions.error || i18n.t("project.salesforceSyncFailed"));
+        } catch (error) {
+            await showAlert(error.message, { title: i18n.t("project.salesforceSyncFailed") });
+            return;
+        }
+        let contactId = null;
+        if (quoteOptions.contactField) {
+            if (quoteOptions.contacts.length === 0) {
+                await showAlert(i18n.t("project.salesforceNoContacts"), { title: i18n.t("project.salesforceSyncFailed") });
+                return;
+            }
+            contactId = await showChoice(i18n.t("project.salesforceSelectContact"), {
+                title: i18n.t("project.salesforceSync"),
+                choices: quoteOptions.contacts.map(contact => ({
+                    value: contact.id,
+                    label: contact.email ? `${contact.name} (${contact.email})` : contact.name
+                })),
+                choiceLayout: "list"
+            });
+            if (!contactId) return;
+        }
+        let deliveryTime = null;
+        if (quoteOptions.deliveryField) {
+            if (quoteOptions.deliveryTimes.length === 0) {
+                await showAlert(i18n.t("project.salesforceNoDeliveryTimes"), { title: i18n.t("project.salesforceSyncFailed") });
+                return;
+            }
+            deliveryTime = await showChoice(i18n.t("project.salesforceSelectDeliveryTime"), {
+                title: i18n.t("project.salesforceSync"),
+                choices: quoteOptions.deliveryTimes.map(item => ({ value: item.value, label: item.label })),
+                choiceLayout: "list"
+            });
+            if (!deliveryTime) return;
+        }
         const confirmed = await showConfirm(
             i18n.t("project.salesforceSyncConfirm"),
             {
@@ -803,7 +842,11 @@ function registerProjectSalesforceSync(projectId) {
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ language: i18n.getCurrentLanguage() })
+                    body: JSON.stringify({
+                        language: i18n.getCurrentLanguage(),
+                        contactId,
+                        deliveryTime
+                    })
                 }
             );
             const result = await response.json();

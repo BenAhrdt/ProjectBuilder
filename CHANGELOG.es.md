@@ -2,6 +2,14 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.4.2 - 13.09.2026
+### Nuevo
+- Antes de transferir a Salesforce, se pueden seleccionar el contacto y el plazo de entrega entre los valores disponibles en Salesforce.
+
+### Corregido
+- Al cambiar a un nuevo borrador se desvincula correctamente la oferta sincronizada anteriormente; una oferta que vuelva a borrador puede reutilizarse.
+- Los errores estructurados de Salesforce muestran su mensaje real en lugar de `[object Object]`.
+
 ## 1.4.1 - 13.09.2026
 ### Corregido
 - Tras la transferencia a Salesforce, la oferta se establece ahora como oferta sincronizada de la oportunidad para que pueda enviarse a aprobación.

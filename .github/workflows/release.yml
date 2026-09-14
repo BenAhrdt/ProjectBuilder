@@ -24,7 +24,7 @@ jobs:
       - name: Repository auschecken
         uses: actions/checkout@v7
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref }}
+          ref: ${{ github.ref }}
 
       - name: Node.js einrichten
         uses: actions/setup-node@v6

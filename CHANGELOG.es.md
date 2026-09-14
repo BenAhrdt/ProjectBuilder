@@ -2,6 +2,12 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.3 - 14.09.2026
+### Modificado
+- Cuando una acción de Salesforce requiere iniciar sesión, el usuario puede conectarse directamente desde el aviso y la acción original se repite automáticamente.
+- La detección del plazo de entrega reconoce más nombres de campo en alemán e inglés y valores de tiempo habituales.
+- El plazo de entrega permanece visible en el diálogo de sincronización. La falta de acceso al campo o de valores seleccionables se explica en lugar de ocultar el campo.
+
 ## 1.5.2 - 14.09.2026
 ### Nuevo
 - Los clientes, oportunidades y ofertas vinculados se pueden abrir directamente en Salesforce. Los enlaces solo aparecen para registros sincronizados correctamente que siguen existiendo en Salesforce.

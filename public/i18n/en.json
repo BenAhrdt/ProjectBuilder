@@ -113,6 +113,8 @@
     "salesforce.connecting": "Signing in…",
     "salesforce.completeLogin": "Complete the Salesforce sign-in in your browser.",
     "salesforce.connected": "Connected to Salesforce.",
+    "salesforce.connectionRequiredTitle": "Salesforce sign-in required",
+    "salesforce.connectionRequired": "This action requires a Salesforce sign-in. Connect to Salesforce now?",
     "articles.articles": "Articles",
     "articles.search": "Search",
     "articles.articleCount": "Actual article count",

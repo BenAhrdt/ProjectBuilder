@@ -113,6 +113,8 @@
     "salesforce.connecting": "Iniciando sesión…",
     "salesforce.completeLogin": "Complete el inicio de sesión de Salesforce en el navegador.",
     "salesforce.connected": "Conectado con Salesforce.",
+    "salesforce.connectionRequiredTitle": "Se requiere iniciar sesión en Salesforce",
+    "salesforce.connectionRequired": "Esta acción requiere iniciar sesión en Salesforce. ¿Conectar ahora?",
     "articles.articles": "Artículos",
     "articles.search": "Buscar",
     "articles.articleCount": "Número actual de artículos",

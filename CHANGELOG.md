@@ -2,6 +2,14 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.3 - 14.09.2026
+
+### Geändert
+
+- Fehlt bei einer Salesforce-Aktion die Anmeldung, kann die Verbindung direkt aus dem Hinweis hergestellt werden; anschließend wird die ursprüngliche Aktion automatisch erneut ausgeführt.
+- Die Lieferzeit im Salesforce-Synchronisierungsdialog wird über zusätzliche deutsche und englische Feldbezeichnungen sowie typische Zeitwerte erkannt.
+- Die Lieferzeit bleibt im Synchronisierungsdialog sichtbar. Fehlende Feldfreigaben oder Auswahlwerte werden verständlich ausgewiesen, statt das Feld kommentarlos auszublenden.
+
 ## 1.5.2 - 14.09.2026
 
 ### Neu

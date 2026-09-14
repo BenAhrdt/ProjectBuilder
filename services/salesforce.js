@@ -312,7 +312,16 @@ export async function getQuoteSyncOptions(accountId) {
         field.createable && field.updateable && field.type === "picklist"
     );
     const deliveryField = selectableDeliveryFields.find(field => configuredDeliveryField && field.name === configuredDeliveryField)
-        ?? selectableDeliveryFields.find(field => /lieferzeit|delivery\s*time/i.test(`${field.label ?? ""} ${field.name ?? ""}`));
+        ?? selectableDeliveryFields.find(field =>
+            /liefer(?:zeit|termin)|delivery|lead.?time|shipping.?time/i
+                .test(`${field.label ?? ""} ${field.name ?? ""}`)
+        )
+        ?? selectableDeliveryFields.find(field =>
+            (field.picklistValues ?? []).filter(value => value.active).some(value =>
+                /\b(?:tag|tage|woche|wochen|monat|monate|day|days|week|weeks|month|months)\b/i
+                    .test(`${value.label ?? ""} ${value.value ?? ""}`)
+            )
+        );
 
     return {
         contactField: contactField?.name ?? null,

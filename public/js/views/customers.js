@@ -4,6 +4,7 @@ await i18n.loadLanguage();
 import * as router from "../router.js";
 import { showAlert } from "../utils/modal.js";
 import { openSalesforceCustomerDialog } from "../utils/salesforceCustomers.js";
+import { offerSalesforceConnection } from "../utils/salesforceConnection.js";
 
 const view =
     document.getElementById("view");
@@ -272,6 +273,11 @@ function generateHandler() {
             await showAlert(i18n.t("salesforce.refreshComplete").replace("{count}", result.updated));
             await renderView();
         } catch (error) {
+            if (await offerSalesforceConnection(error)) {
+                button.disabled = false;
+                button.textContent = originalText;
+                return button.click();
+            }
             await showAlert(error.message ?? i18n.t("salesforce.error"));
         } finally {
             button.disabled = false;

@@ -6,6 +6,7 @@ import {
     showChoice
 } from "../utils/modal.js";
 import * as router from "../router.js";
+import { offerSalesforceConnection } from "../utils/salesforceConnection.js";
 
 await i18n.loadLanguage();
 
@@ -575,6 +576,11 @@ async function checkSalesforceAvailability() {
                 .replace("{pricebook}", result.pricebookName)
         );
     } catch (error) {
+        if (await offerSalesforceConnection(error)) {
+            button.disabled = false;
+            button.innerHTML = originalContent;
+            return checkSalesforceAvailability();
+        }
         await showAlert(error.message || i18n.t("articles.salesforceCheckFailed"));
     } finally {
         button.disabled = false;
@@ -679,6 +685,11 @@ async function importSalesforcePricebook() {
                 .replace("{currency}", importResult.currencyIsoCode)
         );
     } catch (error) {
+        if (await offerSalesforceConnection(error)) {
+            button.disabled = false;
+            button.innerHTML = originalContent;
+            return importSalesforcePricebook();
+        }
         await showAlert(error.message || i18n.t("articles.salesforceImportFailed"));
     } finally {
         if (button.isConnected) {

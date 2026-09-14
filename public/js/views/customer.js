@@ -5,6 +5,7 @@ import {
     showConfirm
 } from "../utils/modal.js";
 import { openSalesforceCustomerDialog } from "../utils/salesforceCustomers.js";
+import { offerSalesforceConnection } from "../utils/salesforceConnection.js";
 
 await i18n.loadLanguage();
 
@@ -278,6 +279,11 @@ function registerSalesforceActions(customerId, customer) {
             await showAlert(i18n.t("salesforce.customerUpdated"));
             await renderView(customerId);
         } catch (error) {
+            if (await offerSalesforceConnection(error)) {
+                button.disabled = false;
+                button.textContent = originalText;
+                return button.click();
+            }
             await showAlert(error.message ?? i18n.t("salesforce.error"));
         } finally {
             button.disabled = false;

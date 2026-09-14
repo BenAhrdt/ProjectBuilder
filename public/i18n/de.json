@@ -113,6 +113,8 @@
     "salesforce.connecting": "Anmeldung läuft…",
     "salesforce.completeLogin": "Bitte die Salesforce-Anmeldung im Browser abschließen.",
     "salesforce.connected": "Mit Salesforce verbunden.",
+    "salesforce.connectionRequiredTitle": "Salesforce-Anmeldung erforderlich",
+    "salesforce.connectionRequired": "Für diese Aktion ist eine Salesforce-Anmeldung erforderlich. Jetzt mit Salesforce verbinden?",
     "articles.articles": "Artikel",
     "articles.search": "Suchen",
     "articles.articleCount": "Aktuelle Artikelanzahl",

@@ -2,6 +2,12 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.3 - 14.09.2026
+### Changed
+- When a Salesforce action requires sign-in, users can connect directly from the notice and the original action is retried automatically.
+- Delivery time detection now recognizes additional German and English field names as well as typical time values.
+- Delivery time remains visible in the synchronization dialog. Missing field access or selectable values are explained instead of silently hiding the field.
+
 ## 1.5.2 - 14.09.2026
 ### Added
 - Linked customers, opportunities, and quotes can be opened directly in Salesforce. Links are shown only for successfully synchronized records that still exist in Salesforce.

@@ -16,6 +16,7 @@ import {
     showChoice,
     showSelectForm
 } from "../utils/modal.js";
+import { offerSalesforceConnection } from "../utils/salesforceConnection.js";
 
 let collapsedNodes = new Set();
 let currentNodes = [];
@@ -820,6 +821,10 @@ function registerProjectSalesforceSync(projectId) {
             quoteOptions = await optionsResponse.json();
             if (!optionsResponse.ok) throw new Error(quoteOptions.error || i18n.t("project.salesforceSyncFailed"));
         } catch (error) {
+            if (await offerSalesforceConnection(error)) {
+                button.disabled = false;
+                return button.click();
+            }
             await showAlert(error.message, { title: i18n.t("project.salesforceSyncFailed") });
             return;
         }
@@ -836,11 +841,13 @@ function registerProjectSalesforceSync(projectId) {
                         value: contact.id, label: contact.email ? `${contact.name} (${contact.email})` : contact.name
                     }))]
                 }] : []),
-                ...(quoteOptions.deliveryField ? [{
+                {
                     name: "deliveryTime", label: i18n.t("project.salesforceDeliveryTime"), required: false,
                     value: deliveryExists ? quoteOptions.saved.deliveryTime : "",
-                    options: [{ value: "", label: i18n.t("project.salesforceNoSelection") }, ...quoteOptions.deliveryTimes]
-                }] : []),
+                    options: quoteOptions.deliveryField && quoteOptions.deliveryTimes.length
+                        ? [{ value: "", label: i18n.t("project.salesforceNoSelection") }, ...quoteOptions.deliveryTimes]
+                        : [{ value: "", label: i18n.t("project.salesforceNoDeliveryTimes") }]
+                },
                 { name: "articleMode", label: i18n.t("project.salesforceArticleMode"), value: quoteOptions.saved.articleMode, options: [
                     ["commercial_total", "project.salesforceModeTotal"], ["commercial_building", "project.salesforceModeBuilding"],
                     ["commercial_panel", "project.salesforceModePanel"], ["commercial_field", "project.salesforceModeField"],
@@ -859,6 +866,8 @@ function registerProjectSalesforceSync(projectId) {
             ],
             validate: values => values.syncScope === "opportunity_quote" && quoteOptions.contactField && !values.contactId
                 ? i18n.t("project.salesforceContactRequired")
+                : values.syncScope === "opportunity_quote" && (!quoteOptions.deliveryField || !quoteOptions.deliveryTimes.length)
+                    ? i18n.t("project.salesforceNoDeliveryTimes")
                 : values.syncScope === "opportunity_quote" && quoteOptions.deliveryField && !values.deliveryTime
                     ? i18n.t("project.salesforceDeliveryRequired") : ""
         });
@@ -911,6 +920,11 @@ function registerProjectSalesforceSync(projectId) {
             if (selectedUrl) window.open(selectedUrl, "_blank", "noopener,noreferrer");
             await renderView(projectId);
         } catch (error) {
+            if (await offerSalesforceConnection(error)) {
+                button.disabled = false;
+                button.innerHTML = originalText;
+                return button.click();
+            }
             await showAlert(error.message, { title: i18n.t("project.salesforceSyncFailed") });
             button.disabled = false;
             button.innerHTML = originalText;

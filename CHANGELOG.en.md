@@ -2,6 +2,10 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.5 - 14.09.2026
+### Changed
+- The “Add project” form now uses a compact single-row layout. Project name, customer, description, and the save button have a consistent height and rearrange responsively in smaller windows.
+
 ## 1.5.4 - 14.09.2026
 ### Added
 - Projects can be created directly from the customer view, with the currently open customer assigned automatically.

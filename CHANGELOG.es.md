@@ -2,6 +2,10 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.5 - 14.09.2026
+### Cambiado
+- El formulario «Añadir proyecto» ahora utiliza un diseño compacto en una sola fila. El nombre del proyecto, el cliente, la descripción y el botón de guardar tienen una altura uniforme y se reorganizan de forma adaptable en ventanas pequeñas.
+
 ## 1.5.4 - 14.09.2026
 ### Nuevo
 - Los proyectos se pueden crear directamente desde la vista del cliente y el cliente abierto se asigna automáticamente.

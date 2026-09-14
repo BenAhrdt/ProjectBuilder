@@ -2,6 +2,12 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.5 - 14.09.2026
+
+### Geändert
+
+- Das Formular „Projekt hinzufügen“ ist jetzt kompakt in einer Zeile ausgerichtet. Projektname, Kunde, Beschreibung und Speichern-Schaltfläche besitzen eine einheitliche Höhe und ordnen sich bei kleineren Fenstern responsiv an.
+
 ## 1.5.4 - 14.09.2026
 
 ### Neu

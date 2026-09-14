@@ -258,7 +258,7 @@
 
 #project-form-container {
 
-    margin-bottom: 20px;
+    margin-bottom: 12px;
 
 }
 
@@ -267,44 +267,16 @@
     display: grid;
 
     grid-template-columns:
-        200px
-        1fr
-        200px;
+        minmax(180px, 280px)
+        minmax(180px, 280px)
+        minmax(260px, 1fr)
+        auto;
 
     gap: 12px;
 
-    padding: 20px;
+    padding: 16px 20px;
 
-    background: #f7f7f7;
-
-    border-radius: 12px;
-
-}
-
-#project-additional-info {
-
-    grid-column: 1 / -1;
-
-    min-height: 100px;
-
-    resize: vertical;
-
-}
-
-#project-form-container .project-form {
-
-    display: grid;
-
-    grid-template-columns:
-        180px
-        180px
-        1fr;
-
-    gap: 16px;
-
-    padding: 20px;
-
-    margin-bottom: 20px;
+    margin-bottom: 12px;
 
     background: white;
 
@@ -356,9 +328,13 @@
 
 #save-project-button {
 
-    width: 180px;
+    width: auto;
 
-    padding: 12px;
+    min-width: 120px;
+
+    height: 38px;
+
+    padding: 0 18px;
 
     border: none;
 
@@ -441,7 +417,7 @@
 
     width: 100%;
 
-    height: 48px;
+    height: 38px;
 
     padding: 0 40px 0 14px;
 
@@ -523,14 +499,47 @@
 #project-form-container #project-name,
 #project-form-container #project-customer {
 
-    height: 60px;
+    height: 38px;
 
 }
 
 #project-form-container #project-description {
 
-    height: 60px;
+    height: 38px;
 
-    resize: none;
+    min-height: 38px;
 
+    resize: vertical;
+
+}
+
+@media (max-width: 1100px) {
+    #project-form-container .project-form {
+        grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr);
+    }
+
+    #project-form-container #project-description {
+        grid-column: 1 / -1;
+    }
+
+    #save-project-button {
+        grid-column: 2;
+        justify-self: end;
+    }
+}
+
+@media (max-width: 700px) {
+    #project-form-container .project-form {
+        grid-template-columns: 1fr;
+        padding: 14px;
+    }
+
+    #project-form-container #project-description,
+    #save-project-button {
+        grid-column: 1;
+    }
+
+    #save-project-button {
+        width: 100%;
+    }
 }

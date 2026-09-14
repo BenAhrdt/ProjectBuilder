@@ -119,6 +119,16 @@ const articleIconRules = [
         ]
     },
     {
+        icon: "module-mf8.png",
+        keywords: [
+            "5231249",
+            "mf8",
+            "mf 8",
+            "module mf8",
+            "modul mf8"
+        ]
+    },
+    {
         icon: "module-96rcm.png",
         keywords: [
             "96-rcm",
@@ -5020,12 +5030,42 @@ function getArticleIcon(
 ) {
 
     if (
+        isCt24CableArticle(
+            article
+        )
+    ) {
+
+        return "/icons/article.png";
+
+    }
+
+    if (
+        isCt24SensorArticle(
+            article
+        )
+    ) {
+
+        return "/icons/ct24-.png";
+
+    }
+
+    if (
         isDlArticle(
             article
         )
     ) {
 
         return "/icons/dl.png";
+
+    }
+
+    if (
+        isCtAcRcmArticle(
+            article
+        )
+    ) {
+
+        return "/icons/ct-ac%20rcm.png";
 
     }
 
@@ -5141,6 +5181,26 @@ function isDlArticle(
 
 }
 
+function isCt24CableArticle(
+    article = {}
+) {
+
+    return /^150312[1-3]$/.test(
+        String(article.articleNumber ?? "").trim()
+    );
+
+}
+
+function isCt24SensorArticle(
+    article = {}
+) {
+
+    return /^150312[4-9]$/.test(
+        String(article.articleNumber ?? "").trim()
+    );
+
+}
+
 function isCtArticle(
     article = {}
 ) {
@@ -5153,6 +5213,16 @@ function isCtArticle(
             .trim()
             .toLowerCase()
             .startsWith("ct-")
+    );
+
+}
+
+function isCtAcRcmArticle(
+    article = {}
+) {
+
+    return /^CT-AC\s+RCM\s+(?:A)?(?:35|80|110|140|150|210|310)N\b/i.test(
+        String(article.manufacturerType ?? "").trim()
     );
 
 }

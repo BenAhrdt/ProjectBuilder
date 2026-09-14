@@ -2,6 +2,13 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.7 - 14.09.2026
+
+### Geändert
+
+- Neue Produktsymbole werden für das Modul 800-MF8 sowie CT-AC-RCM- und CT24-Stromwandler angezeigt.
+- CT24-Kabel und weiteres Wandlerzubehör verwenden wieder das neutrale Standardsymbol.
+
 ## 1.5.6 - 14.09.2026
 
 ### Neu

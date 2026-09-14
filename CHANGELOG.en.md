@@ -2,6 +2,11 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.7 - 14.09.2026
+### Changed
+- New product icons are shown for the 800-MF8 module, CT-AC-RCM transformers, and CT24 current transformers.
+- CT24 cables and other transformer accessories use the neutral default icon again.
+
 ## 1.5.6 - 14.09.2026
 ### Added
 - The header now provides browser-style back and forward buttons for navigating through visited views. Unavailable directions are disabled automatically.

@@ -6,6 +6,7 @@ import {
 } from "../utils/modal.js";
 import { openSalesforceCustomerDialog } from "../utils/salesforceCustomers.js";
 import { offerSalesforceConnection } from "../utils/salesforceConnection.js";
+import { averageOrderValue, calculateSalesMetrics } from "../utils/customerSalesMetrics.js";
 
 await i18n.loadLanguage();
 
@@ -14,6 +15,19 @@ const view =
         "view"
     );
 let saveTimeout;
+let customerViewState = createCustomerViewState();
+
+function createCustomerViewState(customerId = null) {
+    return {
+        customerId,
+        activeTab: "general",
+        projects: null,
+        projectsPromise: null,
+        sales: null,
+        salesPromise: null,
+        additionalInfoOpen: null
+    };
+}
 
 function escapeHtml(value) {
     return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;")
@@ -23,19 +37,11 @@ function escapeHtml(value) {
 async function renderView(
     customerId
 ) {
-
-    const [customerResponse, projectsResponse] =
-        await Promise.all([
-            fetch(`/api/customers/${customerId}`),
-            fetch(`/api/projects?customerId=${encodeURIComponent(customerId)}`)
-        ]);
-
+    if (String(customerViewState.customerId) !== String(customerId)) {
+        customerViewState = createCustomerViewState(customerId);
+    }
+    const customerResponse = await fetch(`/api/customers/${customerId}`);
     const customer = await customerResponse.json();
-    const projects = await projectsResponse.json();
-    const salesforceLink = await loadSalesforceCustomerLink(
-        customerId,
-        customer.salesforceId
-    );
 
     view.innerHTML = `
 
@@ -51,6 +57,16 @@ async function renderView(
             id="customer-content"
             class="view-content"
         >
+
+            <div class="customer-tabs" role="tablist"
+                aria-label="${i18n.t("customer.sections")}">
+                ${renderTab("general", i18n.t("customer.tabGeneral"))}
+                ${renderTab("projects", i18n.t("customer.tabProjects"))}
+                ${renderTab("sales", i18n.t("customer.tabSales"))}
+            </div>
+
+            <section id="customer-panel-general" class="customer-tab-panel"
+                role="tabpanel" aria-labelledby="customer-tab-general">
 
             <div class="customer-card">
 
@@ -68,12 +84,7 @@ async function renderView(
                             <button id="salesforce-refresh-customer" type="button">
                                 ${i18n.t("salesforce.refreshCustomer")}
                             </button>` : ""}
-                        ${salesforceLink ? `
-                            <a class="salesforce-record-link"
-                                href="${escapeHtml(salesforceLink.url)}"
-                                target="_blank" rel="noopener noreferrer">
-                                ${i18n.t("salesforce.openCustomer")}
-                            </a>` : ""}
+                        <span id="salesforce-customer-link"></span>
                         <button
                             id="delete-customer"
                             type="button"
@@ -163,17 +174,6 @@ async function renderView(
 
                     </div>
 
-                    ${customer.salesforceId ? `
-                        <section id="customer-order-intake"
-                            class="customer-order-intake"
-                            aria-live="polite">
-                            <h3>${i18n.t("customer.orderIntake")}</h3>
-                            <div class="customer-order-intake-grid">
-                                ${renderOrderIntakeLoading()}
-                            </div>
-                        </section>
-                    ` : ""}
-
                     <div class="customer-discounts-wrapper">
 
                         <h3>
@@ -189,7 +189,7 @@ async function renderView(
                     </div>
 
                     <details class="customer-additional-info-wrapper"
-                        ${customer.additionalInfo ? "open" : ""}>
+                        ${(customerViewState.additionalInfoOpen ?? Boolean(customer.additionalInfo)) ? "open" : ""}>
                         <summary>${i18n.t("customer.additionalInfo")}</summary>
                         <textarea id="customer-additional-info"
                             rows="1">${escapeHtml(customer.additionalInfo)}</textarea>
@@ -199,51 +199,17 @@ async function renderView(
 
             </div>
 
-            <div class="customer-projects-card">
-                <div class="customer-projects-header">
-                    <h2>${i18n.t("customer.projects")}</h2>
-                    <div class="customer-projects-header-actions">
-                        <span>${projects.length} ${projects.length === 1 ? i18n.t("customer.projectSingular") : i18n.t("customer.projectPlural")}</span>
-                        <button id="add-customer-project" type="button">
-                            + ${i18n.t("projects.addProject")}
-                        </button>
-                    </div>
-                </div>
+            </section>
 
-                <div id="customer-project-form" class="customer-project-form hidden">
-                    <input id="new-project-name" type="text"
-                        placeholder="${i18n.t("projects.projectname")}">
-                    <textarea id="new-project-description" rows="1"
-                        placeholder="${i18n.t("projects.description")}"></textarea>
-                    <button id="cancel-customer-project" type="button">${i18n.t("common.cancel")}</button>
-                    <button id="save-customer-project" type="button">${i18n.t("common.save")}</button>
-                </div>
+            <section id="customer-panel-projects" class="customer-tab-panel" role="tabpanel"
+                aria-labelledby="customer-tab-projects" hidden>
+                <div id="customer-projects-content"></div>
+            </section>
 
-                ${projects.length > 0 ? `
-                    <table class="customer-projects-table">
-                        <thead>
-                            <tr>
-                                <th>${i18n.t("customer.projectName")}</th>
-                                <th>${i18n.t("customer.description")}</th>
-                                <th>${i18n.t("common.actions")}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${projects.map(project => `
-                                <tr class="customer-project-row" data-id="${project.id}" tabindex="0" role="link">
-                                    <td>${escapeHtml(project.name)}</td>
-                                    <td>${escapeHtml(project.description)}</td>
-                                    <td class="customer-project-actions"><button type="button" class="duplicate-customer-project" data-id="${project.id}">${i18n.t("common.duplicate")}</button></td>
-                                </tr>
-                            `).join("")}
-                        </tbody>
-                    </table>
-                ` : `
-                    <div class="customer-projects-empty">
-                        ${i18n.t("customer.noProjects")}
-                    </div>
-                `}
-            </div>
+            <section id="customer-panel-sales" class="customer-tab-panel" role="tabpanel"
+                aria-labelledby="customer-tab-sales" hidden>
+                <div id="customer-sales-content"></div>
+            </section>
 
         </div>
 
@@ -251,79 +217,211 @@ async function renderView(
 
     `;
     generateHandler(customerId);
-    registerCustomerProjectLinks(customerId);
-    registerCustomerProjectCreation(customerId);
     registerCustomerDelete(customerId, customer);
     registerSalesforceActions(customerId, customer);
     registerAdditionalInfoAutoResize();
-    if (customer.salesforceId) loadCustomerOrderIntake(customerId);
+    registerTabs(customerId, customer);
+    if (customer.salesforceId) loadSalesforceCustomerLink(customerId);
+    activateTab(customerViewState.activeTab, customerId, customer, false);
 
 }
 
-function renderOrderIntakeLoading() {
-    const currentYear = new Date().getFullYear();
-    return Array.from({ length: 5 }, (_, index) => `
-        <div class="customer-order-intake-card loading">
-            <span>${currentYear - index}${index === 0 ? ` · ${i18n.t("customer.currentYear")}` : ""}</span>
-            <strong>–</strong>
-            <small>${i18n.t("customer.orderIntakeLoading")}</small>
+function renderTab(name, label) {
+    const selected = customerViewState.activeTab === name;
+    return `<button id="customer-tab-${name}" class="customer-tab" type="button"
+        role="tab" aria-selected="${selected}" aria-controls="customer-panel-${name}"
+        tabindex="${selected ? 0 : -1}" data-tab="${name}">${label}</button>`;
+}
+
+function registerTabs(customerId, customer) {
+    const tabs = [...document.querySelectorAll(".customer-tab")];
+    tabs.forEach((tab, index) => {
+        tab.addEventListener("click", () => activateTab(tab.dataset.tab, customerId, customer));
+        tab.addEventListener("keydown", event => {
+            let targetIndex = null;
+            if (event.key === "ArrowRight") targetIndex = (index + 1) % tabs.length;
+            if (event.key === "ArrowLeft") targetIndex = (index - 1 + tabs.length) % tabs.length;
+            if (event.key === "Home") targetIndex = 0;
+            if (event.key === "End") targetIndex = tabs.length - 1;
+            if (targetIndex === null) return;
+            event.preventDefault();
+            tabs[targetIndex].focus();
+            activateTab(tabs[targetIndex].dataset.tab, customerId, customer);
+        });
+    });
+}
+
+function activateTab(name, customerId, customer, focus = true) {
+    customerViewState.activeTab = name;
+    document.querySelectorAll(".customer-tab").forEach(tab => {
+        const selected = tab.dataset.tab === name;
+        tab.setAttribute("aria-selected", String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+        if (selected && focus) tab.focus();
+    });
+    document.querySelectorAll(".customer-tab-panel").forEach(panel => {
+        panel.hidden = panel.id !== `customer-panel-${name}`;
+    });
+    if (name === "projects") loadCustomerProjects(customerId);
+    if (name === "sales") loadCustomerOrderIntake(customerId, customer);
+}
+
+function renderProjects(projects) {
+    return `<div class="customer-projects-card">
+        <div class="customer-projects-header">
+            <h2>${i18n.t("customer.projects")}</h2>
+            <div class="customer-projects-header-actions">
+                <span>${projects.length} ${projects.length === 1 ? i18n.t("customer.projectSingular") : i18n.t("customer.projectPlural")}</span>
+                <button id="add-customer-project" type="button">+ ${i18n.t("projects.addProject")}</button>
+            </div>
         </div>
-    `).join("");
+        <div id="customer-project-form" class="customer-project-form hidden">
+            <input id="new-project-name" type="text" placeholder="${i18n.t("projects.projectname")}">
+            <textarea id="new-project-description" rows="1" placeholder="${i18n.t("projects.description")}"></textarea>
+            <button id="cancel-customer-project" type="button">${i18n.t("common.cancel")}</button>
+            <button id="save-customer-project" type="button">${i18n.t("common.save")}</button>
+        </div>
+        ${projects.length ? `<div class="customer-projects-table-wrap"><table class="customer-projects-table">
+            <thead><tr><th>${i18n.t("customer.projectName")}</th><th>${i18n.t("customer.description")}</th><th>${i18n.t("common.actions")}</th></tr></thead>
+            <tbody>${projects.map(project => `<tr class="customer-project-row" data-id="${project.id}" tabindex="0" role="link">
+                <td>${escapeHtml(project.name)}</td><td>${escapeHtml(project.description)}</td>
+                <td class="customer-project-actions"><button type="button" class="duplicate-customer-project" data-id="${project.id}">${i18n.t("common.duplicate")}</button></td>
+            </tr>`).join("")}</tbody></table></div>` : `<div class="customer-projects-empty">${i18n.t("customer.noProjects")}</div>`}
+    </div>`;
 }
 
-async function loadCustomerOrderIntake(customerId) {
-    const section = document.getElementById("customer-order-intake");
-    if (!section) return;
-
-    try {
-        const response = await fetch(
-            `/api/salesforce/customers/${customerId}/order-intake`
-        );
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error);
-        if (!result.available) {
-            section.innerHTML = `<h3>${i18n.t("customer.orderIntake")}</h3>
-                <p class="customer-order-intake-empty">${i18n.t("customer.orderIntakeUnavailable")}</p>`;
-            return;
-        }
-
-        const grid = section.querySelector(".customer-order-intake-grid");
-        if (!grid) return;
-        const visibleYears = result.years.slice(0, 5);
-        const earlierYears = result.years.slice(5, 10);
-        grid.innerHTML = visibleYears.map((item, index) =>
-            renderOrderIntakeCard(item, index, result.currency)
-        ).join("");
-
-        section.insertAdjacentHTML("beforeend", `
-            <details class="customer-order-intake-details">
-                <summary>${i18n.t("customer.moreOrderIntakeDetails")}</summary>
-                <div class="customer-order-intake-details-content">
-                    <div>
-                        <h4>${i18n.t("customer.earlierYears")}</h4>
-                        <div class="customer-order-intake-history-grid">
-                            ${earlierYears.map(item =>
-                                renderOrderIntakeCard(item, -1, result.currency)
-                            ).join("")}
-                        </div>
-                    </div>
-                    <div class="customer-order-intake-chart-panel">
-                        <h4>${i18n.t("customer.orderIntakeTrend")}</h4>
-                        ${renderOrderIntakeChart(result.years, result.currency)}
-                    </div>
-                </div>
-            </details>
-        `);
-    } catch {
-        if (!section.isConnected) return;
-        section.innerHTML = `<h3>${i18n.t("customer.orderIntake")}</h3>
-            <p class="customer-order-intake-empty">${i18n.t("customer.orderIntakeUnavailable")}</p>`;
+async function loadCustomerProjects(customerId, force = false) {
+    const container = document.getElementById("customer-projects-content");
+    const state = customerViewState;
+    if (!container) return;
+    if (state.projects && !force) {
+        container.innerHTML = renderProjects(state.projects);
+        registerCustomerProjectLinks(customerId);
+        registerCustomerProjectCreation(customerId);
+        return;
     }
+    if (state.projectsPromise) return state.projectsPromise;
+    container.innerHTML = renderTabLoading(i18n.t("customer.projectsLoading"));
+    state.projectsPromise = (async () => {
+        try {
+            const response = await fetch(`/api/projects?customerId=${encodeURIComponent(customerId)}`);
+            const projects = await response.json();
+            if (!response.ok) throw new Error(projects.error);
+            if (customerViewState !== state) return;
+            state.projects = projects;
+            if (!container.isConnected) return;
+            container.innerHTML = renderProjects(projects);
+            registerCustomerProjectLinks(customerId);
+            registerCustomerProjectCreation(customerId);
+        } catch (error) {
+            if (customerViewState === state && container.isConnected) {
+                container.innerHTML = renderTabError(
+                    error.message || i18n.t("customer.projectsLoadFailed"), "retry-projects"
+                );
+                container.querySelector("#retry-projects")?.addEventListener("click", () =>
+                    loadCustomerProjects(customerId, true));
+            }
+        } finally {
+            state.projectsPromise = null;
+        }
+    })();
+    return state.projectsPromise;
+}
+
+function renderTabLoading(label) {
+    return `<div class="customer-tab-status" role="status"><span class="customer-tab-spinner" aria-hidden="true"></span>${label}</div>`;
+}
+
+function renderTabError(message, buttonId) {
+    return `<div class="customer-tab-status customer-tab-error" role="alert"><p>${escapeHtml(message)}</p>
+        <button id="${buttonId}" type="button">${i18n.t("customer.retry")}</button></div>`;
+}
+
+async function loadCustomerOrderIntake(customerId, customer, force = false) {
+    const container = document.getElementById("customer-sales-content");
+    const state = customerViewState;
+    if (!container) return;
+    if (!customer.salesforceId) {
+        container.innerHTML = `<div class="customer-sales-empty"><h2>${i18n.t("customer.salesUnavailableTitle")}</h2>
+            <p>${i18n.t("customer.salesLinkRequired")}</p>
+            <button id="salesforce-find-from-sales" type="button">${i18n.t("salesforce.searchAndApply")}</button></div>`;
+        document.getElementById("salesforce-find-from-sales")?.addEventListener("click", () =>
+            document.getElementById("salesforce-find-customer")?.click());
+        return;
+    }
+    if (state.sales && !force) {
+        container.innerHTML = renderSales(state.sales);
+        return;
+    }
+    if (state.salesPromise) return state.salesPromise;
+    container.innerHTML = renderTabLoading(i18n.t("customer.orderIntakeLoading"));
+    state.salesPromise = (async () => {
+        try {
+            const response = await fetch(`/api/salesforce/customers/${customerId}/order-intake`);
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error);
+            if (!result.available) throw new Error(i18n.t("customer.orderIntakeUnavailable"));
+            if (customerViewState !== state) return;
+            state.sales = result;
+            if (container.isConnected) container.innerHTML = renderSales(result);
+        } catch (error) {
+            if (customerViewState === state && container.isConnected) {
+                container.innerHTML = renderTabError(
+                    error.message || i18n.t("customer.orderIntakeUnavailable"), "retry-sales");
+                container.querySelector("#retry-sales")?.addEventListener("click", () =>
+                    loadCustomerOrderIntake(customerId, customer, true));
+            }
+        } finally {
+            state.salesPromise = null;
+        }
+    })();
+    return state.salesPromise;
+}
+
+function renderSales(result) {
+    const years = result.years ?? [];
+    const current = years[0];
+    const currentHasData = Boolean(current) && current.hasData !== false;
+    const metrics = calculateSalesMetrics(years);
+    const historyYears = years.slice(0, 10);
+    return `<div class="customer-sales-card">
+        <div class="customer-sales-header"><h2>${i18n.t("customer.salesOverview")}</h2><p>${i18n.t("customer.salesOverviewHint")}</p></div>
+        <div class="customer-sales-metrics">
+            ${renderMetric(i18n.t("customer.orderIntakeYear").replace("{year}", current?.year ?? ""), currentHasData ? formatCurrency(current.orderAmount, result.currency) : "–", formatChange(current?.changePercent, current?.previousYearHasData))}
+            ${renderMetric(i18n.t("customer.ordersCurrentYear"), currentHasData ? String(current.orderCount ?? 0) : "–", currentHasData ? i18n.t("customer.ordersLabel") : i18n.t("customer.notEnoughData"))}
+            ${renderMetric(i18n.t("customer.averageOrderValue"), metrics.currentAverageOrder === null ? "–" : formatCurrency(metrics.currentAverageOrder, result.currency), i18n.t("customer.currentYear"))}
+            ${renderMetric(i18n.t("customer.fiveYearAverage"), metrics.fiveYearComparison === null ? "–" : formatPercent(metrics.fiveYearComparison), metrics.fiveYearComparison === null ? i18n.t("customer.notEnoughData") : i18n.t("customer.comparedToFiveYearAverage"))}
+            ${renderMetric(i18n.t("customer.fiveYearDevelopment"), metrics.cagr === null ? "–" : `${formatPercent(metrics.cagr)} ${i18n.t("customer.perYear")}`, metrics.fiveYearTotal === null ? i18n.t("customer.notEnoughData") : i18n.t("customer.fiveYearTotalChange").replace("{value}", formatPercent(metrics.fiveYearTotal)).replace("{start}", metrics.trendStartYear).replace("{end}", metrics.trendEndYear))}
+        </div>
+        <section class="customer-order-intake"><h3>${i18n.t("customer.tenYearOverview")}</h3>
+            <div class="customer-order-intake-grid customer-order-intake-grid-all">${historyYears.map((item, index) => renderOrderIntakeCard(item, index, result.currency)).join("")}</div></section>
+        <section class="customer-order-intake-chart-panel"><h3>${i18n.t("customer.orderIntakeTrend")}</h3>${renderOrderIntakeChart(years, result.currency)}</section>
+    </div>`;
+}
+
+function renderMetric(label, value, detail) {
+    return `<div class="customer-sales-metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong><small>${escapeHtml(detail)}</small></div>`;
+}
+
+function formatCurrency(value, currency) {
+    return Number(value ?? 0).toLocaleString(i18n.getCurrentLanguage(), { style: "currency", currency: currency || "EUR" });
+}
+
+function formatPercent(value) {
+    const number = Number(value);
+    return `${number > 0 ? "+" : ""}${number.toLocaleString(i18n.getCurrentLanguage(), { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
+}
+
+function formatChange(value, previousYearHasData = true) {
+    return value !== null && value !== undefined && previousYearHasData !== false
+        ? `${formatPercent(value)} ${i18n.t("customer.comparedToPreviousYear")}`
+        : i18n.t("customer.notEnoughData");
 }
 
 function renderOrderIntakeCard(item, index, currency) {
     const change = Number(item.changePercent);
-    const hasComparison = item.changePercent !== null && Number.isFinite(change);
+    const hasComparison = item.changePercent !== null
+        && item.previousYearHasData !== false && Number.isFinite(change);
     const trendClass = change > 0 ? "positive" : change < 0 ? "negative" : "neutral";
     const trendValue = hasComparison
         ? `${change > 0 ? "+" : ""}${change.toLocaleString(
@@ -334,41 +432,50 @@ function renderOrderIntakeCard(item, index, currency) {
     const orderLabel = item.orderCount === 1
         ? i18n.t("customer.orderSingular")
         : i18n.t("customer.orderPlural");
+    const hasData = item.hasData !== false;
 
     return `
         <div class="customer-order-intake-card${index === 0 ? " current" : ""}">
             <div class="customer-order-intake-period">
                 <span>${item.year}${index === 0 ? ` · ${i18n.t("customer.currentYear")}` : ""}:</span>
-                <small>${item.orderCount} ${orderLabel}</small>
+                <small>${hasData ? `${item.orderCount} ${orderLabel}` : i18n.t("customer.noData")}</small>
             </div>
             <div class="customer-order-intake-value">
-                <strong>${Number(item.orderAmount).toLocaleString(
-                    i18n.getCurrentLanguage(),
-                    { style: "currency", currency: currency || "EUR" }
-                )}</strong>
+                <strong>${hasData ? formatCurrency(item.orderAmount, currency) : "–"}</strong>
                 <span class="customer-order-intake-trend ${trendClass}"
                     title="${i18n.t("customer.comparedToPreviousYear")}">
                     ${trendValue}
                 </span>
             </div>
+            <small class="customer-order-average">${i18n.t("customer.averageOrderValue")}: ${averageOrderValue(item) === null
+                ? "–" : formatCurrency(averageOrderValue(item), currency)}</small>
         </div>
     `;
 }
 
 function renderOrderIntakeChart(years, currency) {
-    const values = [...years].reverse();
+    const values = years.filter(item => item.hasData !== false).reverse();
+    if (!values.length) return `<p class="customer-order-intake-empty">${i18n.t("customer.notEnoughData")}</p>`;
     const width = 720;
     const height = 176;
-    const left = 18;
+    const left = 74;
     const right = 18;
     const top = 14;
     const bottom = 28;
     const baseline = height - bottom;
     const maximum = Math.max(...values.map(item => Number(item.orderAmount) || 0), 1);
+    const axisMaximum = getChartAxisMaximum(maximum);
+    const ticks = Array.from({ length: 4 }, (_, index) => {
+        const ratio = index / 3;
+        return {
+            value: axisMaximum * (1 - ratio),
+            y: top + ratio * (baseline - top)
+        };
+    });
     const points = values.map((item, index) => ({
         ...item,
         x: left + index * ((width - left - right) / Math.max(values.length - 1, 1)),
-        y: top + (1 - (Number(item.orderAmount) || 0) / maximum) * (baseline - top)
+        y: top + (1 - (Number(item.orderAmount) || 0) / axisMaximum) * (baseline - top)
     }));
     const line = points.map(point => `${point.x},${point.y}`).join(" ");
     const area = `${left},${baseline} ${line} ${width - right},${baseline}`;
@@ -386,6 +493,14 @@ function renderOrderIntakeChart(years, currency) {
                     <stop offset="100%" stop-color="#4c8bf5" stop-opacity=".02" />
                 </linearGradient>
             </defs>
+            ${ticks.map(tick => `
+                <line x1="${left}" y1="${tick.y}" x2="${width - right}" y2="${tick.y}"
+                    class="customer-order-chart-grid-line" />
+                <text x="${left - 9}" y="${tick.y + 4}"
+                    class="customer-order-chart-y-label">${formatChartAxisValue(tick.value, currency)}</text>
+            `).join("")}
+            <line x1="${left}" y1="${top}" x2="${left}" y2="${baseline}"
+                class="customer-order-chart-axis" />
             <line x1="${left}" y1="${baseline}" x2="${width - right}" y2="${baseline}"
                 class="customer-order-chart-axis" />
             <polygon points="${area}" fill="url(#order-intake-area)" />
@@ -410,6 +525,21 @@ function renderOrderIntakeChart(years, currency) {
     `;
 }
 
+function getChartAxisMaximum(value) {
+    if (value <= 0) return 1;
+    const magnitude = 10 ** Math.floor(Math.log10(value));
+    return Math.ceil(value / magnitude) * magnitude;
+}
+
+function formatChartAxisValue(value, currency) {
+    return Number(value).toLocaleString(i18n.getCurrentLanguage(), {
+        style: "currency",
+        currency: currency || "EUR",
+        notation: "compact",
+        maximumFractionDigits: 1
+    });
+}
+
 function renderOrderIntakeChartTooltip(point, formattedValue, chartWidth, chartTop) {
     const tooltipWidth = 184;
     const tooltipHeight = 59;
@@ -424,7 +554,8 @@ function renderOrderIntakeChartTooltip(point, formattedValue, chartWidth, chartT
         ? i18n.t("customer.orderSingular")
         : i18n.t("customer.orderPlural");
     const change = Number(point.changePercent);
-    const hasComparison = point.changePercent !== null && Number.isFinite(change);
+    const hasComparison = point.changePercent !== null
+        && point.previousYearHasData !== false && Number.isFinite(change);
     const changeValue = hasComparison
         ? `${change > 0 ? "+" : ""}${change.toLocaleString(
             i18n.getCurrentLanguage(),
@@ -457,12 +588,16 @@ function renderOrderIntakeChartTooltip(point, formattedValue, chartWidth, chartT
 function registerAdditionalInfoAutoResize() {
     const textarea = document.getElementById("customer-additional-info");
     if (!textarea) return;
+    const details = textarea.closest("details");
     const resize = () => {
         textarea.style.height = "auto";
         textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 42), 180)}px`;
     };
     textarea.addEventListener("input", resize);
-    textarea.closest("details")?.addEventListener("toggle", resize);
+    details?.addEventListener("toggle", () => {
+        customerViewState.additionalInfoOpen = details.open;
+        resize();
+    });
     resize();
 }
 
@@ -503,7 +638,8 @@ function registerCustomerProjectCreation(customerId) {
             if (!response.ok || !result.success) {
                 throw new Error(result.error || i18n.t("projects.createFailed"));
             }
-            await renderView(customerId);
+            customerViewState.projects = null;
+            await loadCustomerProjects(customerId, true);
         } catch (error) {
             await showAlert(error.message || i18n.t("projects.createFailed"));
             saveButton.disabled = false;
@@ -516,6 +652,12 @@ async function loadSalesforceCustomerLink(customerId, salesforceId) {
     try {
         const response = await fetch(`/api/salesforce/customers/${customerId}/link`);
         const link = await response.json();
+        if (String(customerViewState.customerId) !== String(customerId)) return null;
+        const target = document.getElementById("salesforce-customer-link");
+        if (target?.isConnected && response.ok && link?.url) {
+            target.innerHTML = `<a class="salesforce-record-link" href="${escapeHtml(link.url)}"
+                target="_blank" rel="noopener noreferrer">${i18n.t("salesforce.openCustomer")}</a>`;
+        }
         return response.ok && link?.url ? link : null;
     } catch {
         return null;
@@ -532,7 +674,10 @@ function registerSalesforceActions(customerId, customer) {
                 name: customer.name
             },
             autoSearch: true,
-            onComplete: () => renderView(customerId)
+            onComplete: () => {
+                customerViewState.sales = null;
+                renderView(customerId);
+            }
         });
     });
 
@@ -551,6 +696,7 @@ function registerSalesforceActions(customerId, customer) {
             const result = await response.json();
             if (!response.ok) throw new Error(result.error);
             await showAlert(i18n.t("salesforce.customerUpdated"));
+            customerViewState.sales = null;
             await renderView(customerId);
         } catch (error) {
             if (await offerSalesforceConnection(error)) {
@@ -578,7 +724,8 @@ function registerCustomerProjectLinks(customerId) {
                 });
                 const result = await response.json();
                 if (!response.ok) throw new Error(result.error || i18n.t("projects.duplicateFailed"));
-                await renderView(customerId);
+                customerViewState.projects = null;
+                await loadCustomerProjects(customerId, true);
             } catch (error) {
                 await showAlert(error.message || i18n.t("projects.duplicateFailed"));
                 button.disabled = false;

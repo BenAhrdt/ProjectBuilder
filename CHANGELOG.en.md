@@ -2,6 +2,15 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.12 - 14.09.2026
+### Added
+- The customer detail view is divided into General, Projects, and Sales sections.
+- The customer-specific sales overview adds five-year comparisons, average order values, and a labelled ten-year chart.
+
+### Improved
+- Projects and Salesforce sales data are loaded only when their tab is opened and are not queried again during normal tab changes.
+- Expanded sections and the active customer tab are retained when the view is refreshed.
+
 ## 1.5.11 - 14.09.2026
 ### Added
 - The customer view shows Salesforce order intake for the latest five years, including order count and percentage change from the previous year.

@@ -1,6 +1,6 @@
 {
   "name": "projectbuilder",
-  "version": "1.5.11",
+  "version": "1.5.12",
   "type": "module",
   "description": "",
   "main": "electron/main.js",
@@ -19,6 +19,7 @@
   "build": {
     "appId": "de.benahrdt.projectbuilder",
     "productName": "ProjectBuilder",
+    "artifactName": "${productName}-Setup-${version}.${ext}",
     "directories": {
       "output": "release"
     },

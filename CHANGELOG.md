@@ -2,6 +2,18 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.12 - 14.09.2026
+
+### Neu
+
+- Die Kundendetailansicht ist in die Bereiche „Allgemein“, „Projekte“ und „Vertrieb“ gegliedert.
+- Die kundenspezifische Vertriebsübersicht ergänzt Fünfjahresvergleiche, durchschnittliche Auftragswerte und eine beschriftete Zehnjahresgrafik.
+
+### Verbessert
+
+- Projekte und Salesforce-Vertriebsdaten werden erst beim Öffnen ihres Tabs geladen und bei normalen Tab-Wechseln nicht erneut abgefragt.
+- Aufklappzustände und der aktive Kunden-Tab bleiben bei Aktualisierungen der Ansicht erhalten.
+
 ## 1.5.11 - 14.09.2026
 
 ### Neu

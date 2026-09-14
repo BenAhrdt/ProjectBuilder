@@ -17,6 +17,119 @@
 
 }
 
+.customer-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 14px;
+    padding: 4px;
+    border: 1px solid #d9e1ec;
+    border-radius: 10px;
+    background: #f7f9fc;
+}
+
+.customer-tab {
+    min-width: 120px;
+    padding: 9px 18px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: #526173;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+}
+
+.customer-tab:hover { background: #edf3fb; }
+.customer-tab[aria-selected="true"] {
+    background: white;
+    color: #175cd3;
+    box-shadow: 0 1px 4px rgba(31,53,82,.16);
+}
+.customer-tab:focus-visible {
+    outline: 3px solid rgba(76,139,245,.28);
+    outline-offset: 1px;
+}
+.customer-tab-panel[hidden] { display: none; }
+.customer-tab-panel .customer-projects-card { margin-top: 0; }
+
+.customer-tab-status,
+.customer-sales-empty {
+    display: flex;
+    min-height: 150px;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    box-sizing: border-box;
+    padding: 28px;
+    border: 1px solid #d9e1ec;
+    border-radius: 12px;
+    background: white;
+    color: #526173;
+}
+.customer-tab-spinner {
+    width: 18px;
+    height: 18px;
+    border: 3px solid #dbe7f6;
+    border-top-color: #3578d4;
+    border-radius: 50%;
+    animation: customer-spin .8s linear infinite;
+}
+@keyframes customer-spin { to { transform: rotate(360deg); } }
+.customer-tab-error { flex-direction: column; color: #b42318; }
+.customer-tab-error p { margin: 0; }
+.customer-tab-error button,
+.customer-sales-empty button {
+    padding: 9px 13px;
+    border: 1px solid #8bb6ee;
+    border-radius: 8px;
+    background: white;
+    color: #175cd3;
+    cursor: pointer;
+    font-weight: 700;
+}
+.customer-sales-empty { flex-direction: column; text-align: center; }
+.customer-sales-empty h2, .customer-sales-empty p { margin: 0; }
+
+.customer-sales-card {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 16px;
+    border-radius: 12px;
+    background: white;
+    box-shadow: 0 2px 10px rgba(0,0,0,.06);
+}
+.customer-sales-header h2, .customer-sales-header p,
+.customer-sales-card h3 { margin: 0; }
+.customer-sales-header p { margin-top: 4px; color: #667085; font-size: 13px; }
+.customer-sales-metrics {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+}
+.customer-sales-metric {
+    display: flex;
+    min-width: 0;
+    min-height: 92px;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 12px;
+    border: 1px solid #d9e1ec;
+    border-radius: 9px;
+    background: #f7f9fc;
+    box-sizing: border-box;
+}
+.customer-sales-metric span { color: #526173; font-size: 12px; font-weight: 700; }
+.customer-sales-metric strong { color: #1f3552; font-size: 19px; }
+.customer-sales-metric small { color: #667085; font-size: 11px; }
+.customer-order-average {
+    display: block;
+    margin-top: 5px;
+    color: #667085;
+    font-size: 10px;
+}
+.customer-projects-table-wrap { overflow-x: auto; }
+
 .customer-projects-card {
     margin-top: 16px;
     overflow: hidden;
@@ -326,6 +439,10 @@
     gap: 9px;
 }
 
+.customer-order-intake-grid-all {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .customer-order-intake-card {
     min-width: 0;
     padding: 7px 9px;
@@ -455,6 +572,17 @@
 .customer-order-chart-axis {
     stroke: #cbd5e1;
     stroke-width: 1;
+}
+
+.customer-order-chart-grid-line {
+    stroke: #e8edf3;
+    stroke-width: 1;
+}
+
+.customer-order-chart-y-label {
+    fill: #7a8798;
+    font-size: 9px;
+    text-anchor: end;
 }
 
 .customer-order-chart-line {
@@ -588,6 +716,19 @@
     .customer-project-form { grid-template-columns: 1fr 1fr; }
     .customer-order-intake-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .customer-order-intake-details-content { grid-template-columns: 1fr; }
+    .customer-sales-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1051px) and (max-width: 1350px) {
+    .customer-order-intake-grid-all { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 650px) {
+    .customer-tabs { overflow-x: auto; }
+    .customer-tab { min-width: 100px; flex: 1; }
+    .customer-sales-metrics { grid-template-columns: 1fr; }
+    .customer-form-top { grid-template-columns: 1fr; }
+    .customer-projects-header { align-items: flex-start; flex-direction: column; }
 }
 
 .discount-input-wrapper {

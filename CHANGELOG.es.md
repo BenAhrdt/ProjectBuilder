@@ -2,6 +2,15 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.12 - 14.09.2026
+### Nuevo
+- La vista detallada del cliente se divide en las secciones General, Proyectos y Ventas.
+- El resumen de ventas específico del cliente añade comparaciones de cinco años, valores medios de pedido y un gráfico de diez años etiquetado.
+
+### Mejorado
+- Los proyectos y los datos de ventas de Salesforce solo se cargan al abrir su pestaña y no se vuelven a consultar durante cambios normales de pestaña.
+- Las secciones desplegadas y la pestaña activa del cliente se conservan al actualizar la vista.
+
 ## 1.5.11 - 14.09.2026
 ### Nuevo
 - La vista del cliente muestra la entrada de pedidos de Salesforce de los últimos cinco años, incluida la cantidad de pedidos y la variación porcentual respecto al año anterior.

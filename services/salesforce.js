@@ -316,6 +316,7 @@ export async function getAnnualOrderIntake(accountId, currentYear = new Date().g
         const record = valuesByYear.get(year);
         return {
             year,
+            hasData: Boolean(record),
             orderCount: Number(record?.orderCount) || 0,
             orderAmount: Number(record?.orderAmount) || 0
         };
@@ -325,6 +326,7 @@ export async function getAnnualOrderIntake(accountId, currentYear = new Date().g
         const previousAmount = annualValues[index + 1].orderAmount;
         return {
             ...item,
+            previousYearHasData: annualValues[index + 1].hasData,
             changePercent: previousAmount === 0
                 ? null
                 : ((item.orderAmount - previousAmount) / previousAmount) * 100

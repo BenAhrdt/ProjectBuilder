@@ -2,6 +2,15 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.11 - 14.09.2026
+### Nuevo
+- La vista del cliente muestra la entrada de pedidos de Salesforce de los últimos cinco años, incluida la cantidad de pedidos y la variación porcentual respecto al año anterior.
+- “Más detalles” ofrece cinco años adicionales y un gráfico interactivo de diez años.
+- Al pasar el puntero sobre los puntos del gráfico se muestran el año, la cantidad de pedidos, la entrada de pedidos y la variación interanual.
+
+### Modificado
+- El resumen de entrada de pedidos utiliza tarjetas compactas de dos líneas y distingue por color el crecimiento y la disminución.
+
 ## 1.5.10 - 14.09.2026
 ### Modificado
 - El espaciado de las tarjetas del proyecto ahora coincide con la vista compacta del cliente.

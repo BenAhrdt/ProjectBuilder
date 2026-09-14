@@ -292,6 +292,46 @@ export async function getAccountById(id) {
     return result.records[0] ?? null;
 }
 
+export async function getAnnualOrderIntake(accountId, currentYear = new Date().getUTCFullYear()) {
+    if (!accountId) return [];
+    const displayedYearCount = 10;
+    const firstYear = currentYear - displayedYearCount;
+    const result = await query(`
+        SELECT CALENDAR_YEAR(EffectiveDate) year,
+            COUNT(Id) orderCount,
+            SUM(OrderAmount__c) orderAmount
+        FROM Order
+        WHERE AccountId = '${escapeSoql(accountId)}'
+            AND EffectiveDate >= ${firstYear}-01-01
+            AND EffectiveDate < ${currentYear + 1}-01-01
+        GROUP BY CALENDAR_YEAR(EffectiveDate)
+        ORDER BY CALENDAR_YEAR(EffectiveDate) DESC
+    `);
+    const valuesByYear = new Map(
+        result.records.map(record => [Number(record.year), record])
+    );
+
+    const annualValues = Array.from({ length: displayedYearCount + 1 }, (_, index) => {
+        const year = currentYear - index;
+        const record = valuesByYear.get(year);
+        return {
+            year,
+            orderCount: Number(record?.orderCount) || 0,
+            orderAmount: Number(record?.orderAmount) || 0
+        };
+    });
+
+    return annualValues.slice(0, displayedYearCount).map((item, index) => {
+        const previousAmount = annualValues[index + 1].orderAmount;
+        return {
+            ...item,
+            changePercent: previousAmount === 0
+                ? null
+                : ((item.orderAmount - previousAmount) / previousAmount) * 100
+        };
+    });
+}
+
 export async function getQuoteSyncOptions(accountId) {
     const [quoteDescription, contactsResult] = await Promise.all([
         cachedQuoteDescription ??= describe("Quote").catch(error => {

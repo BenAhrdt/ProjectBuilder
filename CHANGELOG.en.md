@@ -2,6 +2,15 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.11 - 14.09.2026
+### Added
+- The customer view shows Salesforce order intake for the latest five years, including order count and percentage change from the previous year.
+- “More details” provides five additional years and an interactive ten-year chart.
+- Hovering chart points displays year, order count, order intake, and year-over-year change in a readable tooltip.
+
+### Changed
+- The order intake overview uses a compact two-line card layout with color-coded growth and decline.
+
 ## 1.5.10 - 14.09.2026
 ### Changed
 - Project card spacing now matches the more compact customer view.

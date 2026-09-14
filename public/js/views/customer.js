@@ -163,6 +163,17 @@ async function renderView(
 
                     </div>
 
+                    ${customer.salesforceId ? `
+                        <section id="customer-order-intake"
+                            class="customer-order-intake"
+                            aria-live="polite">
+                            <h3>${i18n.t("customer.orderIntake")}</h3>
+                            <div class="customer-order-intake-grid">
+                                ${renderOrderIntakeLoading()}
+                            </div>
+                        </section>
+                    ` : ""}
+
                     <div class="customer-discounts-wrapper">
 
                         <h3>
@@ -245,7 +256,202 @@ async function renderView(
     registerCustomerDelete(customerId, customer);
     registerSalesforceActions(customerId, customer);
     registerAdditionalInfoAutoResize();
+    if (customer.salesforceId) loadCustomerOrderIntake(customerId);
 
+}
+
+function renderOrderIntakeLoading() {
+    const currentYear = new Date().getFullYear();
+    return Array.from({ length: 5 }, (_, index) => `
+        <div class="customer-order-intake-card loading">
+            <span>${currentYear - index}${index === 0 ? ` · ${i18n.t("customer.currentYear")}` : ""}</span>
+            <strong>–</strong>
+            <small>${i18n.t("customer.orderIntakeLoading")}</small>
+        </div>
+    `).join("");
+}
+
+async function loadCustomerOrderIntake(customerId) {
+    const section = document.getElementById("customer-order-intake");
+    if (!section) return;
+
+    try {
+        const response = await fetch(
+            `/api/salesforce/customers/${customerId}/order-intake`
+        );
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error);
+        if (!result.available) {
+            section.innerHTML = `<h3>${i18n.t("customer.orderIntake")}</h3>
+                <p class="customer-order-intake-empty">${i18n.t("customer.orderIntakeUnavailable")}</p>`;
+            return;
+        }
+
+        const grid = section.querySelector(".customer-order-intake-grid");
+        if (!grid) return;
+        const visibleYears = result.years.slice(0, 5);
+        const earlierYears = result.years.slice(5, 10);
+        grid.innerHTML = visibleYears.map((item, index) =>
+            renderOrderIntakeCard(item, index, result.currency)
+        ).join("");
+
+        section.insertAdjacentHTML("beforeend", `
+            <details class="customer-order-intake-details">
+                <summary>${i18n.t("customer.moreOrderIntakeDetails")}</summary>
+                <div class="customer-order-intake-details-content">
+                    <div>
+                        <h4>${i18n.t("customer.earlierYears")}</h4>
+                        <div class="customer-order-intake-history-grid">
+                            ${earlierYears.map(item =>
+                                renderOrderIntakeCard(item, -1, result.currency)
+                            ).join("")}
+                        </div>
+                    </div>
+                    <div class="customer-order-intake-chart-panel">
+                        <h4>${i18n.t("customer.orderIntakeTrend")}</h4>
+                        ${renderOrderIntakeChart(result.years, result.currency)}
+                    </div>
+                </div>
+            </details>
+        `);
+    } catch {
+        if (!section.isConnected) return;
+        section.innerHTML = `<h3>${i18n.t("customer.orderIntake")}</h3>
+            <p class="customer-order-intake-empty">${i18n.t("customer.orderIntakeUnavailable")}</p>`;
+    }
+}
+
+function renderOrderIntakeCard(item, index, currency) {
+    const change = Number(item.changePercent);
+    const hasComparison = item.changePercent !== null && Number.isFinite(change);
+    const trendClass = change > 0 ? "positive" : change < 0 ? "negative" : "neutral";
+    const trendValue = hasComparison
+        ? `${change > 0 ? "+" : ""}${change.toLocaleString(
+            i18n.getCurrentLanguage(),
+            { minimumFractionDigits: 1, maximumFractionDigits: 1 }
+        )} %`
+        : "–";
+    const orderLabel = item.orderCount === 1
+        ? i18n.t("customer.orderSingular")
+        : i18n.t("customer.orderPlural");
+
+    return `
+        <div class="customer-order-intake-card${index === 0 ? " current" : ""}">
+            <div class="customer-order-intake-period">
+                <span>${item.year}${index === 0 ? ` · ${i18n.t("customer.currentYear")}` : ""}:</span>
+                <small>${item.orderCount} ${orderLabel}</small>
+            </div>
+            <div class="customer-order-intake-value">
+                <strong>${Number(item.orderAmount).toLocaleString(
+                    i18n.getCurrentLanguage(),
+                    { style: "currency", currency: currency || "EUR" }
+                )}</strong>
+                <span class="customer-order-intake-trend ${trendClass}"
+                    title="${i18n.t("customer.comparedToPreviousYear")}">
+                    ${trendValue}
+                </span>
+            </div>
+        </div>
+    `;
+}
+
+function renderOrderIntakeChart(years, currency) {
+    const values = [...years].reverse();
+    const width = 720;
+    const height = 176;
+    const left = 18;
+    const right = 18;
+    const top = 14;
+    const bottom = 28;
+    const baseline = height - bottom;
+    const maximum = Math.max(...values.map(item => Number(item.orderAmount) || 0), 1);
+    const points = values.map((item, index) => ({
+        ...item,
+        x: left + index * ((width - left - right) / Math.max(values.length - 1, 1)),
+        y: top + (1 - (Number(item.orderAmount) || 0) / maximum) * (baseline - top)
+    }));
+    const line = points.map(point => `${point.x},${point.y}`).join(" ");
+    const area = `${left},${baseline} ${line} ${width - right},${baseline}`;
+    const formatValue = value => Number(value).toLocaleString(
+        i18n.getCurrentLanguage(),
+        { style: "currency", currency: currency || "EUR" }
+    );
+
+    return `
+        <svg class="customer-order-intake-chart" viewBox="0 0 ${width} ${height}"
+            role="img" aria-label="${i18n.t("customer.orderIntakeTrend")}">
+            <defs>
+                <linearGradient id="order-intake-area" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#4c8bf5" stop-opacity=".28" />
+                    <stop offset="100%" stop-color="#4c8bf5" stop-opacity=".02" />
+                </linearGradient>
+            </defs>
+            <line x1="${left}" y1="${baseline}" x2="${width - right}" y2="${baseline}"
+                class="customer-order-chart-axis" />
+            <polygon points="${area}" fill="url(#order-intake-area)" />
+            <polyline points="${line}" class="customer-order-chart-line" />
+            ${points.map(point => `
+                <g class="customer-order-chart-point-group">
+                    <circle cx="${point.x}" cy="${point.y}" r="4"
+                        class="customer-order-chart-point" />
+                    <circle cx="${point.x}" cy="${point.y}" r="13"
+                        class="customer-order-chart-hit" />
+                    <text x="${point.x}" y="${height - 8}"
+                        class="customer-order-chart-label">${point.year}</text>
+                    ${renderOrderIntakeChartTooltip(
+                        point,
+                        formatValue(point.orderAmount),
+                        width,
+                        top
+                    )}
+                </g>
+            `).join("")}
+        </svg>
+    `;
+}
+
+function renderOrderIntakeChartTooltip(point, formattedValue, chartWidth, chartTop) {
+    const tooltipWidth = 184;
+    const tooltipHeight = 59;
+    const x = Math.min(
+        Math.max(4, point.x - tooltipWidth / 2),
+        chartWidth - tooltipWidth - 4
+    );
+    const y = point.y - tooltipHeight - 10 < chartTop
+        ? point.y + 11
+        : point.y - tooltipHeight - 10;
+    const orderLabel = point.orderCount === 1
+        ? i18n.t("customer.orderSingular")
+        : i18n.t("customer.orderPlural");
+    const change = Number(point.changePercent);
+    const hasComparison = point.changePercent !== null && Number.isFinite(change);
+    const changeValue = hasComparison
+        ? `${change > 0 ? "+" : ""}${change.toLocaleString(
+            i18n.getCurrentLanguage(),
+            { minimumFractionDigits: 1, maximumFractionDigits: 1 }
+        )} %`
+        : "–";
+    const changeClass = change > 0
+        ? "positive"
+        : change < 0
+            ? "negative"
+            : "neutral";
+
+    return `
+        <g class="customer-order-chart-tooltip">
+            <rect x="${x}" y="${y}" width="${tooltipWidth}" height="${tooltipHeight}" rx="7" />
+            <text x="${x + 9}" y="${y + 16}" class="customer-order-chart-tooltip-title">
+                ${point.year} · ${point.orderCount} ${orderLabel}
+            </text>
+            <text x="${x + 9}" y="${y + 33}" class="customer-order-chart-tooltip-value">
+                ${formattedValue}
+            </text>
+            <text x="${x + 9}" y="${y + 50}"
+                class="customer-order-chart-tooltip-change ${changeClass}">
+                ${changeValue} ${i18n.t("customer.comparedToPreviousYear")}
+            </text>
+        </g>
+    `;
 }
 
 function registerAdditionalInfoAutoResize() {

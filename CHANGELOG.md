@@ -2,6 +2,18 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.11 - 14.09.2026
+
+### Neu
+
+- Die Kundenansicht zeigt den Auftragseingang aus Salesforce für die letzten fünf Jahre einschließlich Auftragsanzahl und prozentualer Veränderung zum Vorjahr.
+- Unter „Weitere Details“ stehen fünf zusätzliche Jahre und ein interaktives Zehnjahresdiagramm zur Verfügung.
+- Diagrammpunkte zeigen beim Darüberfahren Jahr, Auftragsanzahl, Auftragseingang und Veränderung zum Vorjahr in einer gut lesbaren Infobox.
+
+### Geändert
+
+- Die Jahresübersicht des Auftragseingangs verwendet ein kompaktes zweizeiliges Kartenlayout und kennzeichnet Wachstum beziehungsweise Rückgang farblich.
+
 ## 1.5.10 - 14.09.2026
 
 ### Geändert

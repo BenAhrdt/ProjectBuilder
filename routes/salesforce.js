@@ -292,6 +292,29 @@ router.get("/customers/:customerId/link", async (req, res) => {
     }
 });
 
+router.get("/customers/:customerId/order-intake", async (req, res) => {
+    try {
+        const customer = database.customers.prepare(
+            "SELECT salesforceId FROM customers WHERE id = ?"
+        ).get(req.params.customerId);
+        if (!customer?.salesforceId) {
+            return res.json({ available: false, years: [] });
+        }
+
+        const account = await salesforce.getAccountById(customer.salesforceId);
+        if (!account) return res.json({ available: false, years: [] });
+
+        const years = await salesforce.getAnnualOrderIntake(account.Id);
+        res.json({
+            available: true,
+            currency: account.CurrencyIsoCode || "EUR",
+            years
+        });
+    } catch (error) {
+        handleError(res, error);
+    }
+});
+
 router.get("/projects/:projectId/links", async (req, res) => {
     try {
         const project = database.projects.prepare(`

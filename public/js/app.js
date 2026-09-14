@@ -1,11 +1,13 @@
 import * as i18n from "./utils/i18n.js";
 await i18n.loadLanguage();
 import * as router from "./router.js";
+import * as navigationHistory from "./utils/navigationHistory.js";
 
 // Bei Seitenstart die aktuelle URL rendern
 router.renderRoute(window.location.pathname);
 
 // Vor / Zurück im Browser ermöglichen
-window.addEventListener("popstate", () => {
+window.addEventListener("popstate", event => {
+    navigationHistory.syncFromPopState(event.state);
     router.renderRoute(window.location.pathname);
 });

@@ -1,4 +1,5 @@
 import * as i18n from "../utils/i18n.js";
+import * as navigationHistory from "../utils/navigationHistory.js";
 await i18n.loadLanguage();
 
 const header = document.getElementById("header");
@@ -10,7 +11,14 @@ header.innerHTML = `
     <div class="header-brand" aria-label="Janitza">
         <img src="/icons/janitza-logo.svg" alt="Janitza">
     </div>
-    <div class="header-space" aria-hidden="true"></div>
+    <nav class="header-history" aria-label="${i18n.t("header.history")}">
+        <button id="history-back" type="button" aria-label="${i18n.t("header.back")}" title="${i18n.t("header.back")}">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5"/><path d="M4 12h9a7 7 0 0 1 7 7"/></svg>
+        </button>
+        <button id="history-forward" type="button" aria-label="${i18n.t("header.forward")}" title="${i18n.t("header.forward")}">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5"/><path d="M20 12h-9a7 7 0 0 0-7 7"/></svg>
+        </button>
+    </nav>
     <div class="language-selector">
         <span>${i18n.t("header.language")}</span>
         <div class="language-dropdown">
@@ -36,6 +44,20 @@ header.innerHTML = `
 `;
 
 const languageSelect = document.getElementById("language-select");
+const historyBackButton = document.getElementById("history-back");
+const historyForwardButton = document.getElementById("history-forward");
+
+function updateHistoryButtons(state = navigationHistory.getState()) {
+    historyBackButton.disabled = !state.canGoBack;
+    historyForwardButton.disabled = !state.canGoForward;
+}
+
+historyBackButton.addEventListener("click", () => history.back());
+historyForwardButton.addEventListener("click", () => history.forward());
+window.addEventListener("projectbuilder:navigation-state", event => {
+    updateHistoryButtons(event.detail);
+});
+updateHistoryButtons();
 if (!document.getElementById("global-search-input")) {
     await new Promise(resolve => document.addEventListener(
         "projectbuilder:navbar-ready",
@@ -227,8 +249,8 @@ function openResult(button) {
 }
 
 function navigate(path) {
-    history.pushState({}, "", path);
-    window.dispatchEvent(new PopStateEvent("popstate"));
+    navigationHistory.push(path);
+    window.dispatchEvent(new PopStateEvent("popstate", { state: history.state }));
 }
 
 function getCurrentProjectId() {

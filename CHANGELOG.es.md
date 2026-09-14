@@ -2,6 +2,10 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.6 - 14.09.2026
+### Añadido
+- El encabezado ahora incluye botones de retroceso y avance similares a los del navegador para recorrer las vistas visitadas. Las direcciones no disponibles se desactivan automáticamente.
+
 ## 1.5.5 - 14.09.2026
 ### Cambiado
 - El formulario «Añadir proyecto» ahora utiliza un diseño compacto en una sola fila. El nombre del proyecto, el cliente, la descripción y el botón de guardar tienen una altura uniforme y se reorganizan de forma adaptable en ventanas pequeñas.

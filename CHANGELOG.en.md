@@ -2,6 +2,10 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.6 - 14.09.2026
+### Added
+- The header now provides browser-style back and forward buttons for navigating through visited views. Unavailable directions are disabled automatically.
+
 ## 1.5.5 - 14.09.2026
 ### Changed
 - The “Add project” form now uses a compact single-row layout. Project name, customer, description, and the save button have a consistent height and rearrange responsively in smaller windows.

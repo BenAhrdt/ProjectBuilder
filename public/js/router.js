@@ -7,6 +7,7 @@ import * as projects from "./views/projects.js";
 import * as project from "./views/project.js";
 import * as changelog from "./views/changelog.js";
 import * as backups from "./views/backups.js";
+import * as navigationHistory from "./utils/navigationHistory.js";
 
 const routes = {
     "/": {
@@ -46,7 +47,7 @@ const routes = {
 function navigate(path) {
 
     // URL ändern
-    history.pushState({}, "", path);
+    navigationHistory.push(path);
 
     // passende Route rendern
     renderRoute(path);

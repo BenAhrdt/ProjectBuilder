@@ -15,6 +15,52 @@
     padding-left: 22px;
 }
 
+.header-history {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    justify-self: start;
+}
+
+.header-history button {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    background: transparent;
+    color: #344054;
+    cursor: pointer;
+}
+
+.header-history button:hover:not(:disabled) {
+    border-color: #d6deea;
+    background: #edf3fc;
+    color: #175cd3;
+}
+
+.header-history button:focus-visible {
+    outline: 3px solid rgba(76, 139, 245, .25);
+    border-color: #4c8bf5;
+}
+
+.header-history button:disabled {
+    color: #b5bdc9;
+    cursor: default;
+}
+
+.header-history svg {
+    width: 21px;
+    height: 21px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
 .header-brand img {
     display: block;
     width: 116px;

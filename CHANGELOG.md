@@ -2,6 +2,12 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.6 - 14.09.2026
+
+### Neu
+
+- Im Kopfbereich stehen browserähnliche Schaltflächen zum Zurück- und Vorwärtsnavigieren durch die tatsächlich besuchten Ansichten bereit. Nicht verfügbare Richtungen werden automatisch deaktiviert.
+
 ## 1.5.5 - 14.09.2026
 
 ### Geändert

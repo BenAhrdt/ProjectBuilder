@@ -2,6 +2,11 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.8 - 14.09.2026
+### Added
+- Added articles show a structured information card after a short hover delay, including available master, pricing, discount, GridVis, and long-text data.
+- A subtle, automatically aligned thought-bubble trail visually connects the information card to its article position.
+
 ## 1.5.7 - 14.09.2026
 ### Changed
 - New product icons are shown for the 800-MF8 module, CT-AC-RCM transformers, and CT24 current transformers.

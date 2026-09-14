@@ -2,6 +2,13 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.8 - 14.09.2026
+
+### Neu
+
+- Hinzugefügte Artikel zeigen nach kurzem Verweilen eine übersichtliche Infokarte mit verfügbaren Stamm-, Preis-, Rabatt- und GridVis-Daten sowie dem Langtext.
+- Eine dezente, automatisch ausgerichtete Denkblasenspur verbindet die Infokarte optisch mit der Artikelposition.
+
 ## 1.5.7 - 14.09.2026
 
 ### Geändert

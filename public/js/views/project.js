@@ -43,6 +43,10 @@ const projectStructureWidthStorageKey =
 const defaultProjectStructureWidth = 495;
 const minimumProjectStructureWidth = 360;
 const minimumProjectArticlesWidth = 480;
+const articleInfoCardDelay = 700;
+let articleInfoCardShowTimer = null;
+let articleInfoCardHideTimer = null;
+let activeArticleInfoCard = null;
 const articleIconRules = [
     {
         icon: "hdr1te.png",
@@ -807,6 +811,7 @@ async function renderView(
     registerNodeArticleMenus(projectId);
     registerNodeArticleQuantityInputs(projectId);
     registerNodeArticleDragAndDrop(projectId);
+    registerNodeArticleInfoCards();
     registerArticleListLayoutSync();
     syncArticleListHeight();
 
@@ -6371,6 +6376,297 @@ function registerNodeArticleQuantityInputs(
             );
 
         });
+
+}
+
+function registerNodeArticleInfoCards() {
+
+    hideArticleInfoCard(true);
+
+    if (view.dataset.articleInfoCardsRegistered === "true") {
+
+        return;
+
+    }
+
+    view.dataset.articleInfoCardsRegistered = "true";
+
+    view.addEventListener("pointerover", event => {
+
+        const articleElement = event.target.closest?.(".node-article");
+
+        if (
+            !articleElement
+            || articleElement.contains(event.relatedTarget)
+        ) {
+
+            return;
+
+        }
+
+        scheduleArticleInfoCard(articleElement, articleInfoCardDelay);
+
+    });
+
+    view.addEventListener("pointerout", event => {
+
+        const articleElement = event.target.closest?.(".node-article");
+
+        if (
+            !articleElement
+            || articleElement.contains(event.relatedTarget)
+        ) {
+
+            return;
+
+        }
+
+        scheduleArticleInfoCardHide();
+
+    });
+
+    view.addEventListener("focusin", event => {
+
+        const articleElement = event.target.closest?.(".node-article");
+
+        if (articleElement) {
+
+            scheduleArticleInfoCard(articleElement, 250);
+
+        }
+
+    });
+
+    view.addEventListener("focusout", event => {
+
+        const articleElement = event.target.closest?.(".node-article");
+
+        if (
+            articleElement
+            && !articleElement.contains(event.relatedTarget)
+        ) {
+
+            scheduleArticleInfoCardHide();
+
+        }
+
+    });
+
+    view.addEventListener("keydown", event => {
+
+        if (event.key === "Escape") {
+
+            hideArticleInfoCard(true);
+
+        }
+
+    });
+
+}
+
+function scheduleArticleInfoCard(
+    articleElement,
+    delay
+) {
+
+    clearTimeout(articleInfoCardHideTimer);
+    clearTimeout(articleInfoCardShowTimer);
+
+    if (
+        activeArticleInfoCard?.dataset.positionId
+        === articleElement.dataset.id
+    ) {
+
+        return;
+
+    }
+
+    articleInfoCardShowTimer = setTimeout(
+        () => showArticleInfoCard(articleElement),
+        delay
+    );
+
+}
+
+function scheduleArticleInfoCardHide() {
+
+    clearTimeout(articleInfoCardShowTimer);
+    clearTimeout(articleInfoCardHideTimer);
+
+    articleInfoCardHideTimer = setTimeout(
+        () => hideArticleInfoCard(),
+        180
+    );
+
+}
+
+function hideArticleInfoCard(immediately = false) {
+
+    clearTimeout(articleInfoCardShowTimer);
+    clearTimeout(articleInfoCardHideTimer);
+
+    if (!activeArticleInfoCard) return;
+
+    const card = activeArticleInfoCard;
+    activeArticleInfoCard = null;
+
+    if (immediately) {
+
+        card.remove();
+        return;
+
+    }
+
+    card.classList.remove("visible");
+    setTimeout(() => card.remove(), 120);
+
+}
+
+function showArticleInfoCard(articleElement) {
+
+    if (!articleElement.isConnected) return;
+
+    const articleNumber = articleElement.dataset.articleNumber;
+    const article = currentArticles.find(item =>
+        String(item.articleNumber) === String(articleNumber)
+    );
+    const nodeArticle = currentNodeArticles.find(item =>
+        String(item.id) === String(articleElement.dataset.id)
+    );
+
+    if (!article) return;
+
+    hideArticleInfoCard(true);
+
+    const quantity = Number(nodeArticle?.quantity) || 1;
+    const listPrice = Number(article.listPrice);
+    const discount = getArticleDiscountPercent(
+        article,
+        currentProjectCustomer
+    );
+    const discountedUnitPrice = Number.isFinite(listPrice)
+        ? listPrice * (1 - discount / 100)
+        : null;
+    const currency = article.listPriceCurrency || "EUR";
+    const origin = [article.originCountry, article.originRegion]
+        .filter(Boolean)
+        .join(" / ");
+    const gridVisItems = article.gridVisItems;
+    const rows = [
+        [i18n.t("project.quantity"), formatQuantity(quantity)],
+        [i18n.t("articles.price"), formatArticleInfoPrice(listPrice, currency)],
+        [i18n.t("articles.discountGroup"), article.discountGroup],
+        [i18n.t("project.discount"), discount ? `${formatQuantity(discount)} %` : ""],
+        [i18n.t("project.discountedPrice"), formatArticleInfoPrice(discountedUnitPrice, currency)],
+        [i18n.t("project.totalPrice"), formatArticleInfoPrice(
+            discountedUnitPrice === null ? null : discountedUnitPrice * quantity,
+            currency
+        )],
+        [i18n.t("articles.gridVisItems"), gridVisItems === null || gridVisItems === undefined
+            ? ""
+            : `${formatQuantity(gridVisItems)} / ${i18n.t("project.unit")}`],
+        [i18n.t("articles.manufacturer"), article.manufacturerName],
+        [i18n.t("articles.quantityUnit"), article.quantityUnit],
+        [i18n.t("articles.ean"), article.ean],
+        [i18n.t("articles.origin"), origin],
+        [i18n.t("articles.intrastatNumber"), article.intrastatNumber],
+        [i18n.t("articles.salesforceFamily"), article.salesforceFamily],
+        [i18n.t("articles.productType"), article.salesforceProductType]
+    ].filter(([, value]) => value !== "" && value !== null && value !== undefined);
+
+    const card = document.createElement("aside");
+    card.className = "node-article-info-card";
+    card.dataset.positionId = articleElement.dataset.id;
+    card.setAttribute("role", "tooltip");
+    card.innerHTML = `
+        <div class="node-article-info-content">
+            <div class="node-article-info-header">
+                <img src="${getArticleIcon(article)}" alt="">
+                <div>
+                    <strong>${escapeHtml(article.articleNumber)}</strong>
+                    <span>${escapeHtml(article.manufacturerType)}</span>
+                </div>
+            </div>
+            ${rows.length ? `
+                <dl class="node-article-info-list">
+                    ${rows.map(([label, value]) => `
+                        <div>
+                            <dt>${escapeHtml(label)}</dt>
+                            <dd>${escapeHtml(value)}</dd>
+                        </div>
+                    `).join("")}
+                </dl>
+            ` : ""}
+            ${article.description ? `
+                <div class="node-article-info-description">
+                    <strong>${escapeHtml(i18n.t("articles.description"))}</strong>
+                    <p>${escapeHtml(article.description)}</p>
+                </div>
+            ` : ""}
+        </div>
+    `;
+
+    card.addEventListener("pointerenter", () => {
+        clearTimeout(articleInfoCardHideTimer);
+    });
+    card.addEventListener("pointerleave", scheduleArticleInfoCardHide);
+    document.body.append(card);
+    activeArticleInfoCard = card;
+    positionArticleInfoCard(card, articleElement);
+    requestAnimationFrame(() => card.classList.add("visible"));
+
+}
+
+function formatArticleInfoPrice(value, currency) {
+
+    if (
+        value === null
+        || value === undefined
+        || value === ""
+        || !Number.isFinite(Number(value))
+    ) return "";
+
+    return Number(value).toLocaleString(
+        i18n.getCurrentLanguage(),
+        {
+            style: "currency",
+            currency,
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }
+    );
+
+}
+
+function positionArticleInfoCard(card, articleElement) {
+
+    const margin = 12;
+    const anchor = articleElement.getBoundingClientRect();
+    const cardRect = card.getBoundingClientRect();
+    let left = anchor.right + margin;
+    let opensToRight = true;
+
+    if (left + cardRect.width > window.innerWidth - margin) {
+
+        left = anchor.left - cardRect.width - margin;
+        opensToRight = false;
+
+    }
+
+    const top = Math.min(
+        Math.max(margin, anchor.top),
+        Math.max(margin, window.innerHeight - cardRect.height - margin)
+    );
+    const anchorOffset = Math.min(
+        Math.max(18, anchor.top + anchor.height / 2 - top),
+        Math.max(18, cardRect.height - 18)
+    );
+
+    card.classList.toggle("opens-right", opensToRight);
+    card.classList.toggle("opens-left", !opensToRight);
+    card.style.setProperty("--article-info-anchor-y", `${anchorOffset}px`);
+    card.style.left = `${Math.max(margin, left)}px`;
+    card.style.top = `${top}px`;
 
 }
 

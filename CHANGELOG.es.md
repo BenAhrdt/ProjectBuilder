@@ -2,6 +2,11 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.8 - 14.09.2026
+### Nuevo
+- Los artículos añadidos muestran, tras una breve pausa, una tarjeta estructurada con los datos maestros, precios, descuentos, GridVis y texto largo disponibles.
+- Una sutil estela de burbuja de pensamiento, alineada automáticamente, conecta visualmente la tarjeta informativa con la posición del artículo.
+
 ## 1.5.7 - 14.09.2026
 ### Modificado
 - Se muestran nuevos iconos de producto para el módulo 800-MF8 y los transformadores CT-AC-RCM y CT24.

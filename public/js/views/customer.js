@@ -31,6 +31,10 @@ async function renderView(
 
     const customer = await customerResponse.json();
     const projects = await projectsResponse.json();
+    const salesforceLink = await loadSalesforceCustomerLink(
+        customerId,
+        customer.salesforceId
+    );
 
     view.innerHTML = `
 
@@ -63,6 +67,12 @@ async function renderView(
                             <button id="salesforce-refresh-customer" type="button">
                                 ${i18n.t("salesforce.refreshCustomer")}
                             </button>` : ""}
+                        ${salesforceLink ? `
+                            <a class="salesforce-record-link"
+                                href="${escapeHtml(salesforceLink.url)}"
+                                target="_blank" rel="noopener noreferrer">
+                                ${i18n.t("salesforce.openCustomer")}
+                            </a>` : ""}
                         <button
                             id="delete-customer"
                             type="button"
@@ -226,6 +236,17 @@ async function renderView(
 
 }
 
+async function loadSalesforceCustomerLink(customerId, salesforceId) {
+    if (!salesforceId) return null;
+    try {
+        const response = await fetch(`/api/salesforce/customers/${customerId}/link`);
+        const link = await response.json();
+        return response.ok && link?.url ? link : null;
+    } catch {
+        return null;
+    }
+}
+
 function registerSalesforceActions(customerId, customer) {
     document.getElementById("salesforce-find-customer")?.addEventListener("click", () => {
         clearTimeout(saveTimeout);
@@ -380,9 +401,15 @@ function generateHandler(customerId) {
                     saveTimeout
                 );
 
+                const customerFormData =
+                    getCustomerFormData();
+
                 saveTimeout =
                     setTimeout(
-                        () => saveCustomer(customerId),
+                        () => saveCustomer(
+                            customerId,
+                            customerFormData
+                        ),
                         500
                     );
 
@@ -469,7 +496,10 @@ function registerCustomerDelete(
 }
 
 // Speichern
-async function saveCustomer(customerId) {
+async function saveCustomer(
+    customerId,
+    customerFormData = getCustomerFormData()
+) {
 
     await fetch(
 
@@ -483,7 +513,19 @@ async function saveCustomer(customerId) {
                     "application/json"
             },
 
-            body: JSON.stringify({
+            body: JSON.stringify(
+                customerFormData
+            )
+
+        }
+
+    );
+
+}
+
+function getCustomerFormData() {
+
+    return {
 
                 customerNumber:
                     document.getElementById(
@@ -559,11 +601,7 @@ async function saveCustomer(customerId) {
                         "discount-pg10"
                     )?.value ?? ""
 
-            })
-
-        }
-
-    );
+    };
 
 }
 

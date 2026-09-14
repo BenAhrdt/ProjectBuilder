@@ -117,18 +117,31 @@ async function synchronizeProjectDocuments(opportunityId, project, nodes, nodeAr
         word: async () => ({ title: "ProjectBuilder - LV Word", filename: `${baseName}-LV.docx`, data: await buildWordTenderBuffer(exportData, "none") }),
         gaeb: async () => ({ title: "ProjectBuilder - LV GAEB", filename: `${baseName}-LV.x82`, data: buildGaebTenderXml(exportData, "list", "82") })
     };
-    const uploaded = [];
-    const errors = [];
-    for (const type of selected) {
+    const generatedFiles = await Promise.all(selected.map(async type => {
         try {
             const file = await generators[type]();
-            await salesforce.uploadOpportunityFile(opportunityId, file);
-            uploaded.push(type);
+            return { type, file };
         } catch (error) {
-            errors.push({ type, error: error?.message ?? String(error) });
+            return { type, error: error?.message ?? String(error) };
+        }
+    }));
+    const results = [];
+    for (const generated of generatedFiles) {
+        if (generated.error) {
+            results.push({ type: generated.type, success: false, error: generated.error });
+            continue;
+        }
+        try {
+            await salesforce.uploadOpportunityFile(opportunityId, generated.file);
+            results.push({ type: generated.type, success: true });
+        } catch (error) {
+            results.push({ type: generated.type, success: false, error: error?.message ?? String(error) });
         }
     }
-    return { uploaded, errors };
+    return {
+        uploaded: results.filter(result => result.success).map(result => result.type),
+        errors: results.filter(result => !result.success).map(({ type, error }) => ({ type, error }))
+    };
 }
 
 function syncCustomer(customer, localId = null) {
@@ -258,6 +271,61 @@ function addDays(date, days) {
 router.get("/status", async (_req, res) => {
     try { res.json(await salesforce.getStatus()); }
     catch (error) { handleError(res, error); }
+});
+
+router.get("/customers/:customerId/link", async (req, res) => {
+    try {
+        const customer = database.customers.prepare(
+            "SELECT salesforceId, salesforceSyncedAt FROM customers WHERE id = ?"
+        ).get(req.params.customerId);
+        const account = customer?.salesforceId && customer.salesforceSyncedAt
+            ? await salesforce.getAccountById(customer.salesforceId)
+            : null;
+        const status = account ? await salesforce.getStatus() : null;
+        res.json(account && status?.instanceUrl ? {
+            id: account.Id,
+            name: account.Name,
+            url: `${status.instanceUrl}/lightning/r/${encodeURIComponent(account.Id)}/view`
+        } : null);
+    } catch (error) {
+        handleError(res, error);
+    }
+});
+
+router.get("/projects/:projectId/links", async (req, res) => {
+    try {
+        const project = database.projects.prepare(`
+            SELECT salesforceOpportunityId, salesforceQuoteId,
+                salesforceSyncedAt, salesforceSyncScope
+            FROM projects WHERE id = ?
+        `).get(req.params.projectId);
+        const [opportunity, quote] = await Promise.all([
+            salesforce.getOpportunity(
+                project?.salesforceSyncedAt ? project.salesforceOpportunityId : null
+            ),
+            salesforce.getQuote(
+                project?.salesforceSyncedAt
+                && project.salesforceSyncScope === "opportunity_quote"
+                    ? project.salesforceQuoteId
+                    : null
+            )
+        ]);
+        const status = opportunity || quote ? await salesforce.getStatus() : null;
+        const recordUrl = record => record && status?.instanceUrl
+            ? `${status.instanceUrl}/lightning/r/${encodeURIComponent(record.Id)}/view`
+            : null;
+        res.json({
+            opportunity: opportunity ? { id: opportunity.Id, name: opportunity.Name, url: recordUrl(opportunity) } : null,
+            quote: quote ? {
+                id: quote.Id,
+                name: quote.Name || quote.QuoteNumber,
+                quoteNumber: quote.QuoteNumber,
+                url: recordUrl(quote)
+            } : null
+        });
+    } catch (error) {
+        handleError(res, error);
+    }
 });
 
 router.post("/login", async (_req, res) => {
@@ -602,7 +670,7 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
             await salesforce.updateOpportunity(opportunity.Id, opportunityFields);
         } else {
             const result = await salesforce.createOpportunity(opportunityFields);
-            opportunity = { Id: result.id };
+            opportunity = { Id: result.id, Name: opportunityFields.Name };
         }
         database.projects.prepare(`
             UPDATE projects SET salesforceOpportunityId = ? WHERE id = ?
@@ -623,6 +691,7 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
             return res.json({
                 success: true,
                 opportunityId: opportunity.Id,
+                opportunityName: opportunity.Name || opportunityFields.Name,
                 opportunityCreated,
                 quoteSynced: false,
                 positionCount: opportunityLineItems.length,
@@ -648,6 +717,7 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
             || reusableQuote.Pricebook2Id !== pricebook.Id
             || reusableQuote.OpportunityId !== opportunity.Id;
         let quote = reusableQuote;
+        let createdQuoteDetails = null;
         const quoteFields = {
             Name: project.name || `ProjectBuilder ${project.id}`,
             OpportunityId: opportunity.Id,
@@ -669,8 +739,8 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
         }
         if (createNewQuote) {
             const result = await salesforce.createQuote(quoteFields);
-            quote = await salesforce.getQuote(result.id)
-                ?? { Id: result.id, Status: "Draft", QuoteNumber: null, IsSyncing: false };
+            quote = { Id: result.id, Name: quoteFields.Name, Status: "Draft", QuoteNumber: null, IsSyncing: false };
+            createdQuoteDetails = salesforce.getQuote(result.id).catch(() => null);
             database.projects.prepare(`
                 UPDATE projects SET salesforceQuoteId = ? WHERE id = ?
             `).run(quote.Id, project.id);
@@ -697,7 +767,16 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
         // Linking the quote alone does not make it the opportunity's synchronized quote.
         // Salesforce requires this relationship before the quote can enter approval.
         await salesforce.synchronizeQuote(opportunity.Id, quote.Id);
-        const documentResult = await synchronizeProjectDocuments(opportunity.Id, project, nodes, nodeArticles, documents);
+        const documentResult = await synchronizeProjectDocuments(
+            opportunity.Id,
+            project,
+            nodes,
+            nodeArticles,
+            documents
+        );
+        if (createdQuoteDetails) {
+            quote = await createdQuoteDetails ?? quote;
+        }
 
         database.projects.prepare(`
             UPDATE projects SET salesforceOpportunityId = ?, salesforceQuoteId = ?, salesforceSyncedAt = ?,
@@ -710,9 +789,11 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
         res.json({
             success: true,
             opportunityId: opportunity.Id,
+            opportunityName: opportunity.Name || opportunityFields.Name,
             opportunityCreated,
             quoteId: quote.Id,
             quoteNumber: quote.QuoteNumber,
+            quoteName: quote.Name || quoteFields.Name,
             quoteCreated: createNewQuote,
             quoteSynced: true,
             previousQuoteStatus: previousQuote?.Status ?? null,

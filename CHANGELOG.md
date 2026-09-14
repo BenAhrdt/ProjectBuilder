@@ -2,6 +2,22 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.2 - 14.09.2026
+
+### Neu
+
+- Verknüpfte Kunden, Opportunities und Angebote können direkt in Salesforce geöffnet werden. Die Links erscheinen nur für erfolgreich synchronisierte und in Salesforce vorhandene Datensätze.
+- Der Salesforce-Erfolgsdialog bietet direkte Links zur Opportunity und zum Angebot und zeigt beim Angebot zusätzlich die Angebotsnummer an.
+
+### Geändert
+
+- Die linke Navigation ist schmaler und lässt „Preisliste importieren“ weiterhin vollständig sichtbar.
+- Die Salesforce-Synchronisierung lädt wiederverwendbare Metadaten nur einmal, ermittelt neue Angebotsdetails parallel und erzeugt ausgewählte Dokumente gemeinsam, um die Wartezeit zu reduzieren.
+
+### Behoben
+
+- Verzögerte automatische Speichervorgänge verwenden die Werte der ursprünglichen Kunden- oder Projektansicht und können beim Navigieren über die globale Suche keine Kundendaten oder Projektzuordnungen mehr leeren.
+
 ## 1.5.1 - 13.09.2026
 
 ### Geändert

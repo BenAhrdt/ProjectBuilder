@@ -134,7 +134,8 @@
     gap: 10px;
 }
 
-.customer-card-actions button:not(#delete-customer) {
+.customer-card-actions button:not(#delete-customer),
+.customer-card-actions .salesforce-record-link {
     padding: 9px 13px;
     border: 1px solid #8bb6ee;
     border-radius: 8px;
@@ -143,6 +144,7 @@
     cursor: pointer;
     font-size: 14px;
     font-weight: 700;
+    text-decoration: none;
 }
 
 .customer-salesforce-state {

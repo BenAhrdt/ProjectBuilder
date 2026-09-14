@@ -348,6 +348,13 @@ async function renderView(
     const project =
         await response.json();
 
+    const salesforceLinks =
+        await loadSalesforceProjectLinks(
+            projectId,
+            project.salesforceOpportunityId
+            || project.salesforceQuoteId
+        );
+
     currentProject =
         project;
 
@@ -437,11 +444,31 @@ async function renderView(
 
             <div class="project-view-heading">
                 <span class="project-view-title">${project.name}</span>
-                ${project.customerId ? `
-                    <button id="back-to-project-customer" type="button">
-                        ← ${i18n.t("project.backToCustomer")}
-                    </button>
-                ` : ""}
+                <div class="project-view-links">
+                    ${project.customerId ? `
+                        <button id="back-to-project-customer" type="button">
+                            ← ${i18n.t("project.backToCustomer")}
+                        </button>
+                    ` : ""}
+                    ${salesforceLinks.opportunity || salesforceLinks.quote ? `
+                        <div class="project-salesforce-links">
+                            ${salesforceLinks.opportunity ? `
+                                <a href="${escapeHtml(salesforceLinks.opportunity.url)}"
+                                    target="_blank" rel="noopener noreferrer">
+                                    ${i18n.t("salesforce.openOpportunity")}
+                                </a>
+                            ` : ""}
+                            ${salesforceLinks.quote ? `
+                                <a href="${escapeHtml(salesforceLinks.quote.url)}"
+                                    target="_blank" rel="noopener noreferrer">
+                                    ${i18n.t("salesforce.openQuote")}${salesforceLinks.quote.quoteNumber
+                                        ? ` (${escapeHtml(salesforceLinks.quote.quoteNumber)})`
+                                        : ""}
+                                </a>
+                            ` : ""}
+                        </div>
+                    ` : ""}
+                </div>
             </div>
 
             <div
@@ -857,14 +884,31 @@ function registerProjectSalesforceSync(projectId) {
             const documentWarning = result.errors?.length
                 ? `\n\n${i18n.t("project.salesforceDocumentErrors")} ${result.errors.map(item => `${item.type}: ${item.error}`).join("; ")}`
                 : "";
-            await showAlert(
+            const updatedLinks = await loadSalesforceProjectLinks(projectId, true);
+            const selectedUrl = await showChoice(
                 i18n.t(result.quoteSynced ? "project.salesforceSyncSuccess" : "project.salesforceOpportunitySyncSuccess")
                     .replace("{positions}", result.positionCount)
                     .replace("{pricebook}", result.pricebookName)
-                    .replace("{quoteNumber}", result.quoteNumber || i18n.t("project.salesforceQuoteWithoutNumber"))
                     + documentWarning,
-                { title: i18n.t("project.salesforceSync") }
+                {
+                    title: i18n.t("project.salesforceSync"),
+                    choiceLayout: "list",
+                    choices: [
+                        updatedLinks.opportunity ? {
+                            label: `${i18n.t("salesforce.opportunity")}: ${result.opportunityName || updatedLinks.opportunity.name}`,
+                            value: updatedLinks.opportunity.url
+                        } : null,
+                        result.quoteSynced && updatedLinks.quote ? {
+                            label: `${i18n.t("salesforce.quote")}: ${formatSalesforceQuoteLabel(
+                                result.quoteName || updatedLinks.quote.name,
+                                result.quoteNumber || updatedLinks.quote.quoteNumber
+                            )}`,
+                            value: updatedLinks.quote.url
+                        } : null
+                    ].filter(Boolean)
+                }
             );
+            if (selectedUrl) window.open(selectedUrl, "_blank", "noopener,noreferrer");
             await renderView(projectId);
         } catch (error) {
             await showAlert(error.message, { title: i18n.t("project.salesforceSyncFailed") });
@@ -3388,9 +3432,15 @@ function generateHandler(
                     saveTimeout
                 );
 
+                const projectFormData =
+                    getProjectFormData();
+
                 saveTimeout =
                     setTimeout(
-                        () => saveProject(projectId),
+                        () => saveProject(
+                            projectId,
+                            projectFormData
+                        ),
                         500
                     );
 
@@ -3851,7 +3901,8 @@ function registerProjectDelete(
 }
 
 async function saveProject(
-    projectId
+    projectId,
+    projectFormData = getProjectFormData()
 ) {
 
     await fetch(
@@ -3869,33 +3920,65 @@ async function saveProject(
 
             },
 
-            body: JSON.stringify({
-
-                name:
-                    document.getElementById(
-                        "project-name"
-                    ).value,
-
-                customerId:
-                    document.getElementById(
-                        "project-customer"
-                    ).value || null,
-
-                projectDiscount:
-                    document.getElementById(
-                        "project-discount"
-                    ).value || 0,
-
-                description:
-                    document.getElementById(
-                        "project-description"
-                    ).value
-
-            })
+            body: JSON.stringify(
+                projectFormData
+            )
 
         }
 
     );
+
+}
+
+async function loadSalesforceProjectLinks(projectId, hasSalesforceId) {
+    if (!hasSalesforceId) return { opportunity: null, quote: null };
+    try {
+        const response = await fetch(`/api/salesforce/projects/${projectId}/links`);
+        const links = await response.json();
+        return response.ok ? links : { opportunity: null, quote: null };
+    } catch {
+        return { opportunity: null, quote: null };
+    }
+}
+
+function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, character => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+    })[character]);
+}
+
+function formatSalesforceQuoteLabel(name, quoteNumber) {
+    const label = String(name || quoteNumber || "");
+    return quoteNumber && label !== String(quoteNumber)
+        ? `${label} (${quoteNumber})`
+        : label;
+}
+
+function getProjectFormData() {
+
+    return {
+
+        name:
+            document.getElementById(
+                "project-name"
+            ).value,
+
+        customerId:
+            document.getElementById(
+                "project-customer"
+            ).value || null,
+
+        projectDiscount:
+            document.getElementById(
+                "project-discount"
+            ).value || 0,
+
+        description:
+            document.getElementById(
+                "project-description"
+            ).value
+
+    };
 
 }
 

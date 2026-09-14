@@ -8,6 +8,7 @@ const API_VERSION = "v67.0";
 let cachedTokenConnection = null;
 let cachedCoreConnection = null;
 let loginPromise = null;
+let cachedQuoteDescription = null;
 
 function salesforceErrorMessage(errors, fallback) {
     const list = Array.isArray(errors) ? errors : [errors];
@@ -224,7 +225,8 @@ function mapCustomer(record) {
 
 export async function getStatus() {
     await query("SELECT Id FROM User LIMIT 1");
-    return { connected: true };
+    const connection = getTokenConnection() ?? await getCoreConnection();
+    return { connected: true, instanceUrl: connection?.instanceUrl ?? null };
 }
 
 export async function warmConnection() {
@@ -292,7 +294,10 @@ export async function getAccountById(id) {
 
 export async function getQuoteSyncOptions(accountId) {
     const [quoteDescription, contactsResult] = await Promise.all([
-        describe("Quote"),
+        cachedQuoteDescription ??= describe("Quote").catch(error => {
+            cachedQuoteDescription = null;
+            throw error;
+        }),
         query(`
             SELECT Id, Name, Email
             FROM Contact
@@ -420,7 +425,7 @@ export async function getPricebookAvailability(pricebookId, articleNumbers) {
 export async function getOpportunity(id) {
     if (!id) return null;
     const result = await query(`
-        SELECT Id, Pricebook2Id, StageName, CloseDate, CurrencyIsoCode, SyncedQuoteId
+        SELECT Id, Name, Pricebook2Id, StageName, CloseDate, CurrencyIsoCode, SyncedQuoteId
         FROM Opportunity
         WHERE Id = '${escapeSoql(id)}'
         LIMIT 1
@@ -480,7 +485,7 @@ export async function synchronizeQuote(opportunityId, quoteId) {
 export async function getQuote(id) {
     if (!id) return null;
     const result = await query(`
-        SELECT Id, Status, QuoteNumber, IsSyncing, Pricebook2Id, OpportunityId
+        SELECT Id, Name, Status, QuoteNumber, IsSyncing, Pricebook2Id, OpportunityId
         FROM Quote
         WHERE Id = '${escapeSoql(id)}'
         LIMIT 1

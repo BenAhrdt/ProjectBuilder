@@ -2,6 +2,18 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.2 - 14.09.2026
+### Nuevo
+- Los clientes, oportunidades y ofertas vinculados se pueden abrir directamente en Salesforce. Los enlaces solo aparecen para registros sincronizados correctamente que siguen existiendo en Salesforce.
+- El diálogo de confirmación de Salesforce ofrece enlaces directos a la oportunidad y la oferta e incluye el número de oferta.
+
+### Modificado
+- La navegación izquierda es más estrecha y mantiene completamente visible «Importar lista de precios».
+- La sincronización con Salesforce reutiliza metadatos almacenados, obtiene en paralelo los datos de ofertas nuevas y genera conjuntamente los documentos seleccionados para reducir la espera.
+
+### Corregido
+- Los guardados automáticos retardados conservan los valores de su vista original y ya no pueden vaciar datos de clientes ni asignaciones de proyectos al navegar mediante la búsqueda global.
+
 ## 1.5.1 - 13.09.2026
 ### Modificado
 - Los elementos GridVis y los precios tienen columnas suficientemente anchas para mostrar los valores y botones de edición sin saltos de línea.

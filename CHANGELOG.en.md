@@ -2,6 +2,18 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.2 - 14.09.2026
+### Added
+- Linked customers, opportunities, and quotes can be opened directly in Salesforce. Links are shown only for successfully synchronized records that still exist in Salesforce.
+- The Salesforce success dialog provides direct links to the opportunity and quote and includes the quote number.
+
+### Changed
+- The left navigation is narrower while keeping “Import pricelist” fully visible.
+- Salesforce synchronization caches reusable metadata, retrieves new quote details concurrently, and generates selected documents together to reduce waiting time.
+
+### Fixed
+- Delayed autosaves retain the values from their original customer or project view and can no longer clear customer data or project assignments after navigation through global search.
+
 ## 1.5.1 - 13.09.2026
 ### Changed
 - GridVis items and prices have sufficiently wide columns so values and edit buttons remain readable without wrapping.

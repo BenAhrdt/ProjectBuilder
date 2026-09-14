@@ -1,6 +1,7 @@
 #project-content {
 
     padding: 30px;
+    font-size: 14px;
 
 }
 
@@ -11,15 +12,20 @@
 }
 
 .project-view-title {
+    display: block;
+    width: 100%;
     min-width: 0;
     overflow: hidden;
+    font-size: clamp(22px, 1.7vw, 28px);
+    line-height: 1.15;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .project-view-heading {
     display: flex;
-    flex: 0 1 420px;
+    flex: 0 1 460px;
+    max-width: min(460px, 30vw);
     min-width: 180px;
     flex-direction: column;
     align-items: flex-start;
@@ -327,13 +333,15 @@
 
     width: 100%;
 
-    padding: 12px 14px;
+    padding: 9px 11px;
 
     border: 1px solid #dcdcdc;
 
     border-radius: 8px;
 
     font-size: 14px;
+
+    line-height: 1.2;
 
     box-sizing: border-box;
 
@@ -677,6 +685,21 @@
 
     font-size: 13px;
 
+}
+
+.project-form input,
+.project-form select {
+    height: 36px;
+    min-height: 36px;
+}
+
+.project-card button,
+.project-editor button,
+.project-editor input,
+.project-editor select,
+.project-editor textarea {
+    font-family: inherit;
+    font-size: 14px;
 }
 
 .project-editor-resizer {
@@ -1247,6 +1270,10 @@ body.project-overview-open {
     .project-view-header .project-price-summary {
         width: 100%;
         margin: 0;
+    }
+
+    .project-view-heading {
+        max-width: 100%;
     }
 
 }

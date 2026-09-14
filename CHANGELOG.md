@@ -2,6 +2,24 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.4 - 14.09.2026
+
+### Neu
+
+- In der Kundenansicht können Projekte direkt angelegt werden; der aktuell geöffnete Kunde wird automatisch zugeordnet.
+- Die Projektübersicht lässt sich per Maus oder Tastatur auf- und absteigend nach Projektname und Kunde sortieren. Die Sortierung bleibt während der Suche erhalten.
+
+### Geändert
+
+- Die Kundenansicht verwendet kompaktere Abstände und Eingabefelder, damit die zugeordneten Projekte ohne unnötiges Scrollen sichtbar werden.
+- Zusatzinformationen sind aufklappbar, bei leerem Inhalt standardmäßig geschlossen und wachsen bis zu einer begrenzten Höhe mit dem Text.
+- Die Projektansicht verwendet eine einheitliche kompakte Typografie. Lange Projektnamen werden responsiv gekürzt und bleiben als Tooltip vollständig lesbar.
+- Projektname, Kunde und Projektrabatt besitzen nun dieselbe kompakte Feldhöhe wie die Stammdaten in der Kundenansicht.
+
+### Behoben
+
+- CSS-Regeln des Formulars in der Projektübersicht wirken nicht mehr versehentlich auf gleichnamige Felder der geöffneten Projektansicht.
+
 ## 1.5.3 - 14.09.2026
 
 ### Geändert

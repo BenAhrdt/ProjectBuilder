@@ -177,17 +177,12 @@ async function renderView(
 
                     </div>
 
-                    <div class="customer-additional-info-wrapper">
-
-                        <label>
-                            ${i18n.t("customer.additionalInfo")}:
-                        </label>
-
-                        <textarea
-                            id="customer-additional-info"
-                        >${escapeHtml(customer.additionalInfo)}</textarea>
-
-                    </div>
+                    <details class="customer-additional-info-wrapper"
+                        ${customer.additionalInfo ? "open" : ""}>
+                        <summary>${i18n.t("customer.additionalInfo")}</summary>
+                        <textarea id="customer-additional-info"
+                            rows="1">${escapeHtml(customer.additionalInfo)}</textarea>
+                    </details>
 
                 </div>
 
@@ -196,7 +191,21 @@ async function renderView(
             <div class="customer-projects-card">
                 <div class="customer-projects-header">
                     <h2>${i18n.t("customer.projects")}</h2>
-                    <span>${projects.length} ${projects.length === 1 ? i18n.t("customer.projectSingular") : i18n.t("customer.projectPlural")}</span>
+                    <div class="customer-projects-header-actions">
+                        <span>${projects.length} ${projects.length === 1 ? i18n.t("customer.projectSingular") : i18n.t("customer.projectPlural")}</span>
+                        <button id="add-customer-project" type="button">
+                            + ${i18n.t("projects.addProject")}
+                        </button>
+                    </div>
+                </div>
+
+                <div id="customer-project-form" class="customer-project-form hidden">
+                    <input id="new-project-name" type="text"
+                        placeholder="${i18n.t("projects.projectname")}">
+                    <textarea id="new-project-description" rows="1"
+                        placeholder="${i18n.t("projects.description")}"></textarea>
+                    <button id="cancel-customer-project" type="button">${i18n.t("common.cancel")}</button>
+                    <button id="save-customer-project" type="button">${i18n.t("common.save")}</button>
                 </div>
 
                 ${projects.length > 0 ? `
@@ -211,8 +220,8 @@ async function renderView(
                         <tbody>
                             ${projects.map(project => `
                                 <tr class="customer-project-row" data-id="${project.id}" tabindex="0" role="link">
-                                    <td>${project.name ?? ""}</td>
-                                    <td>${project.description ?? ""}</td>
+                                    <td>${escapeHtml(project.name)}</td>
+                                    <td>${escapeHtml(project.description)}</td>
                                     <td class="customer-project-actions"><button type="button" class="duplicate-customer-project" data-id="${project.id}">${i18n.t("common.duplicate")}</button></td>
                                 </tr>
                             `).join("")}
@@ -232,9 +241,68 @@ async function renderView(
     `;
     generateHandler(customerId);
     registerCustomerProjectLinks(customerId);
+    registerCustomerProjectCreation(customerId);
     registerCustomerDelete(customerId, customer);
     registerSalesforceActions(customerId, customer);
+    registerAdditionalInfoAutoResize();
 
+}
+
+function registerAdditionalInfoAutoResize() {
+    const textarea = document.getElementById("customer-additional-info");
+    if (!textarea) return;
+    const resize = () => {
+        textarea.style.height = "auto";
+        textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, 42), 180)}px`;
+    };
+    textarea.addEventListener("input", resize);
+    textarea.closest("details")?.addEventListener("toggle", resize);
+    resize();
+}
+
+function registerCustomerProjectCreation(customerId) {
+    const form = document.getElementById("customer-project-form");
+    const nameInput = document.getElementById("new-project-name");
+    const descriptionInput = document.getElementById("new-project-description");
+    const addButton = document.getElementById("add-customer-project");
+    const saveButton = document.getElementById("save-customer-project");
+
+    addButton?.addEventListener("click", () => {
+        form.classList.toggle("hidden");
+        if (!form.classList.contains("hidden")) nameInput.focus();
+    });
+    document.getElementById("cancel-customer-project")?.addEventListener("click", () => {
+        form.classList.add("hidden");
+        nameInput.value = "";
+        descriptionInput.value = "";
+    });
+    saveButton?.addEventListener("click", async () => {
+        const name = nameInput.value.trim();
+        if (!name) {
+            nameInput.focus();
+            return;
+        }
+        saveButton.disabled = true;
+        try {
+            const response = await fetch("/api/projects", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    customerId,
+                    name,
+                    description: descriptionInput.value
+                })
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || i18n.t("projects.createFailed"));
+            }
+            await renderView(customerId);
+        } catch (error) {
+            await showAlert(error.message || i18n.t("projects.createFailed"));
+            saveButton.disabled = false;
+        }
+    });
 }
 
 async function loadSalesforceCustomerLink(customerId, salesforceId) {
@@ -369,7 +437,7 @@ function generateHandler(customerId) {
 
     const inputs =
         document.querySelectorAll(
-            "input, textarea"
+            ".customer-form input, .customer-form textarea"
         );
 
     inputs.forEach(input => {

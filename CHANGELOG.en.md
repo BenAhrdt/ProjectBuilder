@@ -2,6 +2,20 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.4 - 14.09.2026
+### Added
+- Projects can be created directly from the customer view, with the currently open customer assigned automatically.
+- The project overview can be sorted ascending or descending by project name and customer using mouse or keyboard. Sorting remains active while searching.
+
+### Changed
+- The customer view uses more compact spacing and fields so assigned projects become visible without unnecessary scrolling.
+- Additional information is collapsible, initially closed when empty, and grows with its content up to a limited height.
+- The project view uses consistent compact typography. Long project names are shortened responsively while the complete name remains available as a tooltip.
+- Project name, customer, and project discount now use the same compact field height as customer master data.
+
+### Fixed
+- CSS rules belonging to the project-overview form no longer affect fields with the same IDs in an open project.
+
 ## 1.5.3 - 14.09.2026
 ### Changed
 - When a Salesforce action requires sign-in, users can connect directly from the notice and the original action is retried automatically.

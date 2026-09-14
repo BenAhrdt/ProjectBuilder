@@ -9,6 +9,14 @@ import {
 
 const view =
     document.getElementById("view");
+let displayedProjects = [];
+let projectSort = { key: null, direction: "asc" };
+
+function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, character => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+    })[character]);
+}
 
 async function renderView() {
 
@@ -33,6 +41,8 @@ async function renderView() {
 
     const projects =
         await response.json();
+
+    displayedProjects = projects;
 
     // --------------------------------------------------
     // Rendern
@@ -151,12 +161,18 @@ async function renderView() {
 
                     <tr>
 
-                        <th>
-                            ${i18n.t("projects.projectname")}
+                        <th data-sort-key="name" aria-sort="none">
+                            <button class="project-sort-button" type="button" data-sort-key="name">
+                                ${i18n.t("projects.projectname")}
+                                <span class="project-sort-indicator" aria-hidden="true">↕</span>
+                            </button>
                         </th>
 
-                        <th>
-                            ${i18n.t("projects.customer")}
+                        <th data-sort-key="customerName" aria-sort="none">
+                            <button class="project-sort-button" type="button" data-sort-key="customerName">
+                                ${i18n.t("projects.customer")}
+                                <span class="project-sort-indicator" aria-hidden="true">↕</span>
+                            </button>
                         </th>
 
                         <th>
@@ -171,32 +187,7 @@ async function renderView() {
 
                 <tbody>
 
-                    ${projects.map(project => `
-
-                        <tr
-                            class="project-row"
-                            data-id="${project.id}"
-                            tabindex="0"
-                            role="link"
-                        >
-
-                            <td>
-                                ${project.name ?? ""}
-                            </td>
-
-                            <td>
-                                ${project.customerName ?? ""}
-                            </td>
-
-                            <td>
-                                ${project.description ?? ""}
-                            </td>
-
-                            <td class="table-actions"><button type="button" class="duplicate-project" data-id="${project.id}">${i18n.t("common.duplicate")}</button></td>
-
-                        </tr>
-
-                    `).join("")}
+                    ${renderProjectRows(sortProjects(projects))}
 
                 </tbody>
 
@@ -209,6 +200,7 @@ async function renderView() {
     `;
 
     generateHandler();
+    updateProjectSortHeaders();
 
 }
 
@@ -238,10 +230,24 @@ function generateHandler() {
             const projects =
                 await response.json();
 
+            displayedProjects = projects;
             renderProjects(projects);
 
         }
     );
+
+    document.querySelectorAll(".project-sort-button").forEach(button => {
+        button.addEventListener("click", () => {
+            const key = button.dataset.sortKey;
+            projectSort = {
+                key,
+                direction: projectSort.key === key && projectSort.direction === "asc"
+                    ? "desc"
+                    : "asc"
+            };
+            renderProjects(displayedProjects);
+        });
+    });
 
     // --------------------------------------------------
     // Projekt hinzufügen
@@ -558,8 +564,16 @@ function renderProjects(projects) {
             ".projects-table tbody"
         );
 
-    tbody.innerHTML =
-        projects.map(project => `
+    tbody.innerHTML = renderProjectRows(sortProjects(projects));
+
+    updateProjectSortHeaders();
+
+    attachProjectRowHandlers();
+
+}
+
+function renderProjectRows(projects) {
+    return projects.map(project => `
 
             <tr
                 class="project-row"
@@ -569,15 +583,15 @@ function renderProjects(projects) {
             >
 
                 <td>
-                    ${project.name ?? ""}
+                    ${escapeHtml(project.name)}
                 </td>
 
                 <td>
-                    ${project.customerName ?? ""}
+                    ${escapeHtml(project.customerName)}
                 </td>
 
                 <td>
-                    ${project.description ?? ""}
+                    ${escapeHtml(project.description)}
                 </td>
 
                 <td class="table-actions"><button type="button" class="duplicate-project" data-id="${project.id}">${i18n.t("common.duplicate")}</button></td>
@@ -585,9 +599,36 @@ function renderProjects(projects) {
             </tr>
 
         `).join("");
+}
 
-    attachProjectRowHandlers();
+function sortProjects(projects) {
+    if (!projectSort.key) return [...projects];
+    const factor = projectSort.direction === "asc" ? 1 : -1;
+    return [...projects].sort((first, second) => {
+        const comparison = String(first[projectSort.key] ?? "").localeCompare(
+            String(second[projectSort.key] ?? ""),
+            i18n.getCurrentLanguage(),
+            { sensitivity: "base", numeric: true }
+        );
+        return comparison * factor || Number(first.id) - Number(second.id);
+    });
+}
 
+function updateProjectSortHeaders() {
+    document.querySelectorAll(".project-sort-button").forEach(button => {
+        const active = button.dataset.sortKey === projectSort.key;
+        const direction = active ? projectSort.direction : null;
+        const heading = button.closest("th");
+        heading.setAttribute("aria-sort", direction === "asc"
+            ? "ascending"
+            : direction === "desc" ? "descending" : "none");
+        button.querySelector(".project-sort-indicator").textContent = direction === "asc"
+            ? "▲"
+            : direction === "desc" ? "▼" : "↕";
+        button.title = direction === "asc"
+            ? i18n.t("projects.sortDescending")
+            : i18n.t("projects.sortAscending");
+    });
 }
 
 export {

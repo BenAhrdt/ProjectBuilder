@@ -444,7 +444,8 @@ async function renderView(
         <div class="view-header project-view-header">
 
             <div class="project-view-heading">
-                <span class="project-view-title">${project.name}</span>
+                <span class="project-view-title"
+                    title="${escapeHtml(project.name)}">${escapeHtml(project.name)}</span>
                 <div class="project-view-links">
                     ${project.customerId ? `
                         <button id="back-to-project-customer" type="button">

@@ -120,6 +120,32 @@
 
 }
 
+.project-sort-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 3px 5px;
+    margin: -3px -5px;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.project-sort-button:hover,
+.project-sort-button:focus-visible {
+    outline: none;
+    background: #e7eef8;
+}
+
+.project-sort-indicator {
+    min-width: 10px;
+    color: #526173;
+    font-size: 10px;
+}
+
 /* --------------------------------------------------
    Zebra
 -------------------------------------------------- */
@@ -236,7 +262,7 @@
 
 }
 
-.project-form {
+#project-form-container .project-form {
 
     display: grid;
 
@@ -265,7 +291,7 @@
 
 }
 
-.project-form {
+#project-form-container .project-form {
 
     display: grid;
 
@@ -289,8 +315,8 @@
 
 }
 
-.project-form input,
-.project-form textarea {
+#project-form-container .project-form input,
+#project-form-container .project-form textarea {
 
     padding: 12px 14px;
 
@@ -308,8 +334,8 @@
 
 }
 
-.project-form input:focus,
-.project-form textarea:focus {
+#project-form-container .project-form input:focus,
+#project-form-container .project-form textarea:focus {
 
     border-color: #4c8bf5;
 
@@ -411,7 +437,7 @@
 
 }
 
-#project-customer {
+#project-form-container #project-customer {
 
     width: 100%;
 
@@ -441,7 +467,7 @@
 
 }
 
-#project-customer:focus {
+#project-form-container #project-customer:focus {
 
     border-color: #4c8bf5;
 
@@ -450,13 +476,13 @@
 
 }
 
-.project-select-wrapper {
+#project-form-container .project-select-wrapper {
 
     position: relative;
 
 }
 
-.project-select-wrapper::after {
+#project-form-container .project-select-wrapper::after {
 
     content: "▼";
 
@@ -476,9 +502,9 @@
 
 }
 
-.project-form input,
-.project-form select,
-.project-form textarea {
+#project-form-container .project-form input,
+#project-form-container .project-form select,
+#project-form-container .project-form textarea {
 
     padding: 12px 14px;
 
@@ -494,14 +520,14 @@
 
 }
 
-#project-name,
-#project-customer {
+#project-form-container #project-name,
+#project-form-container #project-customer {
 
     height: 60px;
 
 }
 
-#project-description {
+#project-form-container #project-description {
 
     height: 60px;
 

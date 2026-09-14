@@ -2,6 +2,20 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.4 - 14.09.2026
+### Nuevo
+- Los proyectos se pueden crear directamente desde la vista del cliente y el cliente abierto se asigna automáticamente.
+- La vista general de proyectos se puede ordenar de forma ascendente o descendente por nombre de proyecto y cliente mediante ratón o teclado. El orden se conserva durante la búsqueda.
+
+### Modificado
+- La vista del cliente utiliza espacios y campos más compactos para mostrar los proyectos asignados sin desplazamiento innecesario.
+- La información adicional es plegable, permanece cerrada inicialmente si está vacía y crece con el contenido hasta una altura limitada.
+- La vista del proyecto utiliza una tipografía compacta y uniforme. Los nombres largos se acortan de forma adaptable y el nombre completo permanece disponible como ayuda emergente.
+- El nombre del proyecto, el cliente y el descuento utilizan la misma altura compacta que los datos maestros del cliente.
+
+### Corregido
+- Las reglas CSS del formulario de la vista general de proyectos ya no afectan a campos con los mismos identificadores dentro de un proyecto abierto.
+
 ## 1.5.3 - 14.09.2026
 ### Modificado
 - Cuando una acción de Salesforce requiere iniciar sesión, el usuario puede conectarse directamente desde el aviso y la acción original se repite automáticamente.

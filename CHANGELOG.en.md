@@ -2,6 +2,13 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.9 - 14.09.2026
+### Changed
+- The article information card now opens only over the text area and closes immediately at the position menu, preventing overlap with the thought-bubble trail.
+
+### Fixed
+- Quantity changes on newly added articles are now registered and saved correctly without reopening the project first.
+
 ## 1.5.8 - 14.09.2026
 ### Added
 - Added articles show a structured information card after a short hover delay, including available master, pricing, discount, GridVis, and long-text data.

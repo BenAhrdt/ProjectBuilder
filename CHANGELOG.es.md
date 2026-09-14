@@ -2,6 +2,13 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.9 - 14.09.2026
+### Modificado
+- La tarjeta informativa del artículo ahora se abre solo sobre el área de texto y se cierra inmediatamente en el menú de posición, evitando que se superponga con la estela de la burbuja.
+
+### Corregido
+- Los cambios de cantidad en artículos recién añadidos ahora se registran y guardan correctamente sin tener que volver a abrir el proyecto.
+
 ## 1.5.8 - 14.09.2026
 ### Nuevo
 - Los artículos añadidos muestran, tras una breve pausa, una tarjeta estructurada con los datos maestros, precios, descuentos, GridVis y texto largo disponibles.

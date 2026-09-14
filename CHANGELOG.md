@@ -2,6 +2,16 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.9 - 14.09.2026
+
+### Geändert
+
+- Die Artikel-Infokarte öffnet nur noch über dem Textbereich und schließt sofort am Positionsmenü, sodass dessen Bedienung und die Denkblasenpunkte sich nicht überlagern.
+
+### Behoben
+
+- Stückzahländerungen an neu hinzugefügten Artikeln werden sofort korrekt registriert und gespeichert, ohne dass das Projekt zuvor neu geöffnet werden muss.
+
 ## 1.5.8 - 14.09.2026
 
 ### Neu

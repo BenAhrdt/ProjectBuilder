@@ -4931,6 +4931,10 @@ async function addArticleToNode(
         projectId
     );
 
+    registerNodeArticleQuantityInputs(
+        projectId
+    );
+
     registerNodeArticleDragAndDrop(
         projectId
     );
@@ -6393,11 +6397,27 @@ function registerNodeArticleInfoCards() {
 
     view.addEventListener("pointerover", event => {
 
-        const articleElement = event.target.closest?.(".node-article");
+        if (
+            event.target.closest?.(
+                ".node-article-menu, .node-article-quantity-input"
+            )
+        ) {
+
+            hideArticleInfoCard(true);
+            return;
+
+        }
+
+        const articleContent = event.target.closest?.(
+            ".node-article-content"
+        );
+        const articleElement = articleContent?.closest(
+            ".node-article"
+        );
 
         if (
             !articleElement
-            || articleElement.contains(event.relatedTarget)
+            || articleContent.contains(event.relatedTarget)
         ) {
 
             return;
@@ -6410,11 +6430,13 @@ function registerNodeArticleInfoCards() {
 
     view.addEventListener("pointerout", event => {
 
-        const articleElement = event.target.closest?.(".node-article");
+        const articleContent = event.target.closest?.(
+            ".node-article-content"
+        );
 
         if (
-            !articleElement
-            || articleElement.contains(event.relatedTarget)
+            !articleContent
+            || articleContent.contains(event.relatedTarget)
         ) {
 
             return;
@@ -6427,7 +6449,9 @@ function registerNodeArticleInfoCards() {
 
     view.addEventListener("focusin", event => {
 
-        const articleElement = event.target.closest?.(".node-article");
+        const articleElement = event.target.closest?.(
+            ".node-article-content"
+        )?.closest(".node-article");
 
         if (articleElement) {
 
@@ -6439,11 +6463,16 @@ function registerNodeArticleInfoCards() {
 
     view.addEventListener("focusout", event => {
 
-        const articleElement = event.target.closest?.(".node-article");
+        const articleContent = event.target.closest?.(
+            ".node-article-content"
+        );
+        const articleElement = articleContent?.closest(
+            ".node-article"
+        );
 
         if (
             articleElement
-            && !articleElement.contains(event.relatedTarget)
+            && !articleContent.contains(event.relatedTarget)
         ) {
 
             scheduleArticleInfoCardHide();

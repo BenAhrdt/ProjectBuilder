@@ -2,6 +2,16 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.10 - 14.09.2026
+### Changed
+- Project card spacing now matches the more compact customer view.
+- Salesforce badges and action buttons, as well as the edit buttons for GridVis items and prices, are consistently aligned in the article table.
+- The article information card now remains open while moving from the position text into the card; the position menu still does not trigger the card.
+
+### Improved
+- Project, customer, structure, and article data are loaded in parallel when opening a project. Salesforce links are added asynchronously and no longer block navigation.
+- Only positions belonging to the open project are transferred. Off-screen search articles and their images now require substantially less layout work while resizing the project columns.
+
 ## 1.5.9 - 14.09.2026
 ### Changed
 - The article information card now opens only over the text area and closes immediately at the position menu, preventing overlap with the thought-bubble trail.

@@ -2,6 +2,16 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.10 - 14.09.2026
+### Modificado
+- El espaciado de las tarjetas del proyecto ahora coincide con la vista compacta del cliente.
+- Las insignias de Salesforce y los botones de acción, así como los botones de edición de elementos GridVis y precios, están alineados de forma uniforme en la tabla de artículos.
+- La tarjeta informativa del artículo permanece abierta al mover el puntero desde el texto de la posición hasta la tarjeta; el menú de posición sigue sin activarla.
+
+### Mejorado
+- Los datos del proyecto, cliente, estructura y artículos se cargan en paralelo. Los enlaces de Salesforce se añaden después y ya no bloquean el cambio de página.
+- Solo se transfieren las posiciones del proyecto abierto. Los artículos de búsqueda no visibles y sus imágenes requieren considerablemente menos trabajo de diseño al redimensionar las columnas.
+
 ## 1.5.9 - 14.09.2026
 ### Modificado
 - La tarjeta informativa del artículo ahora se abre solo sobre el área de texto y se cierra inmediatamente en el menú de posición, evitando que se superponga con la estela de la burbuja.

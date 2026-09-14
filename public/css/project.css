@@ -1,6 +1,6 @@
 #project-content {
 
-    padding: 30px;
+    padding: 16px;
     font-size: 14px;
 
 }
@@ -71,7 +71,7 @@
 
     border-radius: 12px;
 
-    padding: 24px;
+    padding: 16px;
 
     box-shadow:
         0 2px 10px rgba(0,0,0,0.06);
@@ -88,7 +88,7 @@
 
     gap: 16px;
 
-    margin-bottom: 24px;
+    margin-bottom: 14px;
 
 }
 
@@ -220,13 +220,13 @@
 
     border-radius: 12px;
 
-    padding: 24px;
+    padding: 14px 16px;
 
     display: flex;
 
     flex-direction: column;
 
-    gap: 30px;
+    gap: 14px;
 
 }
 
@@ -378,7 +378,7 @@
 
     border-radius: 12px;
 
-    padding: 24px;
+    padding: 16px;
 
     min-height: 0;
 
@@ -413,7 +413,7 @@
 
     gap: 0;
 
-    margin-top: 30px;
+    margin-top: 16px;
 
     align-items: stretch;
 
@@ -429,7 +429,7 @@
 
     border-radius: 12px;
 
-    padding: 24px;
+    padding: 16px;
 
     display: flex;
 
@@ -1289,6 +1289,10 @@ body.project-overview-open {
 .project-article {
 
     display: grid;
+
+    content-visibility: auto;
+
+    contain-intrinsic-size: auto 105px;
 
     grid-template-columns:
         90px

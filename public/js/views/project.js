@@ -44,6 +44,7 @@ const defaultProjectStructureWidth = 495;
 const minimumProjectStructureWidth = 360;
 const minimumProjectArticlesWidth = 480;
 const articleInfoCardDelay = 700;
+const articleInfoCardHideDelay = 600;
 let articleInfoCardShowTimer = null;
 let articleInfoCardHideTimer = null;
 let activeArticleInfoCard = null;
@@ -363,49 +364,36 @@ async function renderView(
     const project =
         await response.json();
 
-    const salesforceLinks =
-        await loadSalesforceProjectLinks(
-            projectId,
-            project.salesforceOpportunityId
-            || project.salesforceQuoteId
-        );
-
     currentProject =
         project;
 
-    const articleResponse =
-        await fetch(
-            "/api/articles"
-        );
+    const [
+        articleResponse,
+        customerResponse,
+        nodesResponse,
+        nodeArticlesResponse
+    ] = await Promise.all([
+        fetch("/api/articles"),
+        fetch("/api/customers"),
+        fetch(`/api/projectNodes/${projectId}`),
+        fetch(`/api/projectNodeArticles?projectId=${encodeURIComponent(projectId)}`)
+    ]);
 
-    const articles =
-        await articleResponse.json();
+    const [articles, customers, nodes, nodeArticles] =
+        await Promise.all([
+            articleResponse.json(),
+            customerResponse.json(),
+            nodesResponse.json(),
+            nodeArticlesResponse.json()
+        ]);
 
     currentArticles =
         articles;
 
-    const customerResponse =
-        await fetch(
-            "/api/customers"
-        );
-
-    const customers =
-        await customerResponse.json();
-
     currentProjectCustomer =
-        await loadProjectCustomer(
-            project.customerId
-        );
-
-    const nodesResponse =
-        await fetch(
-
-            `/api/projectNodes/${projectId}`
-
-        );
-
-    const nodes =
-        await nodesResponse.json();
+        customers.find(customer =>
+            String(customer.id) === String(project.customerId)
+        ) || null;
 
     currentNodes =
         nodes;
@@ -419,14 +407,6 @@ async function renderView(
         }
         saveCollapsedNodes(projectId);
     }
-
-    const nodeArticlesResponse =
-        await fetch(
-            "/api/projectNodeArticles"
-        );
-
-    const nodeArticles =
-        await nodeArticlesResponse.json();
 
     currentNodeArticles =
         nodeArticles;
@@ -466,24 +446,7 @@ async function renderView(
                             ← ${i18n.t("project.backToCustomer")}
                         </button>
                     ` : ""}
-                    ${salesforceLinks.opportunity || salesforceLinks.quote ? `
-                        <div class="project-salesforce-links">
-                            ${salesforceLinks.opportunity ? `
-                                <a href="${escapeHtml(salesforceLinks.opportunity.url)}"
-                                    target="_blank" rel="noopener noreferrer">
-                                    ${i18n.t("salesforce.openOpportunity")}
-                                </a>
-                            ` : ""}
-                            ${salesforceLinks.quote ? `
-                                <a href="${escapeHtml(salesforceLinks.quote.url)}"
-                                    target="_blank" rel="noopener noreferrer">
-                                    ${i18n.t("salesforce.openQuote")}${salesforceLinks.quote.quoteNumber
-                                        ? ` (${escapeHtml(salesforceLinks.quote.quoteNumber)})`
-                                        : ""}
-                                </a>
-                            ` : ""}
-                        </div>
-                    ` : ""}
+                    <div id="project-salesforce-links"></div>
                 </div>
             </div>
 
@@ -815,6 +778,8 @@ async function renderView(
     registerArticleListLayoutSync();
     syncArticleListHeight();
 
+    loadAndRenderSalesforceProjectLinks(projectId, project);
+
     if (pendingNodeSearch) {
         sessionStorage.removeItem("projectbuilder.pendingNodeSearch");
         const target = document.querySelector(`.project-node[data-id="${CSS.escape(pendingNodeSearch.nodeId)}"]`);
@@ -822,6 +787,33 @@ async function renderView(
         target?.classList.add("project-node-search-target");
         setTimeout(() => target?.classList.remove("project-node-search-target"), 2400);
     }
+}
+
+async function loadAndRenderSalesforceProjectLinks(projectId, project) {
+    if (!project.salesforceOpportunityId && !project.salesforceQuoteId) return;
+
+    const links = await loadSalesforceProjectLinks(projectId, true);
+    const container = document.getElementById("project-salesforce-links");
+    if (!container || String(currentProject?.id) !== String(projectId)) return;
+
+    container.innerHTML = links.opportunity || links.quote ? `
+        <div class="project-salesforce-links">
+            ${links.opportunity ? `
+                <a href="${escapeHtml(links.opportunity.url)}"
+                    target="_blank" rel="noopener noreferrer">
+                    ${i18n.t("salesforce.openOpportunity")}
+                </a>
+            ` : ""}
+            ${links.quote ? `
+                <a href="${escapeHtml(links.quote.url)}"
+                    target="_blank" rel="noopener noreferrer">
+                    ${i18n.t("salesforce.openQuote")}${links.quote.quoteNumber
+                        ? ` (${escapeHtml(links.quote.quoteNumber)})`
+                        : ""}
+                </a>
+            ` : ""}
+        </div>
+    ` : "";
 }
 
 function registerProjectSalesforceSync(projectId) {
@@ -1147,6 +1139,8 @@ function renderArticleList(
                 <img
                     src="${getArticleIcon(article)}"
                     alt=""
+                    loading="lazy"
+                    decoding="async"
                 >
             </div>
 
@@ -6403,7 +6397,7 @@ function registerNodeArticleInfoCards() {
             )
         ) {
 
-            hideArticleInfoCard(true);
+            scheduleArticleInfoCardHide();
             return;
 
         }
@@ -6524,7 +6518,7 @@ function scheduleArticleInfoCardHide() {
 
     articleInfoCardHideTimer = setTimeout(
         () => hideArticleInfoCard(),
-        180
+        articleInfoCardHideDelay
     );
 
 }

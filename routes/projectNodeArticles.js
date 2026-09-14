@@ -10,8 +10,26 @@ router.get(
     "/",
     (req, res) => {
 
-        const articles =
-            database.projectNodeArticles.prepare(`
+        const projectId = String(req.query.projectId ?? "").trim();
+        const articles = projectId
+            ? database.projectNodeArticles.prepare(`
+
+                SELECT projectNodeArticles.*
+
+                FROM projectNodeArticles
+
+                INNER JOIN projectNodes
+                ON projectNodes.id = projectNodeArticles.projectNodeId
+
+                WHERE projectNodes.projectId = ?
+
+                ORDER BY
+                    projectNodeArticles.projectNodeId ASC,
+                    COALESCE(projectNodeArticles.sortOrder, projectNodeArticles.id) ASC,
+                    projectNodeArticles.id ASC
+
+            `).all(projectId)
+            : database.projectNodeArticles.prepare(`
 
                 SELECT *
 

@@ -236,11 +236,21 @@
 
 .article-number-actions {
 
-    display: flex;
+    display: grid;
 
     align-items: center;
 
+    grid-template-columns: minmax(0, 1fr) 20px 74px;
+
     gap: 8px;
+
+    width: 100%;
+
+}
+
+.article-number-actions > span:first-child {
+
+    min-width: 0;
 
 }
 
@@ -378,23 +388,36 @@
 .article-price-editor,
 .article-gridvis-items-editor {
 
-    display: flex;
+    display: grid;
 
     align-items: center;
 
     gap: 8px;
 
-    flex-wrap: nowrap;
-
     white-space: nowrap;
+
+    width: 100%;
+
+}
+
+.article-price-editor {
+
+    grid-template-columns: minmax(72px, 1fr) 58px;
+
+}
+
+.article-gridvis-items-editor {
+
+    grid-template-columns: minmax(28px, 1fr) 58px;
 
 }
 
 .article-price-editor > span,
-.article-gridvis-items-editor > span,
-.article-price-edit-button,
-.article-gridvis-items-edit-button {
-    flex: 0 0 auto;
+.article-gridvis-items-editor > span {
+
+    min-width: 0;
+    text-align: right;
+
 }
 
 .article-price-edit-button,
@@ -415,6 +438,10 @@
     font-weight: 600;
 
     cursor: pointer;
+
+    width: 100%;
+
+    box-sizing: border-box;
 
 }
 
@@ -443,9 +470,9 @@
 .articles-table th:nth-child(1),
 .articles-table td:nth-child(1) {
 
-    width: 100px;
+    width: 185px;
 
-    min-width: 100px;
+    min-width: 185px;
 
     white-space: nowrap;
 

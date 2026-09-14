@@ -2,6 +2,19 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.10 - 14.09.2026
+
+### Geändert
+
+- Die Abstände der Projektkarten entsprechen jetzt der kompakteren Kundenansicht.
+- Salesforce-Kennzeichnung und Aktionsschaltflächen sowie die Bearbeiten-Schaltflächen für GridVis-Items und Preise sind in der Artikeltabelle einheitlich ausgerichtet.
+- Die Artikel-Infokarte bleibt beim Wechsel vom Positionstext in die Karte zuverlässig geöffnet; das Positionsmenü löst weiterhin keine Infokarte aus.
+
+### Verbessert
+
+- Projekt-, Kunden-, Struktur- und Artikeldaten werden beim Öffnen eines Projekts parallel geladen. Salesforce-Links werden nachträglich ergänzt und blockieren den Seitenwechsel nicht mehr.
+- Es werden nur die Positionen des geöffneten Projekts übertragen. Nicht sichtbare Suchartikel und deren Bilder verursachen beim Verschieben der Projektspalten deutlich weniger Layoutarbeit.
+
 ## 1.5.9 - 14.09.2026
 
 ### Geändert

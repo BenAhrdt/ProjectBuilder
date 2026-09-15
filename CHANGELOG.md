@@ -2,6 +2,22 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.13 - 15.09.2026
+
+### Neu
+
+- Die kundenspezifische Vertriebsanalyse kann in der Desktop-App als vollständige PDF-Datei exportiert werden.
+- Eine neue Einstellungsseite bietet einen bevorzugten lokalen Port und einen Browsermodus, der ProjectBuilder nach der Updateprüfung im Standardbrowser öffnet und Electron minimiert.
+- Die Projektansicht ist in die Bereiche „Projektdaten“, „Projektstruktur“ und „Export“ gegliedert.
+
+### Verbessert
+
+- Ist ein bevorzugter Port belegt, startet ProjectBuilder automatisch auf einem freien Port; der tatsächlich verwendete Port wird in der Navigation und den Einstellungen angezeigt.
+- Kunden- und Projekt-Tabs bleiben beim Scrollen erreichbar und verwenden eine einheitliche, in den Inhalt übergehende Darstellung.
+- Die Projektstruktur behält Strukturbaum, Favoriten, Artikelsuche und Artikelliste gemeinsam in einer Arbeitsansicht.
+- Im Browser werden die doppelten internen Zurück-/Vor-Schaltflächen ausgeblendet; Electron verwendet eindeutigere Navigationspfeile.
+- Preisliste, Backup und Einstellungen sind in der unteren Navigation übersichtlich gruppiert.
+
 ## 1.5.12 - 14.09.2026
 
 ### Neu

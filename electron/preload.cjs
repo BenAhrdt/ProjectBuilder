@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld("projectBuilder", {
         ),
     getUpdateStatus: () => ipcRenderer.invoke("update:get-status"),
     setLanguage: language => ipcRenderer.invoke("app:set-language", language),
+    exportCurrentViewPdf: suggestedName =>
+        ipcRenderer.invoke("pdf:export-current-view", suggestedName),
     onUpdateStatus: callback => {
         const listener = (_event, status) => callback(status);
         ipcRenderer.on("update:status", listener);

@@ -8,6 +8,7 @@ const versionResponse = await fetch("/api/version");
 const { version } = versionResponse.ok
     ? await versionResponse.json()
     : { version: i18n.t("navbar.unknownVersion") };
+const electronPort = window.projectBuilder ? window.location.port : null;
 
 navbar.innerHTML = `
     <div class="navbar-global-search global-search">
@@ -45,13 +46,20 @@ navbar.innerHTML = `
                 <span class="navbar-item-icon">${utils.icons.backup}</span>
                 <div class="navbar-item-text">${i18n.t("navbar.backups")}</div>
             </div>
+            <div id="navbar-settings" data-view="settings" class="navbar-item">
+                <span class="navbar-item-icon">${utils.icons.settings}</span>
+                <div class="navbar-item-text">${i18n.t("navbar.settings")}</div>
+            </div>
         </div>
     </div>
     <div id="navbar-informations">
         <div id="navbar-information-1" class="navbar-information">
         </div>
         <div id="navbar-information-version" class="navbar-information">
-            <span>${i18n.t("navbar.currentVersion")}: ${version}</span>
+            <div class="navbar-runtime-information">
+                <span>${i18n.t("navbar.currentVersion")}: ${version}</span>
+                ${electronPort ? `<span class="navbar-local-port">${i18n.t("navbar.localPort")}: ${electronPort}</span>` : ""}
+            </div>
             <button
                 id="navbar-changelog-button"
                 type="button"

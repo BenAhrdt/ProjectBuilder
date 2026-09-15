@@ -7,6 +7,7 @@ import * as projects from "./views/projects.js";
 import * as project from "./views/project.js";
 import * as changelog from "./views/changelog.js";
 import * as backups from "./views/backups.js";
+import * as settings from "./views/settings.js";
 import * as navigationHistory from "./utils/navigationHistory.js";
 
 const routes = {
@@ -37,6 +38,10 @@ const routes = {
     "/backups": {
         render: backups.renderView,
         active: "backups",
+    },
+    "/settings": {
+        render: settings.renderView,
+        active: "settings",
     },
     "/changelog": {
         render: changelog.renderView,

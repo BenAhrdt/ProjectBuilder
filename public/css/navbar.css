@@ -175,11 +175,12 @@
 #navbar-item-group-3 {
     grid-area: navbar-item-group-3;
     display: grid;
-    grid-template-rows: 1fr auto auto;
+    grid-template-rows: 1fr auto auto auto;
     grid-template-areas:
     "spacer"
     "importPricelist"
-    "backups";
+    "backups"
+    "settings";
     align-items: center;
 }
 
@@ -189,6 +190,10 @@
 
 #navbar-import-pricelist {
     grid-area: importPricelist;
+}
+
+#navbar-settings {
+    grid-area: settings;
 }
 
 
@@ -269,6 +274,18 @@
     padding-left: 20px;
     color: black;
     gap: 8px;
+}
+
+.navbar-runtime-information {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.navbar-local-port {
+    color: #667085;
+    font-size: 11px;
 }
 
 #navbar-changelog-button {

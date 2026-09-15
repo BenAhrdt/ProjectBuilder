@@ -2,6 +2,19 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.13 - 15.09.2026
+### Added
+- The customer-specific sales analysis can be exported as a complete PDF file in the desktop app.
+- A new settings page provides a preferred local port and a browser mode that opens ProjectBuilder in the default browser after the update check and minimizes Electron.
+- The project view is divided into Project data, Project structure, and Export sections.
+
+### Improved
+- If a preferred port is occupied, ProjectBuilder automatically starts on an available port; the port actually in use is shown in the navigation and settings.
+- Customer and project tabs remain accessible while scrolling and use a consistent visual transition into their content.
+- The project structure keeps the structure tree, favorites, article search, and article list together in one workspace.
+- Duplicate internal back and forward buttons are hidden in the browser; Electron uses clearer navigation arrows.
+- Price list, backup, and settings are clearly grouped in the lower navigation.
+
 ## 1.5.12 - 14.09.2026
 ### Added
 - The customer detail view is divided into General, Projects, and Sales sections.

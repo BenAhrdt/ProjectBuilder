@@ -6,19 +6,20 @@ const header = document.getElementById("header");
 const MAX_RESULTS_PER_GROUP = 5;
 let searchTimer;
 let searchRequestId = 0;
+const isElectron = Boolean(window.projectBuilder);
 
 header.innerHTML = `
     <div class="header-brand" aria-label="Janitza">
         <img src="/icons/janitza-logo.svg" alt="Janitza">
     </div>
-    <nav class="header-history" aria-label="${i18n.t("header.history")}">
+    ${isElectron ? `<nav class="header-history" aria-label="${i18n.t("header.history")}">
         <button id="history-back" type="button" aria-label="${i18n.t("header.back")}" title="${i18n.t("header.back")}">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5"/><path d="M4 12h9a7 7 0 0 1 7 7"/></svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
         </button>
         <button id="history-forward" type="button" aria-label="${i18n.t("header.forward")}" title="${i18n.t("header.forward")}">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5"/><path d="M20 12h-9a7 7 0 0 0-7 7"/></svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
         </button>
-    </nav>
+    </nav>` : "<div></div>"}
     <div class="language-selector">
         <span>${i18n.t("header.language")}</span>
         <div class="language-dropdown">
@@ -48,12 +49,13 @@ const historyBackButton = document.getElementById("history-back");
 const historyForwardButton = document.getElementById("history-forward");
 
 function updateHistoryButtons(state = navigationHistory.getState()) {
+    if (!historyBackButton || !historyForwardButton) return;
     historyBackButton.disabled = !state.canGoBack;
     historyForwardButton.disabled = !state.canGoForward;
 }
 
-historyBackButton.addEventListener("click", () => history.back());
-historyForwardButton.addEventListener("click", () => history.forward());
+historyBackButton?.addEventListener("click", () => history.back());
+historyForwardButton?.addEventListener("click", () => history.forward());
 window.addEventListener("projectbuilder:navigation-state", event => {
     updateHistoryButtons(event.detail);
 });

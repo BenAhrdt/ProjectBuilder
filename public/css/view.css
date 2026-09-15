@@ -9,7 +9,7 @@
     color: var(--color-content-text);
     display: grid;
     grid-template-columns: 2% 96% 2%;
-    grid-template-rows: 10% auto 5%;
+    grid-template-rows: 10% auto 1%;
     grid-template-areas:
       "header header header"
       "left content right"

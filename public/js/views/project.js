@@ -341,6 +341,50 @@ const view =
         "view"
     );
 
+function getProjectTab(projectId) {
+    const tab = sessionStorage.getItem(`projectBuilder.projectTab.${projectId}`);
+    return ["data", "structure", "export"].includes(tab) ? tab : "structure";
+}
+
+function renderProjectTab(name, label, projectId) {
+    const selected = getProjectTab(projectId) === name;
+    return `<button id="project-tab-${name}" class="project-tab" type="button"
+        role="tab" aria-selected="${selected}" aria-controls="project-panel-${name}"
+        tabindex="${selected ? 0 : -1}" data-tab="${name}">${label}</button>`;
+}
+
+function registerProjectTabs(projectId) {
+    const tabs = [...document.querySelectorAll(".project-tab")];
+    const activate = (name, focus = true) => {
+        sessionStorage.setItem(`projectBuilder.projectTab.${projectId}`, name);
+        tabs.forEach(tab => {
+            const selected = tab.dataset.tab === name;
+            tab.setAttribute("aria-selected", String(selected));
+            tab.tabIndex = selected ? 0 : -1;
+            if (selected && focus) tab.focus();
+        });
+        document.querySelectorAll(".project-tab-panel").forEach(panel => {
+            panel.hidden = panel.id !== `project-panel-${name}`;
+        });
+        if (name === "structure") requestAnimationFrame(syncArticleListHeight);
+    };
+
+    tabs.forEach((tab, index) => {
+        tab.addEventListener("click", () => activate(tab.dataset.tab));
+        tab.addEventListener("keydown", event => {
+            let targetIndex = null;
+            if (event.key === "ArrowRight") targetIndex = (index + 1) % tabs.length;
+            if (event.key === "ArrowLeft") targetIndex = (index - 1 + tabs.length) % tabs.length;
+            if (event.key === "Home") targetIndex = 0;
+            if (event.key === "End") targetIndex = tabs.length - 1;
+            if (targetIndex === null) return;
+            event.preventDefault();
+            activate(tabs[targetIndex].dataset.tab);
+        });
+    });
+    activate(getProjectTab(projectId), false);
+}
+
 async function renderView(
     projectId
 ) {
@@ -468,6 +512,16 @@ async function renderView(
             class="view-content"
         >
 
+            <div class="project-tabs" role="tablist"
+                aria-label="${i18n.t("project.sections")}">
+                ${renderProjectTab("data", i18n.t("project.tabData"), projectId)}
+                ${renderProjectTab("structure", i18n.t("project.tabStructure"), projectId)}
+                ${renderProjectTab("export", i18n.t("project.tabExport"), projectId)}
+            </div>
+
+            <section id="project-panel-data" class="project-tab-panel" role="tabpanel"
+                aria-labelledby="project-tab-data" hidden>
+
             <div class="project-card">
 
                 <div class="project-card-header">
@@ -477,56 +531,6 @@ async function renderView(
                     </h2>
 
                     <div class="project-card-header-actions">
-
-                        <button
-                            id="show-project-overview"
-                            type="button"
-                            title="${i18n.t("project.showOverview")}"
-                            aria-label="${i18n.t("project.showOverview")}"
-                        >
-                            <span class="project-overview-button-icon">
-                                ${utils.icons.projects}
-                            </span>
-
-                            <span>
-                                ${i18n.t("project.showOverview")}
-                            </span>
-                        </button>
-
-                        <button
-                            id="export-project-excel"
-                            type="button"
-                            title="${i18n.t("project.exportExcel")}"
-                            aria-label="${i18n.t("project.exportExcel")}"
-                        >
-                            <span class="export-project-icon">
-                                ${utils.icons.excel}
-                            </span>
-
-                            <span>
-                                ${i18n.t("project.exportExcel")}
-                            </span>
-                        </button>
-
-                        <button
-                            id="export-project-tender"
-                            type="button"
-                            title="${i18n.t("project.exportTender")}"
-                            aria-label="${i18n.t("project.exportTender")}"
-                        >
-                            <span class="export-project-tender-icon">LV</span>
-                            <span>${i18n.t("project.exportTender")}</span>
-                        </button>
-
-                        <button
-                            id="sync-project-salesforce"
-                            type="button"
-                            title="${i18n.t("project.salesforceSync")}"
-                            aria-label="${i18n.t("project.salesforceSync")}"
-                        >
-                            <span class="project-salesforce-icon">SF</span>
-                            <span>${i18n.t("project.salesforceSync")}</span>
-                        </button>
 
                         <button
                             id="delete-project"
@@ -626,6 +630,11 @@ async function renderView(
                 </div>
 
             </div>
+
+            </section>
+
+            <section id="project-panel-structure" class="project-tab-panel" role="tabpanel"
+                aria-labelledby="project-tab-structure">
 
             <div class="project-editor">
 
@@ -744,11 +753,44 @@ async function renderView(
 
             </div>
 
+            </section>
+
+            <section id="project-panel-export" class="project-tab-panel" role="tabpanel"
+                aria-labelledby="project-tab-export" hidden>
+                <div class="project-export-card">
+                    <h2>${i18n.t("project.exportTitle")}</h2>
+                    <p>${i18n.t("project.exportHint")}</p>
+                    <div class="project-export-actions">
+                        <button id="show-project-overview" type="button"
+                            title="${i18n.t("project.showOverview")}">
+                            <span class="project-overview-button-icon">${utils.icons.projects}</span>
+                            <span>${i18n.t("project.showOverview")}</span>
+                        </button>
+                        <button id="export-project-excel" type="button"
+                            title="${i18n.t("project.exportExcel")}">
+                            <span class="export-project-icon">${utils.icons.excel}</span>
+                            <span>${i18n.t("project.exportExcel")}</span>
+                        </button>
+                        <button id="export-project-tender" type="button"
+                            title="${i18n.t("project.exportTender")}">
+                            <span class="export-project-tender-icon">LV</span>
+                            <span>${i18n.t("project.exportTender")}</span>
+                        </button>
+                        <button id="sync-project-salesforce" type="button"
+                            title="${i18n.t("project.salesforceSync")}">
+                            <span class="project-salesforce-icon">SF</span>
+                            <span>${i18n.t("project.salesforceSync")}</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
         </div>
 
         <div class="view-right"></div>
     `;
 
+    registerProjectTabs(projectId);
     generateHandler(projectId);
     document.getElementById("back-to-project-customer")?.addEventListener(
         "click",

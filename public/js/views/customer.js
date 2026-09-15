@@ -350,7 +350,8 @@ async function loadCustomerOrderIntake(customerId, customer, force = false) {
         return;
     }
     if (state.sales && !force) {
-        container.innerHTML = renderSales(state.sales);
+        container.innerHTML = renderSales(state.sales, customer);
+        registerSalesPdfExport(customer);
         return;
     }
     if (state.salesPromise) return state.salesPromise;
@@ -363,7 +364,10 @@ async function loadCustomerOrderIntake(customerId, customer, force = false) {
             if (!result.available) throw new Error(i18n.t("customer.orderIntakeUnavailable"));
             if (customerViewState !== state) return;
             state.sales = result;
-            if (container.isConnected) container.innerHTML = renderSales(result);
+            if (container.isConnected) {
+                container.innerHTML = renderSales(result, customer);
+                registerSalesPdfExport(customer);
+            }
         } catch (error) {
             if (customerViewState === state && container.isConnected) {
                 container.innerHTML = renderTabError(
@@ -378,14 +382,18 @@ async function loadCustomerOrderIntake(customerId, customer, force = false) {
     return state.salesPromise;
 }
 
-function renderSales(result) {
+function renderSales(result, customer) {
     const years = result.years ?? [];
     const current = years[0];
     const currentHasData = Boolean(current) && current.hasData !== false;
     const metrics = calculateSalesMetrics(years);
     const historyYears = years.slice(0, 10);
     return `<div class="customer-sales-card">
-        <div class="customer-sales-header"><h2>${i18n.t("customer.salesOverview")}</h2><p>${i18n.t("customer.salesOverviewHint")}</p></div>
+        <div class="customer-sales-print-title">${escapeHtml(customer?.name)}</div>
+        <div class="customer-sales-header">
+            <div><h2>${i18n.t("customer.salesOverview")}</h2><p>${i18n.t("customer.salesOverviewHint")}</p></div>
+            <button id="export-sales-pdf" type="button">${i18n.t("customer.exportPdf")}</button>
+        </div>
         <div class="customer-sales-metrics">
             ${renderMetric(i18n.t("customer.orderIntakeYear").replace("{year}", current?.year ?? ""), currentHasData ? formatCurrency(current.orderAmount, result.currency) : "–", formatChange(current?.changePercent, current?.previousYearHasData))}
             ${renderMetric(i18n.t("customer.ordersCurrentYear"), currentHasData ? String(current.orderCount ?? 0) : "–", currentHasData ? i18n.t("customer.ordersLabel") : i18n.t("customer.notEnoughData"))}
@@ -397,6 +405,32 @@ function renderSales(result) {
             <div class="customer-order-intake-grid customer-order-intake-grid-all">${historyYears.map((item, index) => renderOrderIntakeCard(item, index, result.currency)).join("")}</div></section>
         <section class="customer-order-intake-chart-panel"><h3>${i18n.t("customer.orderIntakeTrend")}</h3>${renderOrderIntakeChart(years, result.currency)}</section>
     </div>`;
+}
+
+function registerSalesPdfExport(customer) {
+    const button = document.getElementById("export-sales-pdf");
+    if (!button) return;
+    button.addEventListener("click", async () => {
+        const originalLabel = button.textContent;
+        button.disabled = true;
+        button.textContent = i18n.t("customer.exportingPdf");
+        document.body.classList.add("sales-analysis-printing");
+        try {
+            if (window.projectBuilder?.exportCurrentViewPdf) {
+                await window.projectBuilder.exportCurrentViewPdf(
+                    `${i18n.t("customer.salesOverview")} - ${customer?.name || ""}`
+                );
+            } else {
+                window.print();
+            }
+        } catch (error) {
+            await showAlert(error.message || i18n.t("customer.exportPdfFailed"));
+        } finally {
+            document.body.classList.remove("sales-analysis-printing");
+            button.disabled = false;
+            button.textContent = originalLabel;
+        }
+    });
 }
 
 function renderMetric(label, value, detail) {

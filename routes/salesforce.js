@@ -20,6 +20,7 @@ import {
     buildWordTenderBuffer,
     getExportArticleIconDataUri
 } from "./projects.js";
+import { buildProjectFilePayload } from "../utils/projectFile.js";
 import { buildOverviewDocuments } from "../public/js/views/projectOverview.js";
 
 const router = express.Router();
@@ -40,6 +41,7 @@ function getConfiguredPricebookIdentifier() {
 }
 
 const SALESFORCE_DOCUMENT_TYPES = new Set(["overview", "excel", "word", "gaeb"]);
+const SALESFORCE_UPLOAD_TYPES = new Set([...SALESFORCE_DOCUMENT_TYPES, "project"]);
 
 function parseSavedDocuments(value) {
     try {
@@ -96,7 +98,6 @@ function buildOverviewPdf(documents, project) {
 }
 
 async function synchronizeProjectDocuments(opportunityId, project, nodes, nodeArticles, selected) {
-    if (selected.length === 0) return { uploaded: [], errors: [] };
     const exportData = buildProjectExportData(project, nodes, nodeArticles);
     const baseName = String(project.name || "Projekt").replace(/[\\/:*?"<>|]/g, "_").slice(0, 100);
     const generators = {
@@ -117,11 +118,16 @@ async function synchronizeProjectDocuments(opportunityId, project, nodes, nodeAr
                 data: await buildOverviewPdf(documents, project)
             };
         },
+        project: async () => ({
+            title: "ProjectBuilder - Projektdatei",
+            filename: `${baseName}.projectbuilder.json`,
+            data: Buffer.from(JSON.stringify(buildProjectFilePayload(exportData), null, 2), "utf8")
+        }),
         excel: async () => ({ title: "ProjectBuilder - Excel", filename: `${baseName}.xlsx`, data: await buildProjectWorkbookBuffer(exportData) }),
         word: async () => ({ title: "ProjectBuilder - LV Word", filename: `${baseName}-LV.docx`, data: await buildWordTenderBuffer(exportData, "none") }),
         gaeb: async () => ({ title: "ProjectBuilder - LV GAEB", filename: `${baseName}-LV.x82`, data: buildGaebTenderXml(exportData, "list", "82") })
     };
-    const generatedFiles = await Promise.all(selected.map(async type => {
+    const generatedFiles = await Promise.all([...new Set(selected)].map(async type => {
         try {
             const file = await generators[type]();
             return { type, file };
@@ -243,6 +249,18 @@ async function getProjectAccount(projectId) {
     return { project, account };
 }
 
+function saveProjectSalesforceLink(projectId, customerSalesforceId, opportunityId, quoteId = null) {
+    if (!projectId || !customerSalesforceId || !opportunityId) return;
+    database.projects.prepare(`
+        INSERT INTO projectSalesforceLinks (projectId, customerSalesforceId, opportunityId, quoteId, syncedAt)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(projectId, customerSalesforceId) DO UPDATE SET
+            opportunityId = excluded.opportunityId,
+            quoteId = excluded.quoteId,
+            syncedAt = excluded.syncedAt
+    `).run(projectId, customerSalesforceId, opportunityId, quoteId, new Date().toISOString());
+}
+
 router.get("/projects/:projectId/quote-options", async (req, res) => {
     try {
         const result = await getProjectAccount(req.params.projectId);
@@ -274,6 +292,7 @@ router.get("/projects/:projectId/quote-options", async (req, res) => {
                 syncScope: result.project.salesforceSyncScope ?? "opportunity_quote",
                 taxCode: result.project.salesforceTaxCode ?? existingQuote?.Tax__c ?? recommendedTaxCode,
                 documents: parseSavedDocuments(result.project.salesforceDocuments),
+                uploadProjectFile: result.project.salesforceUploadProjectFile !== 0,
                 showDiscount: result.project.salesforceShowDiscount !== 0,
                 showAdditionalDiscount: result.project.salesforceShowAdditionalDiscount === 1,
                 exportQuote: result.project.salesforceExportQuote == null
@@ -638,8 +657,10 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
         const articleModes = new Set(["commercial_total", "commercial_building", "commercial_panel", "commercial_field", "commercial_meter", "projected"]);
         const articleMode = articleModes.has(req.body.articleMode) ? req.body.articleMode : "commercial_total";
         const syncScope = req.body.syncScope === "opportunity" ? "opportunity" : "opportunity_quote";
-        const documents = [...new Set(Array.isArray(req.body.documents) ? req.body.documents : [])]
-            .filter(item => SALESFORCE_DOCUMENT_TYPES.has(item));
+        const uploads = [...new Set(Array.isArray(req.body.documents) ? req.body.documents : [])]
+            .filter(item => SALESFORCE_UPLOAD_TYPES.has(item));
+        const documents = uploads.filter(item => SALESFORCE_DOCUMENT_TYPES.has(item));
+        const uploadProjectFile = uploads.includes("project");
         const [syncOptions, salesAreaRecords] = syncScope === "opportunity_quote"
             ? await Promise.all([
                 salesforce.getQuoteSyncOptions(accountId),
@@ -662,7 +683,7 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
             return res.status(400).json({ success: false, error: "Bitte einen gültigen Salesforce-Steuerschlüssel auswählen." });
         }
         const nodes = database.projectNodes.prepare(`
-            SELECT id, parentId, type, name, sortOrder FROM projectNodes
+            SELECT * FROM projectNodes
             WHERE projectId = ?
         `).all(project.id);
         const nodeArticles = database.projectNodeArticles.prepare(`
@@ -679,14 +700,25 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
             return res.status(400).json({ success: false, error: "Das Projekt enthält keine Artikelpositionen mit einer Menge größer als null." });
         }
 
+        const savedLink = database.projects.prepare(`
+            SELECT opportunityId, quoteId FROM projectSalesforceLinks
+            WHERE projectId = ? AND customerSalesforceId = ?
+        `).get(project.id, accountId);
+        const candidateOpportunityId = savedLink?.opportunityId ?? project.salesforceOpportunityId;
+        const candidateQuoteId = savedLink?.quoteId ?? project.salesforceQuoteId;
         const [pricebook, storedOpportunity, previousQuote] = await Promise.all([
             salesforce.getSalesPricebook(getConfiguredPricebookIdentifier()),
-            salesforce.getOpportunity(project.salesforceOpportunityId),
-            salesforce.getQuote(project.salesforceQuoteId)
+            salesforce.getOpportunity(candidateOpportunityId),
+            salesforce.getQuote(candidateQuoteId)
         ]);
+        if (storedOpportunity?.AccountId && storedOpportunity.AccountId !== accountId) {
+            saveProjectSalesforceLink(project.id, storedOpportunity.AccountId, storedOpportunity.Id,
+                previousQuote?.OpportunityId === storedOpportunity.Id ? previousQuote.Id : null);
+        }
         const storedOpportunityMatchesPricebook = storedOpportunity
+            && storedOpportunity.AccountId === accountId
             && storedOpportunity.Pricebook2Id === pricebook.Id;
-        const opportunityPromise = storedOpportunityMatchesPricebook || project.salesforceOpportunityId
+        const opportunityPromise = storedOpportunityMatchesPricebook || candidateOpportunityId
             ? Promise.resolve(storedOpportunityMatchesPricebook ? storedOpportunity : null)
             : salesforce.findRecentEmptyOpportunity(
                 accountId,
@@ -755,16 +787,21 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
                 await salesforce.synchronizeQuote(opportunity.Id, null);
             }
             await salesforce.replaceLineItems("OpportunityLineItem", "OpportunityId", opportunity.Id, opportunityLineItems);
-            const documentResult = await synchronizeProjectDocuments(opportunity.Id, project, nodes, nodeArticles, documents);
+            project.salesforceOpportunityId = opportunity.Id;
+            project.salesforceQuoteId = null;
+            const documentResult = await synchronizeProjectDocuments(opportunity.Id, project, nodes, nodeArticles,
+                uploadProjectFile ? [...documents, "project"] : documents);
             database.projects.prepare(`
                 UPDATE projects SET salesforceOpportunityId = ?, salesforceSyncedAt = ?,
                     salesforceContactId = ?, salesforceDeliveryTime = ?,
                     salesforceArticleMode = ?, salesforceSyncScope = ?, salesforceDocuments = ?,
-                    salesforceTaxCode = ?
+                    salesforceTaxCode = ?, salesforceUploadProjectFile = ?
                 WHERE id = ?
             `).run(opportunity.Id, new Date().toISOString(), req.body.contactId ?? null,
                 req.body.deliveryTime ?? null, articleMode, syncScope, JSON.stringify(documents),
-                req.body.taxCode ?? project.salesforceTaxCode ?? null, project.id);
+                req.body.taxCode ?? project.salesforceTaxCode ?? null,
+                uploadProjectFile ? 1 : 0, project.id);
+            saveProjectSalesforceLink(project.id, accountId, opportunity.Id, null);
             return res.json({
                 success: true,
                 opportunityId: opportunity.Id,
@@ -860,12 +897,14 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
         await salesforce.finalizeSynchronizedLineDiscounts(
             opportunity.Id, quote.Id, opportunityLineItems, quoteLineItems
         );
+        project.salesforceOpportunityId = opportunity.Id;
+        project.salesforceQuoteId = quote.Id;
         const documentResult = await synchronizeProjectDocuments(
             opportunity.Id,
             project,
             nodes,
             nodeArticles,
-            documents
+            uploadProjectFile ? [...documents, "project"] : documents
         );
         if (createdQuoteDetails) {
             quote = await createdQuoteDetails ?? quote;
@@ -875,14 +914,17 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
             UPDATE projects SET salesforceOpportunityId = ?, salesforceQuoteId = ?, salesforceSyncedAt = ?,
                 salesforceContactId = ?, salesforceDeliveryTime = ?, salesforceArticleMode = ?, salesforceSyncScope = ?,
                 salesforceDocuments = ?, salesforceTaxCode = ?, salesforceShowDiscount = ?,
-                salesforceShowAdditionalDiscount = ?, salesforceExportQuote = ?
+                salesforceShowAdditionalDiscount = ?, salesforceExportQuote = ?,
+                salesforceUploadProjectFile = ?
             WHERE id = ?
         `).run(opportunity.Id, quote.Id, new Date().toISOString(), req.body.contactId ?? null,
             req.body.deliveryTime ?? null, articleMode, syncScope, JSON.stringify(documents),
             req.body.taxCode ?? project.salesforceTaxCode ?? null,
             quoteSettings.has("show_discount") ? 1 : 0,
             quoteSettings.has("show_additional_discount") ? 1 : 0,
-            quoteSettings.has("export_quote") ? 1 : 0, project.id);
+            quoteSettings.has("export_quote") ? 1 : 0,
+            uploadProjectFile ? 1 : 0, project.id);
+        saveProjectSalesforceLink(project.id, accountId, opportunity.Id, quote.Id);
 
         res.json({
             success: true,

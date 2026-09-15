@@ -2,6 +2,20 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.19 - 15.09.2026
+
+### Neu
+
+- Projekte können als eigenständige `.projectbuilder.json`-Datei exportiert und wieder importiert werden.
+- Beim Salesforce-Versand kann die vollständige ProjectBuilder-Projektdatei optional an der Opportunity gespeichert werden. Die standardmäßig aktive Auswahl wird pro Projekt gespeichert und weitere Übertragungen erzeugen Dateiversionen.
+- Projekte lassen sich direkt aus der neuesten ProjectBuilder-Projektdatei einer Salesforce-Opportunity wiederherstellen. Fehlende lokale Kunden werden dabei aus Salesforce importiert.
+
+### Verbessert
+
+- Der Projektimport bietet die Quellen „Aus Datei“ und „Aus Salesforce“ an. Der bisherige Legacy-Import aus Excel wurde entfernt und neue Excel-Exporte enthalten kein technisches Importblatt mehr.
+- Salesforce-Verknüpfungen werden pro Projekt und Kunde verwaltet. Nach einem Kundenwechsel entsteht eine eigene Opportunity; beim Zurückwechseln kann die zuvor verwendete Opportunity wiederverwendet werden.
+- Der Exportbereich ordnet vier Dokumentaktionen übersichtlich an und hebt die Salesforce-Übergabe als abschließende Aktion hervor.
+
 ## 1.5.18 - 15.09.2026
 
 ### Neu

@@ -771,6 +771,11 @@ async function renderView(
                             <span class="export-project-icon">${utils.icons.excel}</span>
                             <span>${i18n.t("project.exportExcel")}</span>
                         </button>
+                        <button id="export-project-file" type="button"
+                            title="${i18n.t("project.exportProjectFile")}">
+                            <span class="project-file-icon">JSON</span>
+                            <span>${i18n.t("project.exportProjectFile")}</span>
+                        </button>
                         <button id="export-project-tender" type="button"
                             title="${i18n.t("project.exportTender")}">
                             <span class="export-project-tender-icon">LV</span>
@@ -798,6 +803,7 @@ async function renderView(
     );
     registerProjectOverview(projectId);
     registerProjectExport(projectId);
+    registerProjectFileExport(projectId);
     registerProjectTenderExport(projectId);
     registerProjectSalesforceSync(projectId);
     registerProjectDelete(projectId, project);
@@ -942,11 +948,13 @@ function registerProjectSalesforceSync(projectId) {
                         label: `${item.value} – ${item.label}`
                     }))
                 }] : []),
-                { type: "checkboxes", name: "documents", label: i18n.t("project.salesforceDocuments"), value: quoteOptions.saved.documents, options: [
+                { type: "checkboxes", name: "documents", label: i18n.t("project.salesforceDocuments"),
+                    value: [...quoteOptions.saved.documents, ...(quoteOptions.saved.uploadProjectFile ? ["project"] : [])], options: [
                     { value: "overview", label: i18n.t("project.salesforceDocumentOverview") },
                     { value: "excel", label: i18n.t("project.salesforceDocumentExcel") },
                     { value: "word", label: i18n.t("project.salesforceDocumentWord") },
-                    { value: "gaeb", label: i18n.t("project.salesforceDocumentGaeb") }
+                    { value: "gaeb", label: i18n.t("project.salesforceDocumentGaeb") },
+                    { value: "project", label: i18n.t("project.salesforceDocumentProjectFile") }
                 ] }
             ],
             validate: values => values.syncScope === "opportunity_quote" && quoteOptions.contactField && !values.contactId
@@ -4029,6 +4037,16 @@ async function saveProject(
 
     );
 
+}
+
+function registerProjectFileExport(projectId) {
+    const button = document.getElementById("export-project-file");
+    if (!button) return;
+    button.addEventListener("click", async () => {
+        clearTimeout(saveTimeout);
+        await saveProject(projectId);
+        window.location.href = `/api/projects/${projectId}/export.projectbuilder.json`;
+    });
 }
 
 async function loadSalesforceProjectLinks(projectId, hasSalesforceId) {

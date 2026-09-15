@@ -196,6 +196,7 @@
 
 #show-project-overview,
 #export-project-excel,
+#export-project-file,
 #export-project-tender,
 #sync-project-salesforce,
 #delete-project {
@@ -249,8 +250,10 @@
 }
 
 #sync-project-salesforce {
+    grid-column: 1 / -1;
     border-color: #9dc9e8;
     color: #176b9b;
+    background: #f7fbfe;
     flex-shrink: 0;
     white-space: nowrap;
 }
@@ -788,6 +791,17 @@
 
 }
 
+#export-project-file {
+    border-color: #b9b7df;
+    color: #4b478f;
+    box-shadow: 0 1px 2px rgba(75,71,143,0.08);
+}
+
+#export-project-file:hover {
+    border-color: #736fc0;
+    background: #f7f6ff;
+}
+
 .project-form input,
 .project-form select {
     height: 36px;
@@ -855,6 +869,20 @@ body.project-editor-resizing {
     border-radius: 3px;
     font-size: 9px;
     font-weight: 800;
+}
+
+.project-file-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 36px;
+    height: 20px;
+    border: 1px solid currentColor;
+    border-radius: 3px;
+    box-sizing: border-box;
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 1;
+    flex: 0 0 36px;
 }
 
 .project-structure-header {

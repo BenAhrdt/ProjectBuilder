@@ -94,6 +94,15 @@ async function query(soql) {
     return connection.query(soql);
 }
 
+async function downloadSalesforceData(requestPath) {
+    const connection = getTokenConnection() ?? await getCoreConnection();
+    if (!connection) throw new Error("Keine Salesforce-Anmeldung vorhanden.");
+    const url = /^https?:/i.test(requestPath) ? requestPath : `${connection.instanceUrl}${requestPath}`;
+    const response = await fetch(url, { headers: { Authorization: `Bearer ${connection.accessToken}` } });
+    if (!response.ok) throw new Error(`Salesforce-Datei konnte nicht geladen werden (${response.status}).`);
+    return Buffer.from(await response.arrayBuffer());
+}
+
 async function describe(objectName) {
     if (getTokenConnection()) {
         return tokenRequest(`/sobjects/${encodeURIComponent(objectName)}/describe`);
@@ -587,7 +596,7 @@ export async function getPricebookAvailability(pricebookId, articleNumbers) {
 export async function getOpportunity(id) {
     if (!id) return null;
     const result = await query(`
-        SELECT Id, Name, Pricebook2Id, StageName, CloseDate, CurrencyIsoCode, SyncedQuoteId
+        SELECT Id, Name, AccountId, Pricebook2Id, StageName, CloseDate, CurrencyIsoCode, SyncedQuoteId
         FROM Opportunity
         WHERE Id = '${escapeSoql(id)}'
         LIMIT 1
@@ -638,6 +647,66 @@ export async function uploadOpportunityFile(opportunityId, { title, filename, da
     else fields.FirstPublishLocationId = opportunityId;
     const result = await createRecord("ContentVersion", fields);
     return { id: result.id, versioned: Boolean(contentDocumentId) };
+}
+
+export async function searchProjectFileOpportunities(search) {
+    const value = String(search ?? "").trim();
+    if (value.length < 2) throw new Error("Bitte mindestens zwei Suchzeichen eingeben.");
+    const escaped = escapeSoql(value);
+    const result = await query(`
+        SELECT Id, Name, StageName, LastModifiedDate, Account.Id, Account.Name, Account.ExtID__c
+        FROM Opportunity
+        WHERE Name LIKE '%${escaped}%'
+           OR Account.Name LIKE '%${escaped}%'
+           OR Account.ExtID__c LIKE '%${escaped}%'
+        ORDER BY LastModifiedDate DESC LIMIT 50
+    `);
+    if (result.records.length === 0) return [];
+    const ids = result.records.map(item => `'${escapeSoql(item.Id)}'`).join(", ");
+    const links = await query(`
+        SELECT LinkedEntityId, ContentDocumentId, ContentDocument.Title,
+            ContentDocument.LatestPublishedVersion.LastModifiedDate
+        FROM ContentDocumentLink
+        WHERE LinkedEntityId IN (${ids})
+          AND ContentDocument.Title = 'ProjectBuilder - Projektdatei'
+    `);
+    const fileByOpportunity = new Map(links.records.map(link => [String(link.LinkedEntityId), link]));
+    return result.records.map(opportunity => ({
+        id: opportunity.Id,
+        name: opportunity.Name,
+        stageName: opportunity.StageName,
+        lastModifiedAt: opportunity.LastModifiedDate,
+        accountId: opportunity.Account?.Id ?? null,
+        accountName: opportunity.Account?.Name ?? "",
+        customerNumber: opportunity.Account?.ExtID__c ?? "",
+        hasProjectFile: fileByOpportunity.has(String(opportunity.Id)),
+        projectFileModifiedAt: fileByOpportunity.get(String(opportunity.Id))
+            ?.ContentDocument?.LatestPublishedVersion?.LastModifiedDate ?? null
+    }));
+}
+
+export async function downloadOpportunityProjectFile(opportunityId) {
+    if (!/^[a-zA-Z0-9]{15,18}$/.test(String(opportunityId ?? ""))) {
+        throw new Error("Ungültige Opportunity-ID.");
+    }
+    const links = await query(`
+        SELECT ContentDocumentId
+        FROM ContentDocumentLink
+        WHERE LinkedEntityId = '${escapeSoql(opportunityId)}'
+          AND ContentDocument.Title = 'ProjectBuilder - Projektdatei'
+        ORDER BY ContentDocument.CreatedDate DESC LIMIT 1
+    `);
+    const contentDocumentId = links.records[0]?.ContentDocumentId;
+    if (!contentDocumentId) throw new Error("Für diese Opportunity wurde keine ProjectBuilder-Projektdatei gefunden.");
+    const versions = await query(`
+        SELECT Id, Title, FileExtension, VersionData, LastModifiedDate
+        FROM ContentVersion
+        WHERE ContentDocumentId = '${escapeSoql(contentDocumentId)}' AND IsLatest = true
+        LIMIT 1
+    `);
+    const version = versions.records[0];
+    if (!version?.VersionData) throw new Error("Die ProjectBuilder-Projektdatei ist nicht verfügbar.");
+    return { data: await downloadSalesforceData(version.VersionData), modifiedAt: version.LastModifiedDate };
 }
 
 export async function synchronizeQuote(opportunityId, quoteId) {

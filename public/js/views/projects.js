@@ -4,7 +4,9 @@ await i18n.loadLanguage();
 import * as router from "../router.js";
 import {
     showAlert,
-    showConfirm
+    showConfirm,
+    showChoice,
+    showPrompt
 } from "../utils/modal.js";
 
 const view =
@@ -97,7 +99,7 @@ async function renderView() {
             <input
                 id="import-project-file"
                 type="file"
-                accept=".xlsx,.xls"
+                accept=".projectbuilder.json,.json,application/json"
                 hidden
             >
 
@@ -346,7 +348,21 @@ function generateHandler() {
 
     importProjectButton.addEventListener(
         "click",
-        () => {
+        async () => {
+
+            const source = await showChoice(i18n.t("projects.importSourcePrompt"), {
+                title: i18n.t("projects.importProject"),
+                choices: [
+                    { value: "file", label: i18n.t("projects.importFromFile") },
+                    { value: "salesforce", label: i18n.t("projects.importFromSalesforce") }
+                ]
+            });
+
+            if (source === "salesforce") {
+                await importProjectFromSalesforce();
+                return;
+            }
+            if (source !== "file") return;
 
             importProjectFile.value =
                 "";
@@ -570,6 +586,57 @@ function renderProjects(projects) {
 
     attachProjectRowHandlers();
 
+}
+
+async function importProjectFromSalesforce() {
+    const search = await showPrompt(i18n.t("projects.salesforceOpportunitySearchHint"), {
+        title: i18n.t("projects.importFromSalesforce"),
+        confirmText: i18n.t("projects.search"),
+        placeholder: i18n.t("projects.salesforceOpportunitySearchPlaceholder")
+    });
+    if (!search) return;
+    const response = await fetch(`/api/projects/import/salesforce/opportunities?search=${encodeURIComponent(search)}`);
+    const result = await response.json();
+    if (!response.ok || !result.ok) return showAlert(result.error || i18n.t("projects.importFailed"));
+    const available = result.opportunities.filter(item => item.hasProjectFile);
+    if (!available.length) return showAlert(i18n.t("projects.noSalesforceProjectFiles"));
+    const opportunityId = await showChoice(i18n.t("projects.selectSalesforceOpportunity"), {
+        title: i18n.t("projects.importFromSalesforce"),
+        choiceLayout: "list",
+        choices: available.map(item => ({
+            value: item.id,
+            label: `${item.name} · ${item.accountName}${item.customerNumber ? ` (${item.customerNumber})` : ""}`
+        }))
+    });
+    if (!opportunityId) return;
+    const previewResponse = await fetch("/api/projects/import/salesforce/preview", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ opportunityId })
+    });
+    const preview = await previewResponse.json();
+    if (!previewResponse.ok || !preview.ok) return showAlert(preview.error || i18n.t("projects.importFailed"));
+    if (preview.missingArticleNumbers.length) {
+        return showAlert(`${i18n.t("projects.importMissingArticles")}:\n${preview.missingArticleNumbers.join(", ")}`);
+    }
+    const confirmed = await confirmProjectImport(preview);
+    if (!confirmed) return;
+    const importResponse = await fetch("/api/projects/import/salesforce", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ opportunityId })
+    });
+    const imported = await importResponse.json();
+    if (!importResponse.ok || !imported.ok) return showAlert(imported.error || i18n.t("projects.importFailed"));
+    router.navigate(`/project/${imported.project.id}`);
+}
+
+function confirmProjectImport(preview) {
+    return showConfirm([
+        i18n.t("projects.importPreview"), "",
+        `${i18n.t("projects.projectname")}: ${preview.projectName}`,
+        `${i18n.t("projects.importNodeCount")}: ${preview.nodeCount}`,
+        `${i18n.t("projects.importPositionCount")}: ${preview.positionCount}`, "",
+        i18n.t("projects.importConfirm")
+    ].join("\n"), {
+        title: i18n.t("projects.importPreview"), confirmText: i18n.t("common.import")
+    });
 }
 
 function renderProjectRows(projects) {

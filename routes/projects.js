@@ -23,6 +23,12 @@ import {
 
 import * as database
 from "../database/index.js";
+import * as salesforce from "../services/salesforce.js";
+import {
+    buildProjectFilePayload,
+    projectFileFormat,
+    projectFileSchemaVersion
+} from "../utils/projectFile.js";
 
 const router =
     express.Router();
@@ -47,6 +53,35 @@ const upload =
 
 const exportVersion =
     1;
+
+function getProjectExportData(projectId) {
+    const project = database.projects.prepare(`
+        SELECT projects.*, customers.customerNumber, customers.name AS customerName,
+            customers.salesforceId AS customerSalesforceId,
+            customers.city AS customerCity, customers.additionalInfo AS customerAdditionalInfo,
+            customers.pg1, customers.pg2, customers.pg3, customers.pg4, customers.pg5,
+            customers.pg6, customers.pg7, customers.pg8, customers.pg9, customers.pg10
+        FROM projects LEFT JOIN customers ON customers.id = projects.customerId
+        WHERE projects.id = ?
+    `).get(projectId);
+    if (!project) return null;
+    const nodes = database.projectNodes.prepare(`
+        SELECT * FROM projectNodes WHERE projectId = ?
+        ORDER BY COALESCE(sortOrder, id), id
+    `).all(projectId);
+    const nodeIds = nodes.map(node => node.id);
+    const positions = nodeIds.length === 0 ? [] : database.projectNodeArticles.prepare(`
+        SELECT projectNodeArticles.*, articles.ean, articles.manufacturerType,
+            articles.manufacturerName, articles.quantityUnit, articles.listPrice,
+            articles.listPriceCurrency, articles.discountGroup, articles.description
+        FROM projectNodeArticles
+        LEFT JOIN articles ON articles.articleNumber = projectNodeArticles.articleNumber
+        WHERE projectNodeArticles.projectNodeId IN (${nodeIds.map(() => "?").join(",")})
+        ORDER BY projectNodeArticles.projectNodeId,
+            COALESCE(projectNodeArticles.sortOrder, projectNodeArticles.id), projectNodeArticles.id
+    `).all(...nodeIds);
+    return buildProjectExportData(project, nodes, positions);
+}
 
 const projectNodeTypeLabels = {
     building: "Gebäude",
@@ -485,6 +520,15 @@ router.get(
     }
 );
 
+router.get("/:id/export.projectbuilder.json", (req, res) => {
+    const exportData = getProjectExportData(req.params.id);
+    if (!exportData) return res.status(404).json({ error: "Projekt nicht gefunden" });
+    const filename = `${sanitizeFilename(exportData.project.name || "Projekt")}.projectbuilder.json`;
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.send(JSON.stringify(buildProjectFilePayload(exportData), null, 2));
+});
+
 router.get(
     "/:id/tender",
     async (req, res) => {
@@ -806,6 +850,61 @@ router.post(
 
     }
 );
+
+router.get("/import/salesforce/opportunities", async (req, res) => {
+    try {
+        res.json({ ok: true, opportunities: await salesforce.searchProjectFileOpportunities(req.query.search) });
+    } catch (error) {
+        res.status(400).json({ ok: false, error: error.message });
+    }
+});
+
+router.post("/import/salesforce/preview", async (req, res) => {
+    try {
+        const downloaded = await salesforce.downloadOpportunityProjectFile(req.body.opportunityId);
+        const payload = parseProjectJson(downloaded.data);
+        const validation = validateProjectImportPayload(payload);
+        res.json({
+            ok: true, projectName: payload.project?.name ?? "",
+            customerNumber: payload.project?.customerNumber ?? "",
+            nodeCount: payload.nodes.length, positionCount: payload.positions.length,
+            missingArticleNumbers: validation.missingArticleNumbers,
+            modifiedAt: downloaded.modifiedAt
+        });
+    } catch (error) {
+        res.status(400).json({ ok: false, error: error.message });
+    }
+});
+
+router.post("/import/salesforce", async (req, res) => {
+    try {
+        const downloaded = await salesforce.downloadOpportunityProjectFile(req.body.opportunityId);
+        const payload = parseProjectJson(downloaded.data);
+        const validation = validateProjectImportPayload(payload);
+        if (validation.missingArticleNumbers.length > 0) {
+            return res.status(400).json({ ok: false, error: "Artikel fehlen in der Artikeldatenbank.",
+                missingArticleNumbers: validation.missingArticleNumbers });
+        }
+        await ensureSalesforceImportCustomer(payload.project);
+        const project = importProjectPayload(payload, {
+            preserveSalesforceLinks: true,
+            opportunityId: req.body.opportunityId
+        });
+        if (payload.project.customerSalesforceId) {
+            database.projects.prepare(`
+                INSERT INTO projectSalesforceLinks (projectId, customerSalesforceId, opportunityId, quoteId, syncedAt)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(projectId, customerSalesforceId) DO UPDATE SET
+                    opportunityId = excluded.opportunityId, quoteId = excluded.quoteId,
+                    syncedAt = excluded.syncedAt
+            `).run(project.id, payload.project.customerSalesforceId, req.body.opportunityId,
+                payload.project.salesforceQuoteId ?? null, new Date().toISOString());
+        }
+        res.json({ ok: true, project });
+    } catch (error) {
+        res.status(400).json({ ok: false, error: error.message });
+    }
+});
 
 router.post("/:id/duplicate", (req, res) => {
     const source = database.projects.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id);
@@ -1358,75 +1457,23 @@ function readProjectImportPayload(
 
     }
 
-    const workbook =
-        XLSX.readFile(
-            file.path
-        );
-
-    const importSheet =
-        workbook.Sheets.Importdaten;
-
-    if (!importSheet) {
-
-        throw new Error("Das Blatt 'Importdaten' fehlt.");
-
+    if (!/\.json$/i.test(file.originalname ?? "")) {
+        throw new Error("Bitte eine ProjectBuilder-Projektdatei (.projectbuilder.json) auswählen.");
     }
-
-    const rows =
-        XLSX.utils.sheet_to_json(
-            importSheet,
-            {
-                header: 1,
-                blankrows: false
-            }
-        );
-
-    const payloadRow =
-        rows.find(row =>
-            String(row?.[0] ?? "")
-                .trim()
-            ===
-            "payloadJson"
-        );
-
-    if (!payloadRow?.[1]) {
-
-        throw new Error("payloadJson wurde in 'Importdaten' nicht gefunden.");
-
-    }
-
-    let payload;
-
-    try {
-
-        payload =
-            JSON.parse(
-                String(payloadRow[1])
-            );
-
-    } catch (error) {
-
-        throw new Error("payloadJson ist kein gültiges JSON.");
-
-    }
-
-    if (
-        !payload
-        ||
-        typeof payload !== "object"
-    ) {
-
-        throw new Error("Importdaten sind ungültig.");
-
-    }
-
-    return payload;
+    return parseProjectJson(fs.readFileSync(file.path));
 
 }
 
 function validateProjectImportPayload(
     payload
 ) {
+
+    if (payload?.format && payload.format !== projectFileFormat) {
+        throw new Error("Die Datei ist keine ProjectBuilder-Projektdatei.");
+    }
+    if (Number(payload?.schemaVersion ?? 1) > projectFileSchemaVersion) {
+        throw new Error("Die Projektdatei wurde mit einer neueren ProjectBuilder-Version erstellt.");
+    }
 
     if (
         !payload.project
@@ -1497,9 +1544,7 @@ function validateProjectImportPayload(
 
 }
 
-function importProjectPayload(
-    payload
-) {
+function importProjectPayload(payload, options = {}) {
 
     const transaction =
         database.projects.transaction(() => {
@@ -1511,14 +1556,20 @@ function importProjectPayload(
                         customerId,
                         name,
                         description,
-                        projectDiscount
+                        projectDiscount,
+                        salesforceOpportunityId,
+                        salesforceQuoteId,
+                        salesforceSyncedAt
                     )
 
                     VALUES (
                         @customerId,
                         @name,
                         @description,
-                        @projectDiscount
+                        @projectDiscount,
+                        @salesforceOpportunityId,
+                        @salesforceQuoteId,
+                        @salesforceSyncedAt
                     )
 
                 `);
@@ -1586,15 +1637,18 @@ function importProjectPayload(
             const projectResult =
                 insertProject.run({
                     customerId:
-                        getImportCustomerId(
-                            payload.project.customerId
-                        ),
+                        getImportCustomerId(payload.project),
                     name:
                         payload.project.name ?? "Importiertes Projekt",
                     description:
                         payload.project.description ?? "",
                     projectDiscount:
-                        payload.project.projectDiscount ?? 0
+                        payload.project.projectDiscount ?? 0,
+                    salesforceOpportunityId: options.preserveSalesforceLinks
+                        ? options.opportunityId ?? payload.project.salesforceOpportunityId ?? null : null,
+                    salesforceQuoteId: options.preserveSalesforceLinks
+                        ? payload.project.salesforceQuoteId ?? null : null,
+                    salesforceSyncedAt: options.preserveSalesforceLinks ? new Date().toISOString() : null
                 });
 
             const newProjectId =
@@ -1705,9 +1759,16 @@ function importProjectPayload(
 
 }
 
-function getImportCustomerId(
-    customerId
-) {
+function getImportCustomerId(project) {
+
+    const linkedCustomer = project.customerSalesforceId
+        ? database.customers.prepare("SELECT id FROM customers WHERE salesforceId = ?").get(project.customerSalesforceId)
+        : project.customerNumber
+            ? database.customers.prepare("SELECT id FROM customers WHERE customerNumber = ?").get(project.customerNumber)
+            : null;
+    if (linkedCustomer) return linkedCustomer.id;
+
+    const customerId = project.customerId;
 
     if (!customerId) {
 
@@ -1881,11 +1942,6 @@ function buildProjectWorkbook(
             exportData.orderedNodes
         );
 
-    const importSheet =
-        buildImportSheet(
-            exportData
-        );
-
     XLSX.utils.book_append_sheet(
         workbook,
         projectSheet,
@@ -1932,12 +1988,6 @@ function buildProjectWorkbook(
         workbook,
         structureSheet,
         "Struktur"
-    );
-
-    XLSX.utils.book_append_sheet(
-        workbook,
-        importSheet,
-        "Importdaten"
     );
 
     workbook.Props = {
@@ -2041,11 +2091,6 @@ export async function buildProjectWorkbookBuffer(
     buildExcelStructureSheet(
         workbook,
         exportData.orderedNodes
-    );
-
-    buildExcelImportSheet(
-        workbook,
-        exportData
     );
 
     return await workbook.xlsx.writeBuffer();
@@ -6298,6 +6343,35 @@ function getExportIconName(
 
     return "";
 
+}
+
+function parseProjectJson(input) {
+    try {
+        return JSON.parse(Buffer.from(input).toString("utf8"));
+    } catch {
+        throw new Error("Die Projektdatei enthält kein gültiges JSON.");
+    }
+}
+
+async function ensureSalesforceImportCustomer(project) {
+    if (!project?.customerSalesforceId) return;
+    const existing = database.customers.prepare(`
+        SELECT id FROM customers WHERE salesforceId = ? OR customerNumber = ? LIMIT 1
+    `).get(project.customerSalesforceId, project.customerNumber ?? null);
+    if (existing) return;
+    const customer = await salesforce.getCustomerById(project.customerSalesforceId);
+    if (!customer) return;
+    const discounts = Object.fromEntries(Array.from({ length: 8 }, (_, index) => [
+        `pg${index + 1}`, customer[`pg${index + 1}`] ?? null
+    ]));
+    database.customers.prepare(`
+        INSERT INTO customers (customerNumber, name, street, postalCode, city,
+            salesforceId, salesforceSyncedAt, salesforceLastModifiedAt,
+            pg1, pg2, pg3, pg4, pg5, pg6, pg7, pg8)
+        VALUES (@customerNumber, @name, @street, @postalCode, @city,
+            @salesforceId, @salesforceSyncedAt, @salesforceLastModifiedAt,
+            @pg1, @pg2, @pg3, @pg4, @pg5, @pg6, @pg7, @pg8)
+    `).run({ ...customer, ...discounts, salesforceSyncedAt: new Date().toISOString() });
 }
 
 export function getExportArticleIconDataUri(article = {}) {

@@ -55,12 +55,24 @@ for (const [name, definition] of [
     ["salesforceTaxCode", "TEXT"],
     ["salesforceShowDiscount", "INTEGER DEFAULT 1"],
     ["salesforceShowAdditionalDiscount", "INTEGER DEFAULT 0"],
-    ["salesforceExportQuote", "INTEGER"]
+    ["salesforceExportQuote", "INTEGER"],
+    ["salesforceUploadProjectFile", "INTEGER DEFAULT 1"]
 ]) {
     if (!columns.includes(name)) {
         projects.exec(`ALTER TABLE projects ADD COLUMN ${name} ${definition}`);
     }
 }
+
+projects.exec(`
+    CREATE TABLE IF NOT EXISTS projectSalesforceLinks (
+        projectId INTEGER NOT NULL,
+        customerSalesforceId TEXT NOT NULL,
+        opportunityId TEXT,
+        quoteId TEXT,
+        syncedAt TEXT,
+        PRIMARY KEY (projectId, customerSalesforceId)
+    )
+`);
 
 export {
     projects

@@ -150,6 +150,9 @@ async function synchronizeProjectDocuments(opportunityId, project, nodes, nodeAr
 
 function syncCustomer(customer, localId = null) {
     const now = new Date().toISOString();
+    const discounts = Object.fromEntries(
+        Array.from({ length: 8 }, (_, index) => [`pg${index + 1}`, customer[`pg${index + 1}`] ?? null])
+    );
     const existing = localId
         ? database.customers.prepare("SELECT id FROM customers WHERE id = ?").get(localId)
         : database.customers.prepare(`
@@ -170,21 +173,27 @@ function syncCustomer(customer, localId = null) {
                 city = @city,
                 salesforceId = @salesforceId,
                 salesforceSyncedAt = @salesforceSyncedAt,
-                salesforceLastModifiedAt = @salesforceLastModifiedAt
+                salesforceLastModifiedAt = @salesforceLastModifiedAt,
+                pg1 = COALESCE(@pg1, pg1), pg2 = COALESCE(@pg2, pg2),
+                pg3 = COALESCE(@pg3, pg3), pg4 = COALESCE(@pg4, pg4),
+                pg5 = COALESCE(@pg5, pg5), pg6 = COALESCE(@pg6, pg6),
+                pg7 = COALESCE(@pg7, pg7), pg8 = COALESCE(@pg8, pg8)
             WHERE id = @id
-        `).run({ ...customer, salesforceSyncedAt: now, id: existing.id });
+        `).run({ ...customer, ...discounts, salesforceSyncedAt: now, id: existing.id });
         return { id: existing.id, created: false };
     }
 
     const result = database.customers.prepare(`
         INSERT INTO customers (
             customerNumber, name, street, postalCode, city, salesforceId,
-            salesforceSyncedAt, salesforceLastModifiedAt
+            salesforceSyncedAt, salesforceLastModifiedAt,
+            pg1, pg2, pg3, pg4, pg5, pg6, pg7, pg8
         ) VALUES (
             @customerNumber, @name, @street, @postalCode, @city, @salesforceId,
-            @salesforceSyncedAt, @salesforceLastModifiedAt
+            @salesforceSyncedAt, @salesforceLastModifiedAt,
+            @pg1, @pg2, @pg3, @pg4, @pg5, @pg6, @pg7, @pg8
         )
-    `).run({ ...customer, salesforceSyncedAt: now });
+    `).run({ ...customer, ...discounts, salesforceSyncedAt: now });
     return { id: Number(result.lastInsertRowid), created: true };
 }
 

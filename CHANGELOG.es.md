@@ -2,6 +2,12 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.18 - 15.09.2026
+
+### Nuevo
+
+- Al importar o actualizar clientes de Salesforce, se recuperan los descuentos disponibles de PG1 a PG8 a partir de las posiciones de oportunidad calculadas de forma inequívoca más recientes. Los grupos sin una coincidencia fiable permanecen sin cambios.
+
 ## 1.5.17 - 15.09.2026
 
 ### Mejorado

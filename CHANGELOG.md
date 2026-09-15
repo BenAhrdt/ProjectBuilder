@@ -2,6 +2,12 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.18 - 15.09.2026
+
+### Neu
+
+- Beim Importieren und Aktualisieren von Salesforce-Kunden werden verfügbare Kundenrabatte für PG1 bis PG8 aus den jüngsten eindeutig kalkulierten Opportunity-Positionen übernommen. Preisgruppen ohne belastbaren Treffer bleiben unverändert.
+
 ## 1.5.17 - 15.09.2026
 
 ### Verbessert

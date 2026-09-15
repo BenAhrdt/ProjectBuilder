@@ -2,6 +2,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import open from "open";
+import { mapCustomerPricingGroupDiscounts } from "../utils/salesforceCustomerDiscounts.js";
 import { AuthInfo, Connection, WebOAuthServer } from "@salesforce/core";
 
 const API_VERSION = "v67.0";
@@ -271,8 +272,46 @@ export async function getCustomersByIds(ids) {
     const validIds = [...new Set(ids)].filter(id => /^[a-zA-Z0-9]{15,18}$/.test(id));
     if (validIds.length === 0) return [];
     const list = validIds.map(id => `'${escapeSoql(id)}'`).join(", ");
-    const result = await query(`SELECT ${CUSTOMER_FIELDS} FROM Account WHERE Id IN (${list})`);
-    return result.records.map(mapCustomer);
+    const [result, pricingGroupDiscounts] = await Promise.all([
+        query(`SELECT ${CUSTOMER_FIELDS} FROM Account WHERE Id IN (${list})`),
+        getCustomerPricingGroupDiscounts(validIds)
+    ]);
+    return result.records.map(record => ({
+        ...mapCustomer(record),
+        ...(pricingGroupDiscounts.get(String(record.Id)) ?? {})
+    }));
+}
+
+export async function getCustomerPricingGroupDiscounts(accountIds) {
+    const validIds = [...new Set(accountIds)].filter(id => /^[a-zA-Z0-9]{15,18}$/.test(id));
+    if (validIds.length === 0) return new Map();
+    const list = validIds.map(id => `'${escapeSoql(id)}'`).join(", ");
+    const lineItems = await queryAll(`
+        SELECT Opportunity.AccountId, Product2Id, BasicDiscount__c, LastModifiedDate
+        FROM OpportunityLineItem
+        WHERE Opportunity.AccountId IN (${list})
+          AND BasicDiscount__c != null
+          AND BasicDiscount__c != 0
+        ORDER BY LastModifiedDate DESC
+    `);
+    const productIds = [...new Set(lineItems.map(item => String(item.Product2Id ?? "")).filter(Boolean))];
+    if (productIds.length === 0) return new Map();
+    const pricingGroupsByProduct = new Map();
+    for (let offset = 0; offset < productIds.length; offset += 100) {
+        const products = productIds.slice(offset, offset + 100)
+            .map(id => `'${escapeSoql(id)}'`).join(", ");
+        const result = await query(`
+            SELECT Product__c, ProductPricingGroup__c
+            FROM DistributionChain__c
+            WHERE Product__c IN (${products})
+              AND SalesOrganisation__c = '1100'
+              AND DistributionChannel__c = '10'
+        `);
+        for (const record of result.records) {
+            pricingGroupsByProduct.set(String(record.Product__c), record.ProductPricingGroup__c);
+        }
+    }
+    return mapCustomerPricingGroupDiscounts(lineItems, pricingGroupsByProduct);
 }
 
 export async function getCustomerById(id) {

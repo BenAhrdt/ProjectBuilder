@@ -2,6 +2,12 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.18 - 15.09.2026
+
+### Added
+
+- Importing or refreshing Salesforce customers now adopts available PG1 through PG8 customer discounts from the latest unambiguously priced opportunity line items. Pricing groups without a reliable match remain unchanged.
+
 ## 1.5.17 - 15.09.2026
 
 ### Improved

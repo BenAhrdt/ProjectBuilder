@@ -627,3 +627,32 @@ export async function replaceLineItems(objectName, parentField, parentId, items)
     await deleteRecords(objectName, existing.records.map(record => record.Id));
     await createRecords(objectName, items.map(item => ({ [parentField]: parentId, ...item })));
 }
+
+export async function finalizeSynchronizedLineDiscounts(opportunityId, quoteId, opportunityItems, quoteItems) {
+    const opportunityLines = await query(`
+        SELECT Id FROM OpportunityLineItem
+        WHERE OpportunityId = '${escapeSoql(opportunityId)}'
+        ORDER BY SortOrder, CreatedDate
+    `);
+    const quoteLines = await query(`
+        SELECT Id FROM QuoteLineItem
+        WHERE QuoteId = '${escapeSoql(quoteId)}'
+        ORDER BY SortOrder, CreatedDate
+    `);
+    if (opportunityLines.records.length !== opportunityItems.length
+        || quoteLines.records.length !== quoteItems.length) {
+        throw new Error("Die synchronisierten Salesforce-Angebotspositionen sind unvollständig.");
+    }
+    await Promise.all(opportunityLines.records.map((record, index) =>
+        updateRecord("OpportunityLineItem", record.Id, {
+            BasicDiscount__c: opportunityItems[index].BasicDiscount__c
+        })
+    ));
+    await Promise.all(quoteLines.records.map((record, index) => updateRecord("QuoteLineItem", record.Id, {
+        SortOrder: quoteItems[index].SortOrder,
+        Position__c: quoteItems[index].Position__c,
+        Alternative__c: quoteItems[index].Alternative__c,
+        Option__c: quoteItems[index].Option__c,
+        Manuell_Updated__c: false
+    })));
+}

@@ -85,11 +85,18 @@ test("maps Salesforce flags and leaves optional opportunity items unmarked", () 
     ]);
 
     assert.equal(opportunityLineItems[0].Alternative__c, false);
+    assert.equal(opportunityLineItems[0].UnitPrice, 85);
+    assert.equal(opportunityLineItems[0].BasicDiscount__c, -15);
+    assert.equal("Discount" in opportunityLineItems[0], false);
     assert.equal("Option__c" in opportunityLineItems[0], false);
     assert.equal(opportunityLineItems[1].Alternative__c, true);
+    assert.equal(opportunityLineItems[1].BasicDiscount__c, 0);
     assert.equal(quoteLineItems[0].Option__c, true);
     assert.equal(quoteLineItems[0].Alternative__c, false);
     assert.equal(quoteLineItems[0].UnitPrice, 85);
+    assert.equal("Discount" in quoteLineItems[0], false);
     assert.equal(quoteLineItems[1].Option__c, false);
     assert.equal(quoteLineItems[1].Alternative__c, true);
+    assert.equal(quoteLineItems[1].UnitPrice, 50);
+    assert.equal("Discount" in quoteLineItems[1], false);
 });

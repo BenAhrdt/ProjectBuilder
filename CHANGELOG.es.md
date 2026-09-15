@@ -2,6 +2,17 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.16 - 15.09.2026
+
+### Corregido
+
+- Los descuentos del cliente se transfieren a Salesforce como descuentos base en lugar de descuentos adicionales y se muestran correctamente en el PDF de la oferta cuando está activada su visualización.
+- Las ofertas ya sincronizadas se desvinculan de forma controlada antes de actualizarlas y se vuelven a sincronizar con todas las posiciones actualizadas.
+
+### Mejorado
+
+- “Mostrar descuento”, “Mostrar siempre el descuento adicional” y “Exportar oferta” pueden seleccionarse por separado y se guardan de forma permanente para cada proyecto.
+
 ## 1.5.15 - 15.09.2026
 
 ### Mejorado

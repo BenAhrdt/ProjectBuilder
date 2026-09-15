@@ -264,7 +264,12 @@ router.get("/projects/:projectId/quote-options", async (req, res) => {
                 articleMode: result.project.salesforceArticleMode ?? "commercial_total",
                 syncScope: result.project.salesforceSyncScope ?? "opportunity_quote",
                 taxCode: result.project.salesforceTaxCode ?? existingQuote?.Tax__c ?? recommendedTaxCode,
-                documents: parseSavedDocuments(result.project.salesforceDocuments)
+                documents: parseSavedDocuments(result.project.salesforceDocuments),
+                showDiscount: result.project.salesforceShowDiscount !== 0,
+                showAdditionalDiscount: result.project.salesforceShowAdditionalDiscount === 1,
+                exportQuote: result.project.salesforceExportQuote == null
+                    ? null
+                    : result.project.salesforceExportQuote === 1
             }
         });
     } catch (error) {
@@ -778,6 +783,7 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
             Status: "Draft",
             DiscountAdd__c: normalizePercent(project.projectDiscount),
             ShowDiscount__c: quoteSettings.has("show_discount"),
+            ShowAdditionalDiscountAnyway__c: quoteSettings.has("show_additional_discount"),
             ...buildSalesforceQuoteHeaderFields({
                 account,
                 salesArea: salesArea ?? {},
@@ -814,25 +820,26 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
             await salesforce.updateQuote(quote.Id, quoteFields);
         }
 
-        // Detach the previous synchronized quote before replacing opportunity lines or
-        // attaching a newly created/reused draft. Salesforce permits only one at a time.
-        if (opportunity.SyncedQuoteId && opportunity.SyncedQuoteId !== quote.Id) {
+        // Detach every synchronized quote before replacing positions. Otherwise Salesforce
+        // mirrors quote lines back to the opportunity and can discard BasicDiscount__c.
+        if (opportunity.SyncedQuoteId) {
             await salesforce.synchronizeQuote(opportunity.Id, null);
             opportunity.SyncedQuoteId = null;
+            quote.IsSyncing = false;
         }
 
-        // Synchronized quotes mirror their line items to the opportunity automatically.
-        // Writing both objects would duplicate work and can cause row-lock conflicts.
+        // Update both sides while detached, then synchronize the finished quote below.
         await Promise.all([
-            quote.IsSyncing
-                ? Promise.resolve()
-                : salesforce.replaceLineItems("OpportunityLineItem", "OpportunityId", opportunity.Id, opportunityLineItems),
+            salesforce.replaceLineItems("OpportunityLineItem", "OpportunityId", opportunity.Id, opportunityLineItems),
             salesforce.replaceLineItems("QuoteLineItem", "QuoteId", quote.Id, quoteLineItems)
         ]);
 
         // Linking the quote alone does not make it the opportunity's synchronized quote.
         // Salesforce requires this relationship before the quote can enter approval.
         await salesforce.synchronizeQuote(opportunity.Id, quote.Id);
+        await salesforce.finalizeSynchronizedLineDiscounts(
+            opportunity.Id, quote.Id, opportunityLineItems, quoteLineItems
+        );
         const documentResult = await synchronizeProjectDocuments(
             opportunity.Id,
             project,
@@ -847,11 +854,15 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
         database.projects.prepare(`
             UPDATE projects SET salesforceOpportunityId = ?, salesforceQuoteId = ?, salesforceSyncedAt = ?,
                 salesforceContactId = ?, salesforceDeliveryTime = ?, salesforceArticleMode = ?, salesforceSyncScope = ?,
-                salesforceDocuments = ?, salesforceTaxCode = ?
+                salesforceDocuments = ?, salesforceTaxCode = ?, salesforceShowDiscount = ?,
+                salesforceShowAdditionalDiscount = ?, salesforceExportQuote = ?
             WHERE id = ?
         `).run(opportunity.Id, quote.Id, new Date().toISOString(), req.body.contactId ?? null,
             req.body.deliveryTime ?? null, articleMode, syncScope, JSON.stringify(documents),
-            req.body.taxCode ?? project.salesforceTaxCode ?? null, project.id);
+            req.body.taxCode ?? project.salesforceTaxCode ?? null,
+            quoteSettings.has("show_discount") ? 1 : 0,
+            quoteSettings.has("show_additional_discount") ? 1 : 0,
+            quoteSettings.has("export_quote") ? 1 : 0, project.id);
 
         res.json({
             success: true,

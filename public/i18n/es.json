@@ -352,6 +352,7 @@
     "project.salesforceScopeOpportunity": "Solo oportunidad",
     "project.salesforceQuoteSettings": "Configuración de la oferta",
     "project.salesforceShowDiscount": "Mostrar descuento",
+    "project.salesforceShowAdditionalDiscount": "Mostrar siempre el descuento adicional",
     "project.salesforceExportQuote": "Exportar oferta",
     "project.salesforceExportQuoteAutomatic": "Exportar oferta (gestionado automáticamente por Salesforce)",
     "project.salesforceTaxCode": "Código fiscal",

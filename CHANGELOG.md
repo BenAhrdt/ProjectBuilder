@@ -2,6 +2,17 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.16 - 15.09.2026
+
+### Behoben
+
+- Kundenrabatte werden in Salesforce als Basisrabatt statt als Zusatzrabatt übertragen und dadurch bei aktivierter Rabattanzeige korrekt im Angebots-PDF ausgegeben.
+- Bereits synchronisierte Angebote werden vor der Aktualisierung kontrolliert gelöst und anschließend wieder mit den vollständig aktualisierten Positionen synchronisiert.
+
+### Verbessert
+
+- „Rabatt anzeigen“, „Zusätzlichen Rabatt immer anzeigen“ und „Export Angebot“ können getrennt gewählt und dauerhaft pro Projekt gespeichert werden.
+
 ## 1.5.15 - 15.09.2026
 
 ### Verbessert

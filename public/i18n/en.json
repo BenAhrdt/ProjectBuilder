@@ -352,6 +352,7 @@
     "project.salesforceScopeOpportunity": "Opportunity only",
     "project.salesforceQuoteSettings": "Quote settings",
     "project.salesforceShowDiscount": "Show discount",
+    "project.salesforceShowAdditionalDiscount": "Always show additional discount",
     "project.salesforceExportQuote": "Export quote",
     "project.salesforceExportQuoteAutomatic": "Export quote (managed automatically by Salesforce)",
     "project.salesforceTaxCode": "Tax code",

@@ -887,8 +887,10 @@ function registerProjectSalesforceSync(projectId) {
             : ["de", "deu", "deutschland", "germany", "alemania"].includes(accountCountry);
         const hasAccountCountry = Boolean(accountCountryCode || accountCountry);
         const quoteSettings = [
-            "show_discount",
-            ...(!isGermanAccount && hasAccountCountry && quoteOptions.exportQuoteField ? ["export_quote"] : [])
+            ...(quoteOptions.saved.showDiscount ? ["show_discount"] : []),
+            ...(quoteOptions.saved.showAdditionalDiscount ? ["show_additional_discount"] : []),
+            ...((quoteOptions.saved.exportQuote ?? (!isGermanAccount && hasAccountCountry))
+                && quoteOptions.exportQuoteField ? ["export_quote"] : [])
         ];
         const selection = await showSelectForm(i18n.t("project.salesforceSyncSettingsHint"), {
             title: i18n.t("project.salesforceSync"),
@@ -920,6 +922,7 @@ function registerProjectSalesforceSync(projectId) {
                 { type: "checkboxes", name: "quoteSettings", label: i18n.t("project.salesforceQuoteSettings"),
                     value: quoteSettings, visibleWhen: { name: "syncScope", value: "opportunity_quote" }, options: [
                         { value: "show_discount", label: i18n.t("project.salesforceShowDiscount") },
+                        { value: "show_additional_discount", label: i18n.t("project.salesforceShowAdditionalDiscount") },
                         ...(quoteOptions.exportQuoteField ? [{
                             value: "export_quote",
                             label: quoteOptions.exportQuoteWritable

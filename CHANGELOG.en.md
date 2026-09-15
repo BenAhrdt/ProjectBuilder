@@ -2,6 +2,17 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.16 - 15.09.2026
+
+### Fixed
+
+- Customer discounts are transferred to Salesforce as base discounts instead of additional discounts and are therefore shown correctly in quote PDFs when discount display is enabled.
+- Existing synchronized quotes are safely detached before updating and synchronized again with their fully updated line items.
+
+### Improved
+
+- “Show discount”, “Always show additional discount”, and “Export quote” can be selected independently and are persisted per project.
+
 ## 1.5.15 - 15.09.2026
 
 ### Improved

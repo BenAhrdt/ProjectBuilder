@@ -89,9 +89,9 @@ export function buildSalesforceLineItems(pricedPositions) {
             PricebookEntryId: item.PricebookEntryId,
             Product2Id: item.Product2Id,
             Quantity: item.Quantity,
-            UnitPrice: item.listPrice,
+            UnitPrice: Math.round(item.listPrice * (1 - item.baseDiscount / 100) * 100) / 100,
+            BasicDiscount__c: item.baseDiscount > 0 ? -item.baseDiscount : 0,
             Alternative__c: item.isAlternative,
-            ...(item.baseDiscount > 0 ? { Discount: item.baseDiscount } : {})
         })),
         quoteLineItems: pricedPositions.map((item, index) => ({
             PricebookEntryId: item.PricebookEntryId,

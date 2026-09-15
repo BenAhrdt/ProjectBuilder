@@ -102,6 +102,20 @@ async function describe(objectName) {
     return connection.sobject(objectName).describe();
 }
 
+export async function getSalesAreaData(accountId, salesOrganisation = "1100") {
+    if (!accountId) return [];
+    const result = await query(`
+        SELECT Id, Account__c, SalesOrganisation__c, DistributionChannel__c,
+            CustomerGroup__c, PriceList__c, PaymentTerms__c, Incoterms__c,
+            IncotermsLocation1__c, ShippingCondition__c, OutputTax__c
+        FROM SalesAreaData__c
+        WHERE Account__c = '${escapeSoql(accountId)}'
+          AND SalesOrganisation__c = '${escapeSoql(salesOrganisation)}'
+        ORDER BY DistributionChannel__c
+    `);
+    return result.records;
+}
+
 async function queryAll(soql) {
     let result = await query(soql);
     const records = [...result.records];
@@ -272,7 +286,9 @@ export async function findAccountByCustomerNumber(customerNumber) {
     const value = String(customerNumber ?? "").trim();
     if (!value) return null;
     const result = await query(`
-        SELECT Id, Name, ExtID__c, CurrencyIsoCode, BillingCountry, BillingCountryCode
+        SELECT Id, Name, ExtID__c, CurrencyIsoCode, Language__c,
+            BillingStreet, BillingCity, BillingStateCode, BillingPostalCode, BillingCountry, BillingCountryCode,
+            ShippingStreet, ShippingCity, ShippingStateCode, ShippingPostalCode, ShippingCountry, ShippingCountryCode
         FROM Account
         WHERE ExtID__c = '${escapeSoql(value)}'
         LIMIT 2
@@ -284,7 +300,9 @@ export async function findAccountByCustomerNumber(customerNumber) {
 export async function getAccountById(id) {
     if (!id) return null;
     const result = await query(`
-        SELECT Id, Name, ExtID__c, CurrencyIsoCode, BillingCountry, BillingCountryCode
+        SELECT Id, Name, ExtID__c, CurrencyIsoCode, Language__c,
+            BillingStreet, BillingCity, BillingStateCode, BillingPostalCode, BillingCountry, BillingCountryCode,
+            ShippingStreet, ShippingCity, ShippingStateCode, ShippingPostalCode, ShippingCountry, ShippingCountryCode
         FROM Account
         WHERE Id = '${escapeSoql(id)}'
         LIMIT 1
@@ -372,6 +390,22 @@ export async function getQuoteSyncOptions(accountId) {
         /(?:export.*(?:angebot|quote)|(?:angebot|quote).*export)/i
             .test(`${field.label ?? ""} ${field.name ?? ""}`)
     );
+    const taxField = fields.find(field =>
+        field.name === "Tax__c" && field.createable && field.updateable && field.type === "picklist"
+    );
+    const deliveryConditionField = fields.find(field =>
+        field.name === "DeliveryEstimateCondition__c"
+        && field.createable
+        && field.updateable
+        && field.type === "picklist"
+    );
+    const deliveryConditionDefault = (deliveryConditionField?.picklistValues ?? [])
+        .filter(value => value.active)
+        .find(value => /after receipt of order/i.test(`${value.value ?? ""} ${value.label ?? ""}`));
+    const salesAreaQuoteFieldNames = new Set([
+        "DistributionChannel__c", "CustomerGroup__c", "PriceList__c", "PaymentTerm__c",
+        "Incoterms__c", "IncotermsLocation1__c", "ShippingCondition__c"
+    ]);
 
     return {
         contactField: contactField?.name ?? null,
@@ -385,7 +419,16 @@ export async function getQuoteSyncOptions(accountId) {
             .filter(value => value.active)
             .map(value => ({ value: value.value, label: value.label })),
         exportQuoteField: exportQuoteField?.name ?? null,
-        exportQuoteWritable: Boolean(exportQuoteField?.createable && exportQuoteField?.updateable)
+        exportQuoteWritable: Boolean(exportQuoteField?.createable && exportQuoteField?.updateable),
+        taxField: taxField?.name ?? null,
+        taxOptions: (taxField?.picklistValues ?? [])
+            .filter(value => value.active)
+            .map(value => ({ value: value.value, label: value.label })),
+        deliveryConditionField: deliveryConditionField?.name ?? null,
+        deliveryConditionDefault: deliveryConditionDefault?.value ?? null,
+        writableSalesAreaFields: fields
+            .filter(field => salesAreaQuoteFieldNames.has(field.name) && field.createable && field.updateable)
+            .map(field => field.name)
     };
 }
 
@@ -546,7 +589,7 @@ export async function synchronizeQuote(opportunityId, quoteId) {
 export async function getQuote(id) {
     if (!id) return null;
     const result = await query(`
-        SELECT Id, Name, Status, QuoteNumber, IsSyncing, Pricebook2Id, OpportunityId
+        SELECT Id, Name, Status, QuoteNumber, IsSyncing, Pricebook2Id, OpportunityId, Tax__c
         FROM Quote
         WHERE Id = '${escapeSoql(id)}'
         LIMIT 1

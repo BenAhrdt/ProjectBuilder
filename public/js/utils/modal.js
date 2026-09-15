@@ -378,11 +378,12 @@ function showSelectForm(message, options = {}) {
                             ${(field.options ?? []).map(item => `<label><input type="checkbox" name="${escapeHtml(field.name)}" value="${escapeHtml(item.value)}" ${(field.value ?? []).map(String).includes(String(item.value)) ? "checked" : ""} ${item.disabled ? "disabled data-always-disabled=\"true\"" : ""}> ${escapeHtml(item.label)}</label>`).join("")}
                         </fieldset>
                     ` : `
-                        <label class="app-modal-field">
+                        <label class="app-modal-field" data-visible-when-name="${escapeHtml(field.visibleWhen?.name ?? "")}" data-visible-when-value="${escapeHtml(field.visibleWhen?.value ?? "")}">
                             <span>${escapeHtml(field.label)}</span>
                             <select name="${escapeHtml(field.name)}" ${field.required ? "required" : ""}>
                                 ${(field.options ?? []).map(item => `<option value="${escapeHtml(item.value)}" ${String(item.value) === String(field.value ?? "") ? "selected" : ""}>${escapeHtml(item.label)}</option>`).join("")}
                             </select>
+                            ${field.description ? `<small>${escapeHtml(field.description)}</small>` : ""}
                         </label>
                     `).join("")}
                     <p class="app-modal-form-error" role="alert"></p>

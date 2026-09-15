@@ -51,7 +51,8 @@ for (const [name, definition] of [
     ["salesforceDeliveryTime", "TEXT"],
     ["salesforceArticleMode", "TEXT DEFAULT 'commercial_total'"],
     ["salesforceSyncScope", "TEXT DEFAULT 'opportunity_quote'"],
-    ["salesforceDocuments", "TEXT DEFAULT '[\"overview\"]'"]
+    ["salesforceDocuments", "TEXT DEFAULT '[\"overview\"]'"],
+    ["salesforceTaxCode", "TEXT"]
 ]) {
     if (!columns.includes(name)) {
         projects.exec(`ALTER TABLE projects ADD COLUMN ${name} ${definition}`);

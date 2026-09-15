@@ -2,6 +2,15 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.15 - 15.09.2026
+
+### Improved
+
+- When sending quotes to Salesforce, the applicable tax code can be selected; Salesforce derives the tax rate and amount from that code.
+- ProjectBuilder copies partner roles, billing and shipping addresses, and language from the Salesforce account.
+- Customer group, price list, payment terms, Incoterms, and shipping conditions are copied from SAP sales-area data for sales organization 1100 and distribution channel 10.
+- The delivery estimate condition is populated with the Salesforce-defined “after receipt of order” value.
+
 ## 1.5.14 - 15.09.2026
 ### Fixed
 - Customer-specific price-group discounts are loaded correctly in projects again and applied to price calculations.

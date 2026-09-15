@@ -2,6 +2,15 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.15 - 15.09.2026
+
+### Verbessert
+
+- Beim Senden von Angeboten an Salesforce kann der gültige Steuerschlüssel ausgewählt werden; Salesforce berechnet daraus Steuersatz und Steuerbetrag.
+- ProjectBuilder übernimmt Partnerrollen, Rechnungs- und Lieferadressen sowie Sprache aus dem Salesforce-Kunden.
+- Kundengruppe, Preisliste, Zahlungsbedingungen, Incoterms und Versandbedingungen werden aus den SAP-Vertriebsbereichsdaten für Verkaufsorganisation 1100 und Vertriebsweg 10 übernommen.
+- Die Lieferzeit-Bedingung wird entsprechend der Salesforce-Vorgabe mit „after receipt of order“ befüllt.
+
 ## 1.5.14 - 15.09.2026
 
 ### Behoben

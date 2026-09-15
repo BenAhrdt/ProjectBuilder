@@ -2,6 +2,15 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.15 - 15.09.2026
+
+### Mejorado
+
+- Al enviar ofertas a Salesforce, se puede seleccionar el código fiscal aplicable; Salesforce calcula a partir de él el porcentaje y el importe del impuesto.
+- ProjectBuilder copia las funciones de interlocutor, las direcciones de facturación y envío y el idioma desde la cuenta de Salesforce.
+- El grupo de clientes, la lista de precios, las condiciones de pago, los Incoterms y las condiciones de envío se copian de los datos del área de ventas de SAP para la organización de ventas 1100 y el canal de distribución 10.
+- La condición del plazo de entrega se completa con el valor de Salesforce “after receipt of order”.
+
 ## 1.5.14 - 15.09.2026
 ### Corregido
 - Los descuentos de grupos de precios específicos del cliente vuelven a cargarse correctamente en los proyectos y se aplican al cálculo de precios.

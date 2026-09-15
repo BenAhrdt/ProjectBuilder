@@ -10,6 +10,10 @@ import {
 import { inferGridVisItems } from "../utils/gridVisItems.js";
 import { selectReusableSalesforceQuote } from "../utils/salesforceQuoteSelection.js";
 import {
+    buildSalesforceQuoteHeaderFields,
+    recommendSalesforceTaxCode
+} from "../utils/salesforceQuoteFields.js";
+import {
     buildGaebTenderXml,
     buildProjectExportData,
     buildProjectWorkbookBuffer,
@@ -240,7 +244,15 @@ router.get("/projects/:projectId/quote-options", async (req, res) => {
                 error: result.error.message
             });
         }
-        const options = await salesforce.getQuoteSyncOptions(result.account.Id);
+        const [options, existingQuote, salesAreaRecords] = await Promise.all([
+            salesforce.getQuoteSyncOptions(result.account.Id),
+            salesforce.getQuote(result.project.salesforceQuoteId),
+            salesforce.getSalesAreaData(result.account.Id)
+        ]);
+        const salesArea = salesAreaRecords.find(item => item.DistributionChannel__c === "10")
+            ?? salesAreaRecords[0]
+            ?? null;
+        const recommendedTaxCode = recommendSalesforceTaxCode(result.account, salesArea ?? {});
         res.json({
             success: true,
             ...options,
@@ -251,6 +263,7 @@ router.get("/projects/:projectId/quote-options", async (req, res) => {
                 deliveryTime: result.project.salesforceDeliveryTime ?? "",
                 articleMode: result.project.salesforceArticleMode ?? "commercial_total",
                 syncScope: result.project.salesforceSyncScope ?? "opportunity_quote",
+                taxCode: result.project.salesforceTaxCode ?? existingQuote?.Tax__c ?? recommendedTaxCode,
                 documents: parseSavedDocuments(result.project.salesforceDocuments)
             }
         });
@@ -602,9 +615,15 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
         const syncScope = req.body.syncScope === "opportunity" ? "opportunity" : "opportunity_quote";
         const documents = [...new Set(Array.isArray(req.body.documents) ? req.body.documents : [])]
             .filter(item => SALESFORCE_DOCUMENT_TYPES.has(item));
-        const syncOptions = syncScope === "opportunity_quote"
-            ? await salesforce.getQuoteSyncOptions(accountId)
-            : null;
+        const [syncOptions, salesAreaRecords] = syncScope === "opportunity_quote"
+            ? await Promise.all([
+                salesforce.getQuoteSyncOptions(accountId),
+                salesforce.getSalesAreaData(accountId)
+            ])
+            : [null, []];
+        const salesArea = salesAreaRecords.find(item => item.DistributionChannel__c === "10")
+            ?? salesAreaRecords[0]
+            ?? null;
         const quoteSettings = new Set(
             Array.isArray(req.body.quoteSettings) ? req.body.quoteSettings : []
         );
@@ -613,6 +632,9 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
         }
         if (syncOptions?.deliveryField && !syncOptions.deliveryTimes.some(item => item.value === req.body.deliveryTime)) {
             return res.status(400).json({ success: false, error: "Bitte eine Lieferzeit auswählen." });
+        }
+        if (syncOptions?.taxField && !syncOptions.taxOptions.some(item => item.value === req.body.taxCode)) {
+            return res.status(400).json({ success: false, error: "Bitte einen gültigen Salesforce-Steuerschlüssel auswählen." });
         }
         const nodes = database.projectNodes.prepare(`
             SELECT id, parentId, type, name, sortOrder FROM projectNodes
@@ -712,10 +734,12 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
             database.projects.prepare(`
                 UPDATE projects SET salesforceOpportunityId = ?, salesforceSyncedAt = ?,
                     salesforceContactId = ?, salesforceDeliveryTime = ?,
-                    salesforceArticleMode = ?, salesforceSyncScope = ?, salesforceDocuments = ?
+                    salesforceArticleMode = ?, salesforceSyncScope = ?, salesforceDocuments = ?,
+                    salesforceTaxCode = ?
                 WHERE id = ?
             `).run(opportunity.Id, new Date().toISOString(), req.body.contactId ?? null,
-                req.body.deliveryTime ?? null, articleMode, syncScope, JSON.stringify(documents), project.id);
+                req.body.deliveryTime ?? null, articleMode, syncScope, JSON.stringify(documents),
+                req.body.taxCode ?? project.salesforceTaxCode ?? null, project.id);
             return res.json({
                 success: true,
                 opportunityId: opportunity.Id,
@@ -753,10 +777,18 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
             Description: project.description || null,
             Status: "Draft",
             DiscountAdd__c: normalizePercent(project.projectDiscount),
-            ShowDiscount__c: quoteSettings.has("show_discount")
+            ShowDiscount__c: quoteSettings.has("show_discount"),
+            ...buildSalesforceQuoteHeaderFields({
+                account,
+                salesArea: salesArea ?? {},
+                writableSalesAreaFields: syncOptions.writableSalesAreaFields
+            })
         };
-        if (account.BillingCountryCode) {
-            quoteFields.BillingCountryCode = account.BillingCountryCode;
+        if (syncOptions.taxField) {
+            quoteFields[syncOptions.taxField] = req.body.taxCode;
+        }
+        if (syncOptions.deliveryConditionField && syncOptions.deliveryConditionDefault) {
+            quoteFields[syncOptions.deliveryConditionField] = syncOptions.deliveryConditionDefault;
         }
         if (syncOptions.exportQuoteField && syncOptions.exportQuoteWritable) {
             quoteFields[syncOptions.exportQuoteField] = quoteSettings.has("export_quote");
@@ -815,10 +847,11 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
         database.projects.prepare(`
             UPDATE projects SET salesforceOpportunityId = ?, salesforceQuoteId = ?, salesforceSyncedAt = ?,
                 salesforceContactId = ?, salesforceDeliveryTime = ?, salesforceArticleMode = ?, salesforceSyncScope = ?,
-                salesforceDocuments = ?
+                salesforceDocuments = ?, salesforceTaxCode = ?
             WHERE id = ?
         `).run(opportunity.Id, quote.Id, new Date().toISOString(), req.body.contactId ?? null,
-            req.body.deliveryTime ?? null, articleMode, syncScope, JSON.stringify(documents), project.id);
+            req.body.deliveryTime ?? null, articleMode, syncScope, JSON.stringify(documents),
+            req.body.taxCode ?? project.salesforceTaxCode ?? null, project.id);
 
         res.json({
             success: true,

@@ -354,6 +354,8 @@
     "project.salesforceShowDiscount": "Rabatt anzeigen",
     "project.salesforceExportQuote": "Export Angebot",
     "project.salesforceExportQuoteAutomatic": "Export Angebot (automatisch durch Salesforce)",
+    "project.salesforceTaxCode": "Steuerschlüssel",
+    "project.salesforceTaxCodeHint": "ProjectBuilder überträgt nur den Steuerschlüssel. Steuersatz und Steuerbetrag berechnet Salesforce automatisch.",
     "project.salesforceContactRequired": "Bitte einen gültigen Kontakt auswählen.",
     "project.salesforceDeliveryRequired": "Bitte eine Lieferzeit auswählen.",
     "project.salesforceDocuments": "Zu sendende Dokumente",

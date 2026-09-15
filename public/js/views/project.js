@@ -928,6 +928,17 @@ function registerProjectSalesforceSync(projectId) {
                             disabled: !quoteOptions.exportQuoteWritable
                         }] : [])
                     ] },
+                ...(quoteOptions.taxField ? [{
+                    name: "taxCode",
+                    label: i18n.t("project.salesforceTaxCode"),
+                    description: i18n.t("project.salesforceTaxCodeHint"),
+                    value: quoteOptions.saved.taxCode,
+                    visibleWhen: { name: "syncScope", value: "opportunity_quote" },
+                    options: quoteOptions.taxOptions.map(item => ({
+                        value: item.value,
+                        label: `${item.value} – ${item.label}`
+                    }))
+                }] : []),
                 { type: "checkboxes", name: "documents", label: i18n.t("project.salesforceDocuments"), value: quoteOptions.saved.documents, options: [
                     { value: "overview", label: i18n.t("project.salesforceDocumentOverview") },
                     { value: "excel", label: i18n.t("project.salesforceDocumentExcel") },

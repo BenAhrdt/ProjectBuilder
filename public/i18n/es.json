@@ -354,6 +354,8 @@
     "project.salesforceShowDiscount": "Mostrar descuento",
     "project.salesforceExportQuote": "Exportar oferta",
     "project.salesforceExportQuoteAutomatic": "Exportar oferta (gestionado automáticamente por Salesforce)",
+    "project.salesforceTaxCode": "Código fiscal",
+    "project.salesforceTaxCodeHint": "ProjectBuilder transfiere únicamente el código fiscal. Salesforce calcula automáticamente el tipo y el importe del impuesto.",
     "project.salesforceContactRequired": "Seleccione un contacto válido.",
     "project.salesforceDeliveryRequired": "Seleccione un plazo de entrega.",
     "project.salesforceDocuments": "Documentos para enviar",

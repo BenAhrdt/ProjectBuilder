@@ -244,6 +244,8 @@ router.get("/projects/:projectId/quote-options", async (req, res) => {
         res.json({
             success: true,
             ...options,
+            accountCountry: result.account.BillingCountry ?? "",
+            accountCountryCode: result.account.BillingCountryCode ?? "",
             saved: {
                 contactId: result.project.salesforceContactId ?? "",
                 deliveryTime: result.project.salesforceDeliveryTime ?? "",
@@ -603,6 +605,9 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
         const syncOptions = syncScope === "opportunity_quote"
             ? await salesforce.getQuoteSyncOptions(accountId)
             : null;
+        const quoteSettings = new Set(
+            Array.isArray(req.body.quoteSettings) ? req.body.quoteSettings : []
+        );
         if (syncOptions?.contactField && !syncOptions.contacts.some(item => item.id === req.body.contactId)) {
             return res.status(400).json({ success: false, error: "Bitte einen Kontakt des Salesforce-Kunden auswählen." });
         }
@@ -748,8 +753,14 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
             Description: project.description || null,
             Status: "Draft",
             DiscountAdd__c: normalizePercent(project.projectDiscount),
-            ShowDiscount__c: normalizePercent(project.projectDiscount) > 0
+            ShowDiscount__c: quoteSettings.has("show_discount")
         };
+        if (account.BillingCountryCode) {
+            quoteFields.BillingCountryCode = account.BillingCountryCode;
+        }
+        if (syncOptions.exportQuoteField && syncOptions.exportQuoteWritable) {
+            quoteFields[syncOptions.exportQuoteField] = quoteSettings.has("export_quote");
+        }
         if (syncOptions.contactField) {
             const contact = syncOptions.contacts.find(item => item.id === req.body.contactId);
             if (!contact) return res.status(400).json({ success: false, error: "Bitte einen Kontakt des Salesforce-Kunden auswählen." });

@@ -272,7 +272,7 @@ export async function findAccountByCustomerNumber(customerNumber) {
     const value = String(customerNumber ?? "").trim();
     if (!value) return null;
     const result = await query(`
-        SELECT Id, Name, ExtID__c, CurrencyIsoCode
+        SELECT Id, Name, ExtID__c, CurrencyIsoCode, BillingCountry, BillingCountryCode
         FROM Account
         WHERE ExtID__c = '${escapeSoql(value)}'
         LIMIT 2
@@ -284,7 +284,7 @@ export async function findAccountByCustomerNumber(customerNumber) {
 export async function getAccountById(id) {
     if (!id) return null;
     const result = await query(`
-        SELECT Id, Name, ExtID__c, CurrencyIsoCode
+        SELECT Id, Name, ExtID__c, CurrencyIsoCode, BillingCountry, BillingCountryCode
         FROM Account
         WHERE Id = '${escapeSoql(id)}'
         LIMIT 1
@@ -364,6 +364,14 @@ export async function getQuoteSyncOptions(accountId) {
                     .test(`${value.label ?? ""} ${value.value ?? ""}`)
             )
         );
+    const booleanFields = fields.filter(field => field.type === "boolean");
+    const configuredExportQuoteField = process.env.SALESFORCE_QUOTE_EXPORT_FIELD;
+    const exportQuoteField = booleanFields.find(field =>
+        configuredExportQuoteField && field.name === configuredExportQuoteField
+    ) ?? booleanFields.find(field =>
+        /(?:export.*(?:angebot|quote)|(?:angebot|quote).*export)/i
+            .test(`${field.label ?? ""} ${field.name ?? ""}`)
+    );
 
     return {
         contactField: contactField?.name ?? null,
@@ -375,7 +383,9 @@ export async function getQuoteSyncOptions(accountId) {
         deliveryField: deliveryField?.name ?? null,
         deliveryTimes: (deliveryField?.picklistValues ?? [])
             .filter(value => value.active)
-            .map(value => ({ value: value.value, label: value.label }))
+            .map(value => ({ value: value.value, label: value.label })),
+        exportQuoteField: exportQuoteField?.name ?? null,
+        exportQuoteWritable: Boolean(exportQuoteField?.createable && exportQuoteField?.updateable)
     };
 }
 

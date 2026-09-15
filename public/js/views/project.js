@@ -415,12 +415,14 @@ async function renderView(
         articleResponse,
         customerResponse,
         nodesResponse,
-        nodeArticlesResponse
+        nodeArticlesResponse,
+        projectCustomer
     ] = await Promise.all([
         fetch("/api/articles"),
         fetch("/api/customers"),
         fetch(`/api/projectNodes/${projectId}`),
-        fetch(`/api/projectNodeArticles?projectId=${encodeURIComponent(projectId)}`)
+        fetch(`/api/projectNodeArticles?projectId=${encodeURIComponent(projectId)}`),
+        loadProjectCustomer(project.customerId)
     ]);
 
     const [articles, customers, nodes, nodeArticles] =
@@ -435,9 +437,7 @@ async function renderView(
         articles;
 
     currentProjectCustomer =
-        customers.find(customer =>
-            String(customer.id) === String(project.customerId)
-        ) || null;
+        projectCustomer;
 
     currentNodes =
         nodes;
@@ -880,6 +880,16 @@ function registerProjectSalesforceSync(projectId) {
         }
         const contactExists = quoteOptions.contacts.some(item => item.id === quoteOptions.saved.contactId);
         const deliveryExists = quoteOptions.deliveryTimes.some(item => item.value === quoteOptions.saved.deliveryTime);
+        const accountCountry = String(quoteOptions.accountCountry ?? "").trim().toLowerCase();
+        const accountCountryCode = String(quoteOptions.accountCountryCode ?? "").trim().toUpperCase();
+        const isGermanAccount = accountCountryCode
+            ? accountCountryCode === "DE"
+            : ["de", "deu", "deutschland", "germany", "alemania"].includes(accountCountry);
+        const hasAccountCountry = Boolean(accountCountryCode || accountCountry);
+        const quoteSettings = [
+            "show_discount",
+            ...(!isGermanAccount && hasAccountCountry && quoteOptions.exportQuoteField ? ["export_quote"] : [])
+        ];
         const selection = await showSelectForm(i18n.t("project.salesforceSyncSettingsHint"), {
             title: i18n.t("project.salesforceSync"),
             confirmText: i18n.t("project.salesforceSyncStart"),
@@ -907,6 +917,17 @@ function registerProjectSalesforceSync(projectId) {
                     { value: "opportunity_quote", label: i18n.t("project.salesforceScopeBoth") },
                     { value: "opportunity", label: i18n.t("project.salesforceScopeOpportunity") }
                 ] },
+                { type: "checkboxes", name: "quoteSettings", label: i18n.t("project.salesforceQuoteSettings"),
+                    value: quoteSettings, visibleWhen: { name: "syncScope", value: "opportunity_quote" }, options: [
+                        { value: "show_discount", label: i18n.t("project.salesforceShowDiscount") },
+                        ...(quoteOptions.exportQuoteField ? [{
+                            value: "export_quote",
+                            label: quoteOptions.exportQuoteWritable
+                                ? i18n.t("project.salesforceExportQuote")
+                                : i18n.t("project.salesforceExportQuoteAutomatic"),
+                            disabled: !quoteOptions.exportQuoteWritable
+                        }] : [])
+                    ] },
                 { type: "checkboxes", name: "documents", label: i18n.t("project.salesforceDocuments"), value: quoteOptions.saved.documents, options: [
                     { value: "overview", label: i18n.t("project.salesforceDocumentOverview") },
                     { value: "excel", label: i18n.t("project.salesforceDocumentExcel") },
@@ -2517,7 +2538,7 @@ function formatQuantity(
     value
 ) {
 
-    return Number(value || 1).toLocaleString("de-DE", {
+    return Number(value ?? 1).toLocaleString("de-DE", {
         maximumFractionDigits: 2
     });
 

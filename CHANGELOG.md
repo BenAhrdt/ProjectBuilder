@@ -2,6 +2,14 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.14 - 15.09.2026
+
+### Behoben
+
+- Kundenspezifische Rabatte der Preisgruppen werden in Projekten wieder korrekt geladen und bei der Preisberechnung berücksichtigt.
+- Leere Projekte zeigen bei den benötigten GridVis-Items wieder 0 statt 1 an.
+- Beim Senden eines Angebots an Salesforce kann „Rabatt anzeigen“ gewählt werden; der Rechnungs-Ländercode wird übertragen, damit Salesforce „Export Angebot“ für ausländische Kunden korrekt berechnet und als automatische Vorschau anzeigt.
+
 ## 1.5.13 - 15.09.2026
 
 ### Neu

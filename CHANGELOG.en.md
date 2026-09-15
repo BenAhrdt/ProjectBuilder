@@ -2,6 +2,12 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.14 - 15.09.2026
+### Fixed
+- Customer-specific price-group discounts are loaded correctly in projects again and applied to price calculations.
+- Empty projects show 0 required GridVis items again instead of 1.
+- When sending a quote to Salesforce, “Show discount” can be selected; the billing country code is transferred so Salesforce calculates “Export quote” correctly for foreign customers and displays it as an automatic preview.
+
 ## 1.5.13 - 15.09.2026
 ### Added
 - The customer-specific sales analysis can be exported as a complete PDF file in the desktop app.

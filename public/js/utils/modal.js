@@ -373,9 +373,9 @@ function showSelectForm(message, options = {}) {
                 <div class="app-modal-body">
                     <div class="app-modal-message"><p>${escapeHtml(message)}</p></div>
                     ${options.fields.map(field => field.type === "checkboxes" ? `
-                        <fieldset class="app-modal-field app-modal-checkboxes">
+                        <fieldset class="app-modal-field app-modal-checkboxes" data-visible-when-name="${escapeHtml(field.visibleWhen?.name ?? "")}" data-visible-when-value="${escapeHtml(field.visibleWhen?.value ?? "")}">
                             <legend>${escapeHtml(field.label)}</legend>
-                            ${(field.options ?? []).map(item => `<label><input type="checkbox" name="${escapeHtml(field.name)}" value="${escapeHtml(item.value)}" ${(field.value ?? []).map(String).includes(String(item.value)) ? "checked" : ""}> ${escapeHtml(item.label)}</label>`).join("")}
+                            ${(field.options ?? []).map(item => `<label><input type="checkbox" name="${escapeHtml(field.name)}" value="${escapeHtml(item.value)}" ${(field.value ?? []).map(String).includes(String(item.value)) ? "checked" : ""} ${item.disabled ? "disabled data-always-disabled=\"true\"" : ""}> ${escapeHtml(item.label)}</label>`).join("")}
                         </fieldset>
                     ` : `
                         <label class="app-modal-field">
@@ -394,6 +394,20 @@ function showSelectForm(message, options = {}) {
             </form>`;
         const finish = value => { closeActiveModal(); resolve(value); };
         const form = overlay.querySelector("form");
+        const updateConditionalFields = () => {
+            overlay.querySelectorAll("[data-visible-when-name]").forEach(field => {
+                const controllerName = field.dataset.visibleWhenName;
+                if (!controllerName) return;
+                const controller = form.elements.namedItem(controllerName);
+                const visible = String(controller?.value ?? "") === field.dataset.visibleWhenValue;
+                field.hidden = !visible;
+                field.querySelectorAll("input, select").forEach(input => {
+                    input.disabled = !visible || input.dataset.alwaysDisabled === "true";
+                });
+            });
+        };
+        form.addEventListener("change", updateConditionalFields);
+        updateConditionalFields();
         form.addEventListener("submit", event => {
             event.preventDefault();
             const formData = new FormData(form);

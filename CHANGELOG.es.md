@@ -2,6 +2,12 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.14 - 15.09.2026
+### Corregido
+- Los descuentos de grupos de precios específicos del cliente vuelven a cargarse correctamente en los proyectos y se aplican al cálculo de precios.
+- Los proyectos vacíos vuelven a mostrar 0 elementos GridVis necesarios en lugar de 1.
+- Al enviar una oferta a Salesforce se puede seleccionar «Mostrar descuento»; se transfiere el código del país de facturación para que Salesforce calcule correctamente «Exportar oferta» para clientes extranjeros y lo muestre como vista previa automática.
+
 ## 1.5.13 - 15.09.2026
 ### Nuevo
 - El análisis de ventas específico del cliente se puede exportar como un archivo PDF completo en la aplicación de escritorio.

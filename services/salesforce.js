@@ -487,6 +487,25 @@ export async function getPricebookProducts(pricebookId, currencyIsoCode) {
     `);
 }
 
+export async function getProductPricingGroups(productIds, salesOrganisation = "1100", distributionChannel = "10") {
+    const ids = [...new Set(productIds.map(value => String(value).trim()).filter(Boolean))];
+    const records = [];
+    for (let offset = 0; offset < ids.length; offset += 100) {
+        const values = ids.slice(offset, offset + 100)
+            .map(value => `'${escapeSoql(value)}'`)
+            .join(", ");
+        const result = await query(`
+            SELECT Product__c, ProductPricingGroup__c
+            FROM DistributionChain__c
+            WHERE Product__c IN (${values})
+              AND SalesOrganisation__c = '${escapeSoql(salesOrganisation)}'
+              AND DistributionChannel__c = '${escapeSoql(distributionChannel)}'
+        `);
+        records.push(...result.records);
+    }
+    return new Map(records.map(record => [String(record.Product__c), record.ProductPricingGroup__c ?? ""]));
+}
+
 export async function getPricebookEntries(pricebookId, articleNumbers, currencyIsoCode) {
     const numbers = [...new Set(articleNumbers.map(value => String(value).trim()).filter(Boolean))];
     const records = [];

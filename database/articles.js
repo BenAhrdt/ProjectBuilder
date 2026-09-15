@@ -48,7 +48,8 @@ for (const [name, definition] of [
     ["salesforceAvailabilityCheckedAt", "TEXT"],
     ["salesforceCurrencies", "TEXT"],
     ["gridVisItems", "REAL"],
-    ["gridVisItemsManual", "INTEGER DEFAULT 0"]
+    ["gridVisItemsManual", "INTEGER DEFAULT 0"],
+    ["discountGroupManual", "INTEGER DEFAULT 0"]
 ]) {
     if (!columns.includes(name)) {
         articles.exec(`ALTER TABLE articles ADD COLUMN ${name} ${definition}`);

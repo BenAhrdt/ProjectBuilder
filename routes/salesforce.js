@@ -455,6 +455,9 @@ router.post("/articles/import", async (req, res) => {
 
         const pricebook = await salesforce.getSalesPricebook(pricebookId);
         const entries = await salesforce.getPricebookProducts(pricebook.Id, currencyIsoCode);
+        const pricingGroups = await salesforce.getProductPricingGroups(
+            entries.map(entry => entry.Product2.Id), "1100", "10"
+        );
         const existingNumbers = new Set(
             database.articles.prepare("SELECT articleNumber FROM articles").all()
                 .map(article => String(article.articleNumber))
@@ -468,15 +471,15 @@ router.post("/articles/import", async (req, res) => {
                 salesforceProductId, salesforcePricebookId, salesforceActive,
                 salesforceFamily, salesforceProductType, salesforceLastModifiedAt,
                 salesforceImportedAt, salesforceAvailabilityCheckedAt,
-                salesforceCurrencies, gridVisItems, gridVisItemsManual
+                salesforceCurrencies, gridVisItems, gridVisItemsManual, discountGroupManual
             ) VALUES (
                 @articleNumber, '', @manufacturerType, '',
                 '', '', '', NULL, @quantityUnit,
-                @listPrice, @listPriceCurrency, '', @description,
+                @listPrice, @listPriceCurrency, @discountGroup, @description,
                 @salesforceProductId, @salesforcePricebookId, 1,
                 @salesforceFamily, @salesforceProductType, @salesforceLastModifiedAt,
                 @salesforceImportedAt, @salesforceImportedAt,
-                @salesforceCurrencies, @gridVisItems, 0
+                @salesforceCurrencies, @gridVisItems, 0, 0
             )
             ON CONFLICT(articleNumber) DO UPDATE SET
                 manufacturerType = CASE
@@ -487,6 +490,10 @@ router.post("/articles/import", async (req, res) => {
                     ELSE articles.quantityUnit END,
                 listPrice = excluded.listPrice,
                 listPriceCurrency = excluded.listPriceCurrency,
+                discountGroup = CASE
+                    WHEN COALESCE(articles.discountGroupManual, 0) = 1 THEN articles.discountGroup
+                    WHEN TRIM(excluded.discountGroup) <> '' THEN excluded.discountGroup
+                    ELSE articles.discountGroup END,
                 description = CASE
                     WHEN COALESCE(TRIM(articles.description), '') = '' THEN excluded.description
                     ELSE articles.description END,
@@ -516,6 +523,10 @@ router.post("/articles/import", async (req, res) => {
             quantityUnit: entry.Product2.QuantityUnitOfMeasure ?? "",
             listPrice: Number(entry.UnitPrice),
             listPriceCurrency: entry.CurrencyIsoCode,
+            discountGroup: (() => {
+                const value = String(pricingGroups.get(String(entry.Product2.Id)) ?? "").trim();
+                return /^0?[1-8]$/.test(value) ? `PG${Number(value)}` : "";
+            })(),
             description: entry.Product2.Description ?? "",
             salesforceProductId: entry.Product2.Id,
             salesforcePricebookId: pricebook.Id,

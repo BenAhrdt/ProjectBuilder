@@ -169,7 +169,7 @@ async function renderView() {
                             </td>
 
                             <td>
-                                ${article.discountGroup ?? ""}
+                                ${renderDiscountGroup(article)}
                             </td>
 
                             <td>${renderGridVisItems(article)}</td>
@@ -295,6 +295,7 @@ function generateHandler() {
     );
 
     attachArticlePriceHandlers();
+    attachDiscountGroupHandlers();
     attachGridVisItemHandlers();
     attachArticleDeleteHandlers();
 
@@ -478,7 +479,7 @@ function renderArticles(articles) {
                 </td>
 
                 <td>
-                    ${article.discountGroup ?? ""}
+                    ${renderDiscountGroup(article)}
                 </td>
 
                 <td>${renderGridVisItems(article)}</td>
@@ -492,6 +493,7 @@ function renderArticles(articles) {
         `).join("");
 
     attachArticlePriceHandlers();
+    attachDiscountGroupHandlers();
     attachGridVisItemHandlers();
     attachArticleDeleteHandlers();
 
@@ -917,6 +919,53 @@ async function deleteArticle(
     salesforceAvailability = null;
     await renderView();
 
+}
+
+function renderDiscountGroup(article) {
+    return `
+        <div class="article-discount-group-editor">
+            <span>${article.discountGroup || "–"}</span>
+            <button
+                class="article-discount-group-edit-button"
+                type="button"
+                data-article-number="${article.articleNumber ?? ""}"
+                data-current-discount-group="${article.discountGroup ?? ""}"
+                title="${i18n.t("articles.editDiscountGroup")}"
+            >${i18n.t("common.edit")}</button>
+        </div>
+    `;
+}
+
+function attachDiscountGroupHandlers() {
+    document.querySelectorAll(".article-discount-group-edit-button").forEach(button => {
+        button.addEventListener("click", async () => {
+            const discountGroup = await showChoice(i18n.t("articles.selectDiscountGroup"), {
+                title: `${i18n.t("articles.articleNumber")} ${button.dataset.articleNumber}`,
+                choices: [
+                    { value: "none", label: i18n.t("articles.noDiscountGroup") },
+                    ...Array.from({ length: 8 }, (_, index) => ({
+                        value: `PG${index + 1}`,
+                        label: `PG${index + 1}`
+                    }))
+                ]
+            });
+            if (!discountGroup) return;
+            const response = await fetch(
+                `/api/articles/${encodeURIComponent(button.dataset.articleNumber)}/discount-group`,
+                {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ discountGroup: discountGroup === "none" ? "" : discountGroup })
+                }
+            );
+            const result = await response.json();
+            if (!response.ok) {
+                await showAlert(result.error || i18n.t("articles.discountGroupSaveFailed"));
+                return;
+            }
+            await refreshArticles();
+        });
+    });
 }
 
 function renderGridVisItems(article) {

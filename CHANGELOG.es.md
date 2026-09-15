@@ -2,6 +2,13 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.17 - 15.09.2026
+
+### Mejorado
+
+- Las importaciones de listas de precios de Salesforce ahora asignan automáticamente los grupos de precios de las líneas de distribución de la organización de ventas 1100 y el canal 10 a PG1–PG8.
+- Los grupos de descuento pueden modificarse o eliminarse manualmente en la vista de artículos; las asignaciones manuales se conservan en futuras importaciones de Salesforce y se incluyen en las copias de seguridad.
+
 ## 1.5.16 - 15.09.2026
 
 ### Corregido

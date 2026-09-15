@@ -542,7 +542,8 @@ router.post("/", (req, res) => {
                 discountGroup,
                 description,
                 gridVisItems,
-                gridVisItemsManual
+                gridVisItemsManual,
+                discountGroupManual
 
             )
 
@@ -562,7 +563,8 @@ router.post("/", (req, res) => {
                 @discountGroup,
                 @description,
                 @gridVisItems,
-                0
+                0,
+                1
 
             )
 
@@ -672,6 +674,29 @@ router.patch("/:articleNumber/price", (req, res) => {
         listPriceCurrency
     });
 
+});
+
+router.patch("/:articleNumber/discount-group", (req, res) => {
+    const articleNumber = req.params.articleNumber;
+    const rawDiscountGroup = String(req.body.discountGroup ?? "").trim().toUpperCase();
+    const discountGroup = rawDiscountGroup
+        ? `PG${rawDiscountGroup.replace(/^PG/, "")}`
+        : "";
+
+    if (discountGroup && !/^PG[1-8]$/.test(discountGroup)) {
+        return res.status(400).json({ ok: false, error: "Ungültige Rabattgruppe" });
+    }
+
+    const result = database.articles.prepare(`
+        UPDATE articles SET discountGroup = @discountGroup, discountGroupManual = 1
+        WHERE articleNumber = @articleNumber
+    `).run({ articleNumber, discountGroup });
+
+    if (result.changes === 0) {
+        return res.status(404).json({ ok: false, error: "Artikel nicht gefunden" });
+    }
+
+    res.json({ ok: true, articleNumber, discountGroup });
 });
 
 router.patch("/:articleNumber/gridvis-items", (req, res) => {

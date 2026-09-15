@@ -386,6 +386,7 @@
 }
 
 .article-price-editor,
+.article-discount-group-editor,
 .article-gridvis-items-editor {
 
     display: grid;
@@ -412,7 +413,14 @@
 
 }
 
+.article-discount-group-editor {
+
+    grid-template-columns: minmax(36px, 1fr) 58px;
+
+}
+
 .article-price-editor > span,
+.article-discount-group-editor > span,
 .article-gridvis-items-editor > span {
 
     min-width: 0;
@@ -421,6 +429,7 @@
 }
 
 .article-price-edit-button,
+.article-discount-group-edit-button,
 .article-gridvis-items-edit-button {
 
     padding: 4px 8px;
@@ -446,6 +455,7 @@
 }
 
 .article-price-edit-button:hover,
+.article-discount-group-edit-button:hover,
 .article-gridvis-items-edit-button:hover {
 
     background: #dfeaff;

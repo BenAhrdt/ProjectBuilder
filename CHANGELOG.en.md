@@ -2,6 +2,13 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.17 - 15.09.2026
+
+### Improved
+
+- Salesforce pricebook imports now automatically map pricing groups from distribution chains for sales organization 1100 and distribution channel 10 to PG1 through PG8.
+- Discount groups can be changed or removed manually in the article overview; manual assignments survive later Salesforce imports and are included in backups.
+
 ## 1.5.16 - 15.09.2026
 
 ### Fixed

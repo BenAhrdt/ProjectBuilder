@@ -2,6 +2,13 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.17 - 15.09.2026
+
+### Verbessert
+
+- Beim Salesforce-Preisbuchimport werden die Preisgruppen aus den Vertriebslinien der Verkaufsorganisation 1100 und des Vertriebswegs 10 automatisch als PG1 bis PG8 übernommen.
+- Rabattgruppen können in der Artikelübersicht manuell geändert oder entfernt werden; manuelle Zuordnungen bleiben bei späteren Salesforce-Importen erhalten und werden in Backups gesichert.
+
 ## 1.5.16 - 15.09.2026
 
 ### Behoben

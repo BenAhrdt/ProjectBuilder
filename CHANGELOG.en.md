@@ -2,6 +2,13 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.22 - 16.09.2026
+
+### Improved
+
+- The sales overview continues to use available actual order amounts and efficiently completes missing header amounts from fully available net order line items.
+- Years with incomplete amounts show their data coverage and are excluded from average, development and chart calculations.
+
 ## 1.5.21 - 16.09.2026
 
 ### Improved

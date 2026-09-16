@@ -47,3 +47,15 @@ test("uses the oldest usable value in the five-year window", () => {
     assert.equal(metrics.trendStartYear, 2022);
     assert.equal(metrics.trendEndYear, 2026);
 });
+
+test("excludes years with incomplete order amounts", () => {
+    const years = [
+        { year: 2026, hasData: true, amountComplete: true, orderAmount: 200, orderCount: 2 },
+        { year: 2025, hasData: true, amountComplete: false, orderAmount: null, orderCount: 3 },
+        { year: 2024, hasData: true, amountComplete: true, orderAmount: 100, orderCount: 1 }
+    ];
+    const metrics = calculateSalesMetrics(years);
+    assert.equal(metrics.currentAverageOrder, 100);
+    assert.equal(metrics.fiveYearComparison, null);
+    assert.equal(averageOrderValue(years[1]), null);
+});

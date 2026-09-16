@@ -4,6 +4,7 @@ import path from "path";
 import open from "open";
 import { mapCustomerPricingGroupDiscounts } from "../utils/salesforceCustomerDiscounts.js";
 import { isSalesforceAuthenticationError } from "../utils/externalError.js";
+import { buildAnnualOrderIntake } from "../utils/salesforceOrderIntake.js";
 import { AuthInfo, Connection, WebOAuthServer } from "@salesforce/core";
 
 const API_VERSION = "v67.0";
@@ -367,9 +368,10 @@ export async function getAnnualOrderIntake(accountId, currentYear = new Date().g
     if (!accountId) return [];
     const displayedYearCount = 10;
     const firstYear = currentYear - displayedYearCount;
-    const result = await query(`
+    const headerResult = await query(`
         SELECT CALENDAR_YEAR(EffectiveDate) year,
             COUNT(Id) orderCount,
+            COUNT(OrderAmount__c) orderAmountCount,
             SUM(OrderAmount__c) orderAmount
         FROM Order
         WHERE AccountId = '${escapeSoql(accountId)}'
@@ -378,31 +380,26 @@ export async function getAnnualOrderIntake(accountId, currentYear = new Date().g
         GROUP BY CALENDAR_YEAR(EffectiveDate)
         ORDER BY CALENDAR_YEAR(EffectiveDate) DESC
     `);
-    const valuesByYear = new Map(
-        result.records.map(record => [Number(record.year), record])
+    const needsFallback = headerResult.records.some(record =>
+        Number(record.orderAmountCount) < Number(record.orderCount)
     );
-
-    const annualValues = Array.from({ length: displayedYearCount + 1 }, (_, index) => {
-        const year = currentYear - index;
-        const record = valuesByYear.get(year);
-        return {
-            year,
-            hasData: Boolean(record),
-            orderCount: Number(record?.orderCount) || 0,
-            orderAmount: Number(record?.orderAmount) || 0
-        };
-    });
-
-    return annualValues.slice(0, displayedYearCount).map((item, index) => {
-        const previousAmount = annualValues[index + 1].orderAmount;
-        return {
-            ...item,
-            previousYearHasData: annualValues[index + 1].hasData,
-            changePercent: previousAmount === 0
-                ? null
-                : ((item.orderAmount - previousAmount) / previousAmount) * 100
-        };
-    });
+    const fallbackResult = needsFallback ? await query(`
+        SELECT CALENDAR_YEAR(Order.EffectiveDate) year, OrderId,
+            COUNT(Id) itemCount, COUNT(TotalNet__c) netAmountCount,
+            SUM(TotalNet__c) netAmount
+        FROM OrderItem
+        WHERE Order.AccountId = '${escapeSoql(accountId)}'
+            AND Order.EffectiveDate >= ${firstYear}-01-01
+            AND Order.EffectiveDate < ${currentYear + 1}-01-01
+            AND Order.OrderAmount__c = null
+        GROUP BY CALENDAR_YEAR(Order.EffectiveDate), OrderId
+    `) : { records: [] };
+    return buildAnnualOrderIntake(
+        headerResult.records,
+        fallbackResult.records,
+        currentYear,
+        displayedYearCount
+    );
 }
 
 export async function getQuoteSyncOptions(accountId) {

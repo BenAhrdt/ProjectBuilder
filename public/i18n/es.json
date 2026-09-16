@@ -121,6 +121,7 @@
     "customer.currentYear": "año actual",
     "customer.orderIntakeLoading": "Cargando desde Salesforce…",
     "customer.orderIntakeUnavailable": "No hay datos de pedidos disponibles.",
+    "customer.incompleteOrderAmounts": "Importes incompletos ({known} de {total} pedidos)",
     "customer.orderSingular": "pedido",
     "customer.orderPlural": "pedidos",
     "customer.comparedToPreviousYear": "frente al año anterior",

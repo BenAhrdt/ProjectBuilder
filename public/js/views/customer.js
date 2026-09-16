@@ -392,6 +392,7 @@ function renderSales(result, customer) {
     const years = result.years ?? [];
     const current = years[0];
     const currentHasData = Boolean(current) && current.hasData !== false;
+    const currentAmountComplete = currentHasData && current.amountComplete !== false;
     const metrics = calculateSalesMetrics(years);
     const historyYears = years.slice(0, 10);
     return `<div class="customer-sales-card">
@@ -401,7 +402,7 @@ function renderSales(result, customer) {
             <button id="export-sales-pdf" type="button">${i18n.t("customer.exportPdf")}</button>
         </div>
         <div class="customer-sales-metrics">
-            ${renderMetric(i18n.t("customer.orderIntakeYear").replace("{year}", current?.year ?? ""), currentHasData ? formatCurrency(current.orderAmount, result.currency) : "–", formatChange(current?.changePercent, current?.previousYearHasData))}
+            ${renderMetric(i18n.t("customer.orderIntakeYear").replace("{year}", current?.year ?? ""), currentAmountComplete ? formatCurrency(current.orderAmount, result.currency) : "–", currentAmountComplete ? formatChange(current?.changePercent, current?.previousYearHasData) : formatAmountCoverage(current))}
             ${renderMetric(i18n.t("customer.ordersCurrentYear"), currentHasData ? String(current.orderCount ?? 0) : "–", currentHasData ? i18n.t("customer.ordersLabel") : i18n.t("customer.notEnoughData"))}
             ${renderMetric(i18n.t("customer.averageOrderValue"), metrics.currentAverageOrder === null ? "–" : formatCurrency(metrics.currentAverageOrder, result.currency), i18n.t("customer.currentYear"))}
             ${renderMetric(i18n.t("customer.fiveYearAverage"), metrics.fiveYearComparison === null ? "–" : formatPercent(metrics.fiveYearComparison), metrics.fiveYearComparison === null ? i18n.t("customer.notEnoughData") : i18n.t("customer.comparedToFiveYearAverage"))}
@@ -473,6 +474,7 @@ function renderOrderIntakeCard(item, index, currency) {
         ? i18n.t("customer.orderSingular")
         : i18n.t("customer.orderPlural");
     const hasData = item.hasData !== false;
+    const amountComplete = hasData && item.amountComplete !== false;
 
     return `
         <div class="customer-order-intake-card${index === 0 ? " current" : ""}">
@@ -481,20 +483,22 @@ function renderOrderIntakeCard(item, index, currency) {
                 <small>${hasData ? `${item.orderCount} ${orderLabel}` : i18n.t("customer.noData")}</small>
             </div>
             <div class="customer-order-intake-value">
-                <strong>${hasData ? formatCurrency(item.orderAmount, currency) : "–"}</strong>
+                <strong>${amountComplete ? formatCurrency(item.orderAmount, currency) : "–"}</strong>
                 <span class="customer-order-intake-trend ${trendClass}"
                     title="${i18n.t("customer.comparedToPreviousYear")}">
                     ${trendValue}
                 </span>
             </div>
-            <small class="customer-order-average">${i18n.t("customer.averageOrderValue")}: ${averageOrderValue(item) === null
-                ? "–" : formatCurrency(averageOrderValue(item), currency)}</small>
+            <small class="customer-order-average">${amountComplete
+                ? `${i18n.t("customer.averageOrderValue")}: ${averageOrderValue(item) === null
+                    ? "–" : formatCurrency(averageOrderValue(item), currency)}`
+                : escapeHtml(formatAmountCoverage(item))}</small>
         </div>
     `;
 }
 
 function renderOrderIntakeChart(years, currency) {
-    const values = years.filter(item => item.hasData !== false).reverse();
+    const values = years.filter(item => item.hasData !== false && item.amountComplete !== false).reverse();
     if (!values.length) return `<p class="customer-order-intake-empty">${i18n.t("customer.notEnoughData")}</p>`;
     const width = 720;
     const height = 176;
@@ -563,6 +567,13 @@ function renderOrderIntakeChart(years, currency) {
             `).join("")}
         </svg>
     `;
+}
+
+function formatAmountCoverage(item) {
+    if (!item?.hasData) return i18n.t("customer.notEnoughData");
+    return i18n.t("customer.incompleteOrderAmounts")
+        .replace("{known}", item.amountKnownCount ?? 0)
+        .replace("{total}", item.orderCount ?? 0);
 }
 
 function getChartAxisMaximum(value) {

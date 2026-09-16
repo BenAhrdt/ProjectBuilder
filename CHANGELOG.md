@@ -2,6 +2,13 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.22 - 16.09.2026
+
+### Verbessert
+
+- Die Vertriebsübersicht verwendet weiterhin vorhandene tatsächliche Auftragsbeträge und ergänzt fehlende Kopfbeträge effizient aus vollständig verfügbaren Netto-Auftragspositionen.
+- Jahre mit unvollständigen Beträgen zeigen die Datenabdeckung an und werden nicht in Durchschnitts-, Entwicklungs- oder Diagrammberechnungen einbezogen.
+
 ## 1.5.21 - 16.09.2026
 
 ### Verbessert

@@ -2,6 +2,13 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.22 - 16.09.2026
+
+### Mejorado
+
+- El resumen de ventas sigue utilizando los importes reales de pedido disponibles y completa de forma eficiente los importes de cabecera ausentes a partir de posiciones netas de pedido completamente disponibles.
+- Los años con importes incompletos muestran su cobertura de datos y se excluyen de los cálculos de promedio, evolución y gráfico.
+
 ## 1.5.21 - 16.09.2026
 
 ### Mejorado

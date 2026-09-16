@@ -1,3 +1,24 @@
+export function groupOrderItemNetAmounts(records) {
+    const orders = new Map();
+    for (const record of records) {
+        const orderId = String(record.OrderId ?? "");
+        if (!orderId) continue;
+        const effectiveDate = record.Order?.EffectiveDate;
+        const year = Number(String(effectiveDate ?? "").slice(0, 4));
+        if (!Number.isInteger(year)) continue;
+        const order = orders.get(orderId) ?? {
+            year, OrderId: orderId, itemCount: 0, netAmountCount: 0, netAmount: 0
+        };
+        order.itemCount += 1;
+        if (record.TotalNet__c !== null && record.TotalNet__c !== undefined) {
+            order.netAmountCount += 1;
+            order.netAmount += Number(record.TotalNet__c) || 0;
+        }
+        orders.set(orderId, order);
+    }
+    return [...orders.values()];
+}
+
 export function buildAnnualOrderIntake(
     headerRecords,
     fallbackRecords,
@@ -8,7 +29,7 @@ export function buildAnnualOrderIntake(
     for (const record of fallbackRecords) {
         const itemCount = Number(record.itemCount) || 0;
         const netAmountCount = Number(record.netAmountCount) || 0;
-        if (itemCount === 0 || itemCount !== netAmountCount) continue;
+        if (itemCount !== netAmountCount) continue;
         const year = Number(record.year);
         const value = fallbackByYear.get(year) ?? { count: 0, amount: 0 };
         value.count += 1;
@@ -31,7 +52,7 @@ export function buildAnnualOrderIntake(
             orderCount,
             amountKnownCount,
             amountComplete,
-            orderAmount: amountComplete
+            orderAmount: amountKnownCount > 0
                 ? Math.round(((Number(record?.orderAmount) || 0) + fallback.amount) * 100) / 100
                 : null
         };

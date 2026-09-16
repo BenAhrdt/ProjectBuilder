@@ -2,6 +2,14 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.23 - 16.09.2026
+
+### Improved
+
+- Historical Salesforce order intake is reliably completed from actual net order line items while list prices remain excluded.
+- Orders without line items and orders with a net value of zero are treated as complete and no longer block year comparisons or historical averages.
+- For genuinely incomplete years, the sales overview clearly shows the known partial total, data coverage and affected order numbers.
+
 ## 1.5.22 - 16.09.2026
 
 ### Improved

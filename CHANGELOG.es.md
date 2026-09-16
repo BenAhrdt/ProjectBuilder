@@ -2,6 +2,14 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.23 - 16.09.2026
+
+### Mejorado
+
+- Los pedidos históricos de Salesforce se completan de forma fiable a partir de las posiciones netas reales, sin utilizar precios de lista.
+- Los pedidos sin posiciones y los pedidos con un importe neto de cero se consideran completos y ya no bloquean las comparaciones anuales ni los promedios históricos.
+- Para los años realmente incompletos, el resumen de ventas muestra claramente el total parcial conocido, la cobertura de datos y los números de pedido afectados.
+
 ## 1.5.22 - 16.09.2026
 
 ### Mejorado

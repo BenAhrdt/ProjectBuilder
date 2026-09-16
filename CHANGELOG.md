@@ -2,6 +2,14 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.23 - 16.09.2026
+
+### Verbessert
+
+- Historische Salesforce-Auftragseingänge werden zuverlässig aus den tatsächlichen Netto-Auftragspositionen ergänzt; Listenpreise bleiben unberücksichtigt.
+- Aufträge ohne Positionen sowie Aufträge mit einem Nettowert von null gelten als vollständig und blockieren weder Jahresvergleiche noch historische Durchschnittswerte.
+- Bei wirklich unvollständigen Jahren zeigt die Vertriebsübersicht die bekannte Teilsumme, die Datenabdeckung und die betroffenen Auftragsnummern eindeutig an.
+
 ## 1.5.22 - 16.09.2026
 
 ### Verbessert

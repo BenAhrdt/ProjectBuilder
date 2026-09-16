@@ -4,7 +4,10 @@ import path from "path";
 import open from "open";
 import { mapCustomerPricingGroupDiscounts } from "../utils/salesforceCustomerDiscounts.js";
 import { isSalesforceAuthenticationError } from "../utils/externalError.js";
-import { buildAnnualOrderIntake } from "../utils/salesforceOrderIntake.js";
+import {
+    buildAnnualOrderIntake,
+    groupOrderItemNetAmounts
+} from "../utils/salesforceOrderIntake.js";
 import { AuthInfo, Connection, WebOAuthServer } from "@salesforce/core";
 
 const API_VERSION = "v67.0";
@@ -368,38 +371,66 @@ export async function getAnnualOrderIntake(accountId, currentYear = new Date().g
     if (!accountId) return [];
     const displayedYearCount = 10;
     const firstYear = currentYear - displayedYearCount;
-    const headerResult = await query(`
-        SELECT CALENDAR_YEAR(EffectiveDate) year,
-            COUNT(Id) orderCount,
-            COUNT(OrderAmount__c) orderAmountCount,
-            SUM(OrderAmount__c) orderAmount
+    const orders = await queryAll(`
+        SELECT Id, OrderNumber, EffectiveDate, OrderAmount__c
         FROM Order
         WHERE AccountId = '${escapeSoql(accountId)}'
             AND EffectiveDate >= ${firstYear}-01-01
             AND EffectiveDate < ${currentYear + 1}-01-01
-        GROUP BY CALENDAR_YEAR(EffectiveDate)
-        ORDER BY CALENDAR_YEAR(EffectiveDate) DESC
     `);
-    const needsFallback = headerResult.records.some(record =>
-        Number(record.orderAmountCount) < Number(record.orderCount)
-    );
-    const fallbackResult = needsFallback ? await query(`
-        SELECT CALENDAR_YEAR(Order.EffectiveDate) year, OrderId,
-            COUNT(Id) itemCount, COUNT(TotalNet__c) netAmountCount,
-            SUM(TotalNet__c) netAmount
+    const headersByYear = new Map();
+    const ordersMissingAmount = new Set();
+    for (const order of orders) {
+        const year = Number(String(order.EffectiveDate ?? "").slice(0, 4));
+        if (!Number.isInteger(year)) continue;
+        const header = headersByYear.get(year) ?? {
+            year, orderCount: 0, orderAmountCount: 0, orderAmount: 0
+        };
+        header.orderCount += 1;
+        if (order.OrderAmount__c !== null && order.OrderAmount__c !== undefined) {
+            header.orderAmountCount += 1;
+            header.orderAmount += Number(order.OrderAmount__c) || 0;
+        } else {
+            ordersMissingAmount.add(String(order.Id));
+        }
+        headersByYear.set(year, header);
+    }
+    const fallbackRecords = ordersMissingAmount.size > 0 ? groupOrderItemNetAmounts(await queryAll(`
+        SELECT OrderId, Order.EffectiveDate, TotalNet__c
         FROM OrderItem
         WHERE Order.AccountId = '${escapeSoql(accountId)}'
             AND Order.EffectiveDate >= ${firstYear}-01-01
             AND Order.EffectiveDate < ${currentYear + 1}-01-01
-            AND Order.OrderAmount__c = null
-        GROUP BY CALENDAR_YEAR(Order.EffectiveDate), OrderId
-    `) : { records: [] };
+    `)).filter(record => ordersMissingAmount.has(String(record.OrderId))) : [];
+    const fallbackByOrderId = new Map(fallbackRecords.map(record => [String(record.OrderId), record]));
+    for (const order of orders) {
+        const orderId = String(order.Id);
+        if (!ordersMissingAmount.has(orderId) || fallbackByOrderId.has(orderId)) continue;
+        const year = Number(String(order.EffectiveDate ?? "").slice(0, 4));
+        const emptyOrder = {
+            year, OrderId: orderId, itemCount: 0, netAmountCount: 0, netAmount: 0
+        };
+        fallbackRecords.push(emptyOrder);
+        fallbackByOrderId.set(orderId, emptyOrder);
+    }
+    const missingOrdersByYear = new Map();
+    for (const order of orders) {
+        if (!ordersMissingAmount.has(String(order.Id))) continue;
+        const fallback = fallbackByOrderId.get(String(order.Id));
+        const amountComplete = fallback
+            && Number(fallback.itemCount) === Number(fallback.netAmountCount);
+        if (amountComplete) continue;
+        const year = Number(String(order.EffectiveDate ?? "").slice(0, 4));
+        const missing = missingOrdersByYear.get(year) ?? [];
+        missing.push(order.OrderNumber || order.Id);
+        missingOrdersByYear.set(year, missing);
+    }
     return buildAnnualOrderIntake(
-        headerResult.records,
-        fallbackResult.records,
+        [...headersByYear.values()],
+        fallbackRecords,
         currentYear,
         displayedYearCount
-    );
+    ).map(year => ({ ...year, missingOrders: missingOrdersByYear.get(year.year) ?? [] }));
 }
 
 export async function getQuoteSyncOptions(accountId) {

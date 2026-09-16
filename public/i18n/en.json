@@ -121,7 +121,7 @@
     "customer.currentYear": "current year",
     "customer.orderIntakeLoading": "Loading from Salesforce…",
     "customer.orderIntakeUnavailable": "No order data available.",
-    "customer.incompleteOrderAmounts": "Amounts incomplete ({known} of {total} orders)",
+    "customer.incompleteOrderAmounts": "Net amount available: {known} of {total} ({missing} missing: {orders})",
     "customer.orderSingular": "order",
     "customer.orderPlural": "orders",
     "customer.comparedToPreviousYear": "vs. previous year",

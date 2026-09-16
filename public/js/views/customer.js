@@ -475,6 +475,8 @@ function renderOrderIntakeCard(item, index, currency) {
         : i18n.t("customer.orderPlural");
     const hasData = item.hasData !== false;
     const amountComplete = hasData && item.amountComplete !== false;
+    const hasKnownAmount = hasData && item.orderAmount !== null
+        && item.orderAmount !== undefined && Number.isFinite(Number(item.orderAmount));
 
     return `
         <div class="customer-order-intake-card${index === 0 ? " current" : ""}">
@@ -483,7 +485,7 @@ function renderOrderIntakeCard(item, index, currency) {
                 <small>${hasData ? `${item.orderCount} ${orderLabel}` : i18n.t("customer.noData")}</small>
             </div>
             <div class="customer-order-intake-value">
-                <strong>${amountComplete ? formatCurrency(item.orderAmount, currency) : "–"}</strong>
+                <strong>${hasKnownAmount ? formatCurrency(item.orderAmount, currency) : "–"}</strong>
                 <span class="customer-order-intake-trend ${trendClass}"
                     title="${i18n.t("customer.comparedToPreviousYear")}">
                     ${trendValue}
@@ -571,9 +573,13 @@ function renderOrderIntakeChart(years, currency) {
 
 function formatAmountCoverage(item) {
     if (!item?.hasData) return i18n.t("customer.notEnoughData");
+    const known = Number(item.amountKnownCount) || 0;
+    const total = Number(item.orderCount) || 0;
     return i18n.t("customer.incompleteOrderAmounts")
-        .replace("{known}", item.amountKnownCount ?? 0)
-        .replace("{total}", item.orderCount ?? 0);
+        .replace("{known}", known)
+        .replace("{total}", total)
+        .replace("{missing}", Math.max(total - known, 0))
+        .replace("{orders}", (item.missingOrders ?? []).join(", ") || "–");
 }
 
 function getChartAxisMaximum(value) {

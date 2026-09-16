@@ -2,6 +2,16 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.20 - 16.09.2026
+
+### Nuevo
+
+- Los proyectos vinculados pueden cargarse directamente desde el proyecto abierto utilizando el archivo de ProjectBuilder más reciente de su oportunidad de Salesforce. Se solicita confirmación antes de sustituir por completo el proyecto local.
+
+### Mejorado
+
+- Las acciones de Salesforce se muestran de forma uniforme una junto a otra en el área de exportación: «Enviar a Salesforce» a la izquierda y «Cargar desde Salesforce» a la derecha.
+
 ## 1.5.19 - 15.09.2026
 
 ### Nuevo

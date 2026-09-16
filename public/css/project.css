@@ -199,6 +199,7 @@
 #export-project-file,
 #export-project-tender,
 #sync-project-salesforce,
+#load-project-salesforce,
 #delete-project {
 
     display: inline-flex;
@@ -249,7 +250,8 @@
     justify-content: flex-start !important;
 }
 
-#sync-project-salesforce {
+#sync-project-salesforce.project-salesforce-action,
+#load-project-salesforce.project-salesforce-action {
     grid-column: 1 / -1;
     border-color: #9dc9e8;
     color: #176b9b;
@@ -258,7 +260,13 @@
     white-space: nowrap;
 }
 
-#sync-project-salesforce:hover {
+.project-export-actions-with-salesforce-load #sync-project-salesforce.project-salesforce-action,
+.project-export-actions-with-salesforce-load #load-project-salesforce.project-salesforce-action {
+    grid-column: auto;
+}
+
+#sync-project-salesforce.project-salesforce-action:hover,
+#load-project-salesforce.project-salesforce-action:hover {
     border-color: #1684c4;
     background: #f2f9fd;
 }

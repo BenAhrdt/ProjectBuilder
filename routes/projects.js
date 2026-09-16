@@ -906,6 +906,45 @@ router.post("/import/salesforce", async (req, res) => {
     }
 });
 
+router.post("/:id/import/salesforce", async (req, res) => {
+    try {
+        const project = database.projects.prepare(`
+            SELECT projects.*, customers.salesforceId AS customerSalesforceId
+            FROM projects
+            LEFT JOIN customers ON customers.id = projects.customerId
+            WHERE projects.id = ?
+        `).get(req.params.id);
+        if (!project) return res.status(404).json({ ok: false, error: "Projekt nicht gefunden." });
+
+        const link = project.customerSalesforceId
+            ? database.projects.prepare(`
+                SELECT opportunityId FROM projectSalesforceLinks
+                WHERE projectId = ? AND customerSalesforceId = ?
+            `).get(project.id, project.customerSalesforceId)
+            : null;
+        const opportunityId = link?.opportunityId ?? project.salesforceOpportunityId;
+        if (!opportunityId) {
+            return res.status(400).json({ ok: false, error: "Das Projekt ist mit keiner Salesforce-Opportunity verknüpft." });
+        }
+
+        const downloaded = await salesforce.downloadOpportunityProjectFile(opportunityId);
+        const payload = parseProjectJson(downloaded.data);
+        const validation = validateProjectImportPayload(payload);
+        if (validation.missingArticleNumbers.length > 0) {
+            return res.status(400).json({
+                ok: false,
+                error: `Diese Artikel fehlen in der Artikeldatenbank: ${validation.missingArticleNumbers.join(", ")}`,
+                missingArticleNumbers: validation.missingArticleNumbers
+            });
+        }
+        await ensureSalesforceImportCustomer(payload.project);
+        const updatedProject = replaceProjectPayload(project.id, payload, { opportunityId });
+        res.json({ ok: true, project: updatedProject, modifiedAt: downloaded.modifiedAt });
+    } catch (error) {
+        res.status(400).json({ ok: false, error: error.message });
+    }
+});
+
 router.post("/:id/duplicate", (req, res) => {
     const source = database.projects.prepare("SELECT * FROM projects WHERE id = ?").get(req.params.id);
     if (!source) return res.status(404).json({ success: false, error: "Projekt nicht gefunden" });
@@ -6343,6 +6382,89 @@ function getExportIconName(
 
     return "";
 
+}
+
+function replaceProjectPayload(projectId, payload, options = {}) {
+    const transaction = database.projects.transaction(() => {
+        const existing = database.projects.prepare("SELECT * FROM projects WHERE id = ?").get(projectId);
+        if (!existing) throw new Error("Projekt nicht gefunden.");
+
+        const oldNodeIds = database.projects.prepare(
+            "SELECT id FROM projectNodes WHERE projectId = ?"
+        ).all(projectId).map(node => node.id);
+        if (oldNodeIds.length > 0) {
+            database.projects.prepare(`
+                DELETE FROM projectNodeArticles
+                WHERE projectNodeId IN (${oldNodeIds.map(() => "?").join(",")})
+            `).run(...oldNodeIds);
+        }
+        database.projects.prepare("DELETE FROM projectNodes WHERE projectId = ?").run(projectId);
+
+        const customerId = getImportCustomerId(payload.project);
+        database.projects.prepare(`
+            UPDATE projects SET customerId = ?, name = ?, description = ?, projectDiscount = ?,
+                salesforceOpportunityId = ?, salesforceQuoteId = ?, salesforceSyncedAt = ?
+            WHERE id = ?
+        `).run(
+            customerId,
+            payload.project.name ?? "Importiertes Projekt",
+            payload.project.description ?? "",
+            payload.project.projectDiscount ?? 0,
+            options.opportunityId ?? payload.project.salesforceOpportunityId ?? existing.salesforceOpportunityId,
+            payload.project.salesforceQuoteId ?? existing.salesforceQuoteId,
+            new Date().toISOString(),
+            projectId
+        );
+
+        const insertNode = database.projects.prepare(`
+            INSERT INTO projectNodes (
+                projectId, parentId, type, name, sortOrder, physicalQuantity,
+                deviceDesignation, dataCollectionLocation, fundingObject,
+                responsibility, collectionFrequency, thirdPartyQuantity
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        const insertPosition = database.projects.prepare(`
+            INSERT INTO projectNodeArticles (
+                projectNodeId, articleNumber, quantity, positionName,
+                sortOrder, isOptional, isAlternative
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        `);
+        const oldToNewNodeId = new Map();
+        for (const node of getNodesInImportOrder(payload.nodes)) {
+            const parentId = node.parentId == null ? null : oldToNewNodeId.get(String(node.parentId)) ?? null;
+            const result = insertNode.run(
+                projectId, parentId, node.type, node.name ?? "", Number(node.sortOrder) || 0,
+                node.physicalQuantity ?? "kWh", node.deviceDesignation ?? "",
+                node.dataCollectionLocation ?? "", node.fundingObject ?? "",
+                node.responsibility ?? "", node.collectionFrequency ?? "",
+                node.thirdPartyQuantity ?? ""
+            );
+            oldToNewNodeId.set(String(node.id), result.lastInsertRowid);
+        }
+        for (const position of payload.positions.slice().sort(compareSortOrder)) {
+            const nodeId = oldToNewNodeId.get(String(position.nodeId));
+            if (!nodeId) throw new Error("Position konnte keiner importierten Strukturposition zugeordnet werden.");
+            insertPosition.run(
+                nodeId, String(position.articleNumber ?? "").trim(), Number(position.quantity) || 1,
+                position.positionName || null, Number(position.sortOrder) || 0,
+                position.isOptional ? 1 : 0, position.isAlternative ? 1 : 0
+            );
+        }
+
+        const customerSalesforceId = payload.project.customerSalesforceId;
+        if (customerSalesforceId) {
+            database.projects.prepare(`
+                INSERT INTO projectSalesforceLinks (projectId, customerSalesforceId, opportunityId, quoteId, syncedAt)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(projectId, customerSalesforceId) DO UPDATE SET
+                    opportunityId = excluded.opportunityId, quoteId = excluded.quoteId,
+                    syncedAt = excluded.syncedAt
+            `).run(projectId, customerSalesforceId, options.opportunityId,
+                payload.project.salesforceQuoteId ?? null, new Date().toISOString());
+        }
+        return database.projects.prepare("SELECT * FROM projects WHERE id = ?").get(projectId);
+    });
+    return transaction();
 }
 
 function parseProjectJson(input) {

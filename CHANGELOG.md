@@ -2,6 +2,16 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.20 - 16.09.2026
+
+### Neu
+
+- Verknüpfte Projekte können im geöffneten Projekt direkt aus der neuesten ProjectBuilder-Projektdatei ihrer Salesforce-Opportunity geladen werden. Vor dem vollständigen Ersetzen des lokalen Stands ist eine Bestätigung erforderlich.
+
+### Verbessert
+
+- Die Salesforce-Aktionen stehen im Exportbereich einheitlich nebeneinander: „An Salesforce senden“ links und „Aus Salesforce laden“ rechts.
+
 ## 1.5.19 - 15.09.2026
 
 ### Neu

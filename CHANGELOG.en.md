@@ -2,6 +2,16 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.20 - 16.09.2026
+
+### Added
+
+- Linked projects can be loaded directly in the open project from the latest ProjectBuilder project file attached to their Salesforce opportunity. Confirmation is required before the local project is completely replaced.
+
+### Improved
+
+- The Salesforce actions are presented consistently side by side in the export area: “Send to Salesforce” on the left and “Load from Salesforce” on the right.
+
 ## 1.5.19 - 15.09.2026
 
 ### Added

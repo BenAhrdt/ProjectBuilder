@@ -760,7 +760,9 @@ async function renderView(
                 <div class="project-export-card">
                     <h2>${i18n.t("project.exportTitle")}</h2>
                     <p>${i18n.t("project.exportHint")}</p>
-                    <div class="project-export-actions">
+                    <div class="project-export-actions${project.salesforceOpportunityId
+                        ? " project-export-actions-with-salesforce-load"
+                        : ""}">
                         <button id="show-project-overview" type="button"
                             title="${i18n.t("project.showOverview")}">
                             <span class="project-overview-button-icon">${utils.icons.projects}</span>
@@ -781,11 +783,18 @@ async function renderView(
                             <span class="export-project-tender-icon">LV</span>
                             <span>${i18n.t("project.exportTender")}</span>
                         </button>
-                        <button id="sync-project-salesforce" type="button"
+                        <button id="sync-project-salesforce" class="project-salesforce-action" type="button"
                             title="${i18n.t("project.salesforceSync")}">
                             <span class="project-salesforce-icon">SF</span>
                             <span>${i18n.t("project.salesforceSync")}</span>
                         </button>
+                        ${project.salesforceOpportunityId ? `
+                            <button id="load-project-salesforce" class="project-salesforce-action" type="button"
+                                title="${i18n.t("project.salesforceLoad")}">
+                                <span class="project-salesforce-icon">SF</span>
+                                <span>${i18n.t("project.salesforceLoad")}</span>
+                            </button>
+                        ` : ""}
                     </div>
                 </div>
             </section>
@@ -806,6 +815,7 @@ async function renderView(
     registerProjectFileExport(projectId);
     registerProjectTenderExport(projectId);
     registerProjectSalesforceSync(projectId);
+    registerProjectSalesforceLoad(projectId);
     registerProjectDelete(projectId, project);
     registerProjectDescriptionPersistence(projectId);
     registerProjectStructurePriceToggle(projectId);
@@ -835,6 +845,42 @@ async function renderView(
         target?.classList.add("project-node-search-target");
         setTimeout(() => target?.classList.remove("project-node-search-target"), 2400);
     }
+}
+
+function registerProjectSalesforceLoad(projectId) {
+    const button = document.getElementById("load-project-salesforce");
+    if (!button) return;
+
+    button.addEventListener("click", async () => {
+        const confirmed = await showConfirm(i18n.t("project.salesforceLoadConfirm"), {
+            title: i18n.t("project.salesforceLoad"),
+            confirmText: i18n.t("project.salesforceLoadStart")
+        });
+        if (!confirmed) return;
+
+        clearTimeout(saveTimeout);
+        button.disabled = true;
+        const originalContent = button.innerHTML;
+        button.textContent = i18n.t("project.salesforceLoadRunning");
+        try {
+            const response = await fetch(`/api/projects/${projectId}/import/salesforce`, {
+                method: "POST"
+            });
+            const result = await response.json();
+            if (!response.ok || !result.ok) {
+                throw new Error(result.error || i18n.t("project.salesforceLoadFailed"));
+            }
+            await renderView(projectId);
+            await showAlert(i18n.t("project.salesforceLoadSuccess"), {
+                title: i18n.t("project.salesforceLoad")
+            });
+        } catch (error) {
+            button.disabled = false;
+            button.innerHTML = originalContent;
+            if (await offerSalesforceConnection(error)) return button.click();
+            await showAlert(error.message, { title: i18n.t("project.salesforceLoadFailed") });
+        }
+    });
 }
 
 async function loadAndRenderSalesforceProjectLinks(projectId, project) {

@@ -1,13 +1,27 @@
 import * as i18n from "./i18n.js";
 import { showAlert, showChoice } from "./modal.js";
 
+let pendingConnectionOffer = null;
+
 export function isSalesforceConnectionError(error) {
-    return /Keine Salesforce-Anmeldung vorhanden|Salesforce (?:is )?not connected|No Salesforce (?:sign-in|login)/i
+    return /Keine Salesforce-Anmeldung vorhanden|Salesforce (?:is )?not connected|No Salesforce (?:sign-in|login)|INVALID_SESSION_ID|session (?:expired|is invalid)|invalid session/i
         .test(String(error?.message ?? error ?? ""));
 }
 
 export async function offerSalesforceConnection(error) {
     if (!isSalesforceConnectionError(error)) return false;
+
+    if (pendingConnectionOffer) return pendingConnectionOffer;
+
+    pendingConnectionOffer = connectAfterConfirmation();
+    try {
+        return await pendingConnectionOffer;
+    } finally {
+        pendingConnectionOffer = null;
+    }
+}
+
+async function connectAfterConfirmation() {
 
     const choice = await showChoice(
         i18n.t("salesforce.connectionRequired"),
@@ -30,5 +44,14 @@ export async function offerSalesforceConnection(error) {
     } catch (loginError) {
         await showAlert(loginError.message ?? i18n.t("salesforce.error"));
         return false;
+    }
+}
+
+export async function withSalesforceConnectionRetry(operation) {
+    try {
+        return await operation();
+    } catch (error) {
+        if (await offerSalesforceConnection(error)) return operation();
+        throw error;
     }
 }

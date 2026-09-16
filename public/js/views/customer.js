@@ -5,7 +5,10 @@ import {
     showConfirm
 } from "../utils/modal.js";
 import { openSalesforceCustomerDialog } from "../utils/salesforceCustomers.js";
-import { offerSalesforceConnection } from "../utils/salesforceConnection.js";
+import {
+    offerSalesforceConnection,
+    withSalesforceConnectionRetry
+} from "../utils/salesforceConnection.js";
 import { averageOrderValue, calculateSalesMetrics } from "../utils/customerSalesMetrics.js";
 
 await i18n.loadLanguage();
@@ -358,9 +361,12 @@ async function loadCustomerOrderIntake(customerId, customer, force = false) {
     container.innerHTML = renderTabLoading(i18n.t("customer.orderIntakeLoading"));
     state.salesPromise = (async () => {
         try {
-            const response = await fetch(`/api/salesforce/customers/${customerId}/order-intake`);
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error);
+            const result = await withSalesforceConnectionRetry(async () => {
+                const response = await fetch(`/api/salesforce/customers/${customerId}/order-intake`);
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error);
+                return data;
+            });
             if (!result.available) throw new Error(i18n.t("customer.orderIntakeUnavailable"));
             if (customerViewState !== state) return;
             state.sales = result;
@@ -684,8 +690,12 @@ function registerCustomerProjectCreation(customerId) {
 async function loadSalesforceCustomerLink(customerId, salesforceId) {
     if (!salesforceId) return null;
     try {
-        const response = await fetch(`/api/salesforce/customers/${customerId}/link`);
-        const link = await response.json();
+        const { response, link } = await withSalesforceConnectionRetry(async () => {
+            const response = await fetch(`/api/salesforce/customers/${customerId}/link`);
+            const link = await response.json();
+            if (!response.ok) throw new Error(link.error);
+            return { response, link };
+        });
         if (String(customerViewState.customerId) !== String(customerId)) return null;
         const target = document.getElementById("salesforce-customer-link");
         if (target?.isConnected && response.ok && link?.url) {

@@ -2,6 +2,17 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.21 - 16.09.2026
+
+### Verbessert
+
+- Fehlende oder abgelaufene Salesforce-Anmeldungen bieten nun bei allen Salesforce-Aktionen direkt die Verbindungsherstellung an und wiederholen den ursprünglichen Vorgang anschließend automatisch.
+- Der Kundenimport bleibt möglich, wenn ausschließlich die optionalen Rabattdaten wegen einer vorübergehenden Wartung nicht verfügbar sind; vorhandene lokale Rabatte bleiben erhalten.
+
+### Behoben
+
+- HTML-Wartungsseiten externer Dienste werden nicht mehr ungefiltert im Salesforce-Kundendialog angezeigt.
+
 ## 1.5.20 - 16.09.2026
 
 ### Neu

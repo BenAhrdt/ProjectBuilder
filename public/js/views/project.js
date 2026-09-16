@@ -16,7 +16,10 @@ import {
     showChoice,
     showSelectForm
 } from "../utils/modal.js";
-import { offerSalesforceConnection } from "../utils/salesforceConnection.js";
+import {
+    offerSalesforceConnection,
+    withSalesforceConnectionRetry
+} from "../utils/salesforceConnection.js";
 
 let collapsedNodes = new Set();
 let currentNodes = [];
@@ -4098,9 +4101,12 @@ function registerProjectFileExport(projectId) {
 async function loadSalesforceProjectLinks(projectId, hasSalesforceId) {
     if (!hasSalesforceId) return { opportunity: null, quote: null };
     try {
-        const response = await fetch(`/api/salesforce/projects/${projectId}/links`);
-        const links = await response.json();
-        return response.ok ? links : { opportunity: null, quote: null };
+        return await withSalesforceConnectionRetry(async () => {
+            const response = await fetch(`/api/salesforce/projects/${projectId}/links`);
+            const links = await response.json();
+            if (!response.ok) throw new Error(links.error);
+            return links;
+        });
     } catch {
         return { opportunity: null, quote: null };
     }

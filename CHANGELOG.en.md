@@ -2,6 +2,17 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.21 - 16.09.2026
+
+### Improved
+
+- Missing or expired Salesforce sessions now offer sign-in directly from every Salesforce action and automatically retry the original operation afterwards.
+- Customer imports remain available when only the optional discount data is unavailable due to temporary maintenance; existing local discounts are preserved.
+
+### Fixed
+
+- HTML maintenance pages from external services are no longer displayed unfiltered in the Salesforce customer dialog.
+
 ## 1.5.20 - 16.09.2026
 
 ### Added

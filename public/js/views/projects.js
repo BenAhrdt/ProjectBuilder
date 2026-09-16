@@ -8,6 +8,7 @@ import {
     showChoice,
     showPrompt
 } from "../utils/modal.js";
+import { withSalesforceConnectionRetry } from "../utils/salesforceConnection.js";
 
 const view =
     document.getElementById("view");
@@ -595,36 +596,48 @@ async function importProjectFromSalesforce() {
         placeholder: i18n.t("projects.salesforceOpportunitySearchPlaceholder")
     });
     if (!search) return;
-    const response = await fetch(`/api/projects/import/salesforce/opportunities?search=${encodeURIComponent(search)}`);
-    const result = await response.json();
-    if (!response.ok || !result.ok) return showAlert(result.error || i18n.t("projects.importFailed"));
-    const available = result.opportunities.filter(item => item.hasProjectFile);
-    if (!available.length) return showAlert(i18n.t("projects.noSalesforceProjectFiles"));
-    const opportunityId = await showChoice(i18n.t("projects.selectSalesforceOpportunity"), {
-        title: i18n.t("projects.importFromSalesforce"),
-        choiceLayout: "list",
-        choices: available.map(item => ({
-            value: item.id,
-            label: `${item.name} · ${item.accountName}${item.customerNumber ? ` (${item.customerNumber})` : ""}`
-        }))
-    });
-    if (!opportunityId) return;
-    const previewResponse = await fetch("/api/projects/import/salesforce/preview", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ opportunityId })
-    });
-    const preview = await previewResponse.json();
-    if (!previewResponse.ok || !preview.ok) return showAlert(preview.error || i18n.t("projects.importFailed"));
-    if (preview.missingArticleNumbers.length) {
-        return showAlert(`${i18n.t("projects.importMissingArticles")}:\n${preview.missingArticleNumbers.join(", ")}`);
+    try {
+        const result = await fetchSalesforceJson(
+            `/api/projects/import/salesforce/opportunities?search=${encodeURIComponent(search)}`
+        );
+        const available = result.opportunities.filter(item => item.hasProjectFile);
+        if (!available.length) return showAlert(i18n.t("projects.noSalesforceProjectFiles"));
+        const opportunityId = await showChoice(i18n.t("projects.selectSalesforceOpportunity"), {
+            title: i18n.t("projects.importFromSalesforce"),
+            choiceLayout: "list",
+            choices: available.map(item => ({
+                value: item.id,
+                label: `${item.name} · ${item.accountName}${item.customerNumber ? ` (${item.customerNumber})` : ""}`
+            }))
+        });
+        if (!opportunityId) return;
+        const requestOptions = {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ opportunityId })
+        };
+        const preview = await fetchSalesforceJson("/api/projects/import/salesforce/preview", requestOptions);
+        if (preview.missingArticleNumbers.length) {
+            return showAlert(`${i18n.t("projects.importMissingArticles")}:\n${preview.missingArticleNumbers.join(", ")}`);
+        }
+        const confirmed = await confirmProjectImport(preview);
+        if (!confirmed) return;
+        const imported = await fetchSalesforceJson("/api/projects/import/salesforce", requestOptions);
+        router.navigate(`/project/${imported.project.id}`);
+    } catch (error) {
+        await showAlert(error.message || i18n.t("projects.importFailed"));
     }
-    const confirmed = await confirmProjectImport(preview);
-    if (!confirmed) return;
-    const importResponse = await fetch("/api/projects/import/salesforce", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ opportunityId })
+}
+
+function fetchSalesforceJson(url, options) {
+    return withSalesforceConnectionRetry(async () => {
+        const response = await fetch(url, options);
+        const result = await response.json();
+        if (!response.ok || result?.ok === false) {
+            throw new Error(result?.error || i18n.t("projects.importFailed"));
+        }
+        return result;
     });
-    const imported = await importResponse.json();
-    if (!importResponse.ok || !imported.ok) return showAlert(imported.error || i18n.t("projects.importFailed"));
-    router.navigate(`/project/${imported.project.id}`);
 }
 
 function confirmProjectImport(preview) {

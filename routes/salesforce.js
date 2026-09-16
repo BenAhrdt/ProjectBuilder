@@ -21,6 +21,7 @@ import {
     getExportArticleIconDataUri
 } from "./projects.js";
 import { buildProjectFilePayload } from "../utils/projectFile.js";
+import { normalizeExternalError } from "../utils/externalError.js";
 import { buildOverviewDocuments } from "../public/js/views/projectOverview.js";
 
 const router = express.Router();
@@ -204,13 +205,7 @@ function syncCustomer(customer, localId = null) {
 }
 
 function handleError(res, error) {
-    const stringifyError = value => {
-        if (typeof value === "string") return value;
-        if (value?.message) return stringifyError(value.message);
-        try { return JSON.stringify(value); }
-        catch { return String(value); }
-    };
-    let message = stringifyError(error) || "Salesforce-Abfrage fehlgeschlagen.";
+    let message = normalizeExternalError(error);
     if (message.includes("customers.customerNumber")) {
         message = "Diese Kundennummer ist bereits einem anderen lokalen Kunden zugeordnet.";
     } else if (message.includes("customers.salesforceId")) {

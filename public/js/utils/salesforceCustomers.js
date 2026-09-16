@@ -1,5 +1,6 @@
 import * as i18n from "./i18n.js";
 import { showAlert } from "./modal.js";
+import { isSalesforceConnectionError } from "./salesforceConnection.js";
 
 function escapeHtml(value) {
     return String(value ?? "")
@@ -136,6 +137,7 @@ export function openSalesforceCustomerDialog({
             await onComplete?.();
         } catch (error) {
             status.textContent = error.message;
+            if (isSalesforceConnectionError(error)) connectButton.classList.remove("hidden");
             importButton.disabled = false;
         }
     });

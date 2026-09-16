@@ -2,6 +2,17 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.21 - 16.09.2026
+
+### Mejorado
+
+- Las sesiones de Salesforce ausentes o caducadas ofrecen ahora iniciar sesión directamente desde todas las acciones de Salesforce y vuelven a intentar automáticamente la operación original.
+- La importación de clientes sigue disponible cuando solo los datos opcionales de descuentos no están disponibles debido a un mantenimiento temporal; se conservan los descuentos locales existentes.
+
+### Corregido
+
+- Las páginas HTML de mantenimiento de servicios externos ya no se muestran sin filtrar en el diálogo de clientes de Salesforce.
+
 ## 1.5.20 - 16.09.2026
 
 ### Nuevo

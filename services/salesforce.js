@@ -3,6 +3,7 @@ import os from "os";
 import path from "path";
 import open from "open";
 import { mapCustomerPricingGroupDiscounts } from "../utils/salesforceCustomerDiscounts.js";
+import { isSalesforceAuthenticationError } from "../utils/externalError.js";
 import { AuthInfo, Connection, WebOAuthServer } from "@salesforce/core";
 
 const API_VERSION = "v67.0";
@@ -283,7 +284,11 @@ export async function getCustomersByIds(ids) {
     const list = validIds.map(id => `'${escapeSoql(id)}'`).join(", ");
     const [result, pricingGroupDiscounts] = await Promise.all([
         query(`SELECT ${CUSTOMER_FIELDS} FROM Account WHERE Id IN (${list})`),
-        getCustomerPricingGroupDiscounts(validIds)
+        getCustomerPricingGroupDiscounts(validIds).catch(error => {
+            if (isSalesforceAuthenticationError(error)) throw error;
+            console.warn("Salesforce-Kundenrabatte konnten nicht geladen werden:", error?.message ?? error);
+            return new Map();
+        })
     ]);
     return result.records.map(record => ({
         ...mapCustomer(record),

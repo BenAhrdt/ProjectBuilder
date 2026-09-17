@@ -77,6 +77,7 @@
     "customers.customerCount": "Aktuelle Kundenanzahl",
     "customers.customerNumber": "Kundennummer",
     "customers.name": "Name",
+    "customers.accountOwner": "Accountinhaber",
     "customers.city": "Ort",
     "customers.address": "Adresse",
     "customers.postalCode": "PLZ",

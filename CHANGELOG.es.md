@@ -2,6 +2,16 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.25 - 17.09.2026
+
+### Nuevo
+
+- El resumen de clientes muestra el propietario de la cuenta de Salesforce directamente después del nombre del cliente.
+
+### Mejorado
+
+- Los propietarios de cuenta se importan desde Salesforce y se pueden filtrar mediante la búsqueda de clientes y ordenar con el encabezado de la columna.
+
 ## 1.5.24 - 17.09.2026
 
 ### Nuevo

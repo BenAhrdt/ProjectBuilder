@@ -13,6 +13,7 @@ let customerSort = { key: null, direction: "asc" };
 const customerColumns = [
     ["customerNumber", "customers.customerNumber", true],
     ["name", "customers.name"],
+    ["accountOwner", "customers.accountOwner"],
     ["street", "customers.address"],
     ["postalCode", "customers.postalCode", true],
     ["city", "customers.city"]
@@ -399,6 +400,10 @@ function renderCustomerRows(customers) {
 
                 <td>
                     ${escapeHtml(customer.name)}
+                </td>
+
+                <td>
+                    ${escapeHtml(customer.accountOwner)}
                 </td>
 
                 <td>

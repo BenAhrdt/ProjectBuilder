@@ -20,6 +20,8 @@ customers.prepare(`
 
         name TEXT,
 
+        accountOwner TEXT,
+
         street TEXT,
 
         postalCode TEXT,
@@ -49,6 +51,7 @@ const customerColumns = new Set(
 for (const [name, definition] of [
     ["street", "TEXT"],
     ["postalCode", "TEXT"],
+    ["accountOwner", "TEXT"],
     ["salesforceId", "TEXT"],
     ["salesforceSyncedAt", "TEXT"],
     ["salesforceLastModifiedAt", "TEXT"]

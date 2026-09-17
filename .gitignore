@@ -3,3 +3,4 @@ node_modules/
 *.db
 release/
 certificates/*.pfx
+secondBrain/

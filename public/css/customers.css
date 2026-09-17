@@ -235,11 +235,26 @@
 }
 
 /* --------------------------------------------------
-   Adresse
+   Accountinhaber
 -------------------------------------------------- */
 
 .customers-table th:nth-child(3),
 .customers-table td:nth-child(3) {
+
+    width: 180px;
+
+    min-width: 180px;
+
+    white-space: normal;
+
+}
+
+/* --------------------------------------------------
+   Adresse
+-------------------------------------------------- */
+
+.customers-table th:nth-child(4),
+.customers-table td:nth-child(4) {
 
     width: 260px;
 
@@ -253,8 +268,8 @@
    PLZ
 -------------------------------------------------- */
 
-.customers-table th:nth-child(4),
-.customers-table td:nth-child(4) {
+.customers-table th:nth-child(5),
+.customers-table td:nth-child(5) {
 
     width: 90px;
 
@@ -268,8 +283,8 @@
    Ort
 -------------------------------------------------- */
 
-.customers-table th:nth-child(5),
-.customers-table td:nth-child(5) {
+.customers-table th:nth-child(6),
+.customers-table td:nth-child(6) {
 
     width: 180px;
 

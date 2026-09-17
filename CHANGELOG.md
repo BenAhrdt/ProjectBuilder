@@ -2,6 +2,16 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.25 - 17.09.2026
+
+### Neu
+
+- Die Kundenübersicht zeigt den Salesforce-Accountinhaber direkt nach dem Kundennamen.
+
+### Verbessert
+
+- Accountinhaber werden aus Salesforce übernommen und können über die Kundensuche gefiltert sowie über die Spaltenüberschrift sortiert werden.
+
 ## 1.5.24 - 17.09.2026
 
 ### Neu

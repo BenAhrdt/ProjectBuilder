@@ -28,6 +28,8 @@ router.get(
 
                     name,
 
+                    accountOwner,
+
                     street,
 
                     postalCode,
@@ -43,6 +45,8 @@ router.get(
                     customerNumber LIKE @search
 
                     OR name LIKE @search
+
+                    OR accountOwner LIKE @search
 
                     OR street LIKE @search
 

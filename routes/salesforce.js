@@ -175,6 +175,7 @@ function syncCustomer(customer, localId = null) {
             UPDATE customers SET
                 customerNumber = @customerNumber,
                 name = @name,
+                accountOwner = @accountOwner,
                 street = @street,
                 postalCode = @postalCode,
                 city = @city,
@@ -192,11 +193,11 @@ function syncCustomer(customer, localId = null) {
 
     const result = database.customers.prepare(`
         INSERT INTO customers (
-            customerNumber, name, street, postalCode, city, salesforceId,
+            customerNumber, name, accountOwner, street, postalCode, city, salesforceId,
             salesforceSyncedAt, salesforceLastModifiedAt,
             pg1, pg2, pg3, pg4, pg5, pg6, pg7, pg8
         ) VALUES (
-            @customerNumber, @name, @street, @postalCode, @city, @salesforceId,
+            @customerNumber, @name, @accountOwner, @street, @postalCode, @city, @salesforceId,
             @salesforceSyncedAt, @salesforceLastModifiedAt,
             @pg1, @pg2, @pg3, @pg4, @pg5, @pg6, @pg7, @pg8
         )

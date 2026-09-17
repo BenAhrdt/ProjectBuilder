@@ -78,6 +78,7 @@
     "customers.search": "Search",
     "customers.customerNumber": "Customer Number",
     "customers.name": "Name",
+    "customers.accountOwner": "Account Owner",
     "customers.city": "City",
     "customers.address": "Address",
     "customers.postalCode": "Postal code",

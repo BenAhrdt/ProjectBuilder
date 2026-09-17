@@ -2,6 +2,16 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.25 - 17.09.2026
+
+### Added
+
+- The customer overview displays the Salesforce account owner directly after the customer name.
+
+### Improved
+
+- Account owners are imported from Salesforce and can be filtered through the customer search and sorted using the column header.
+
 ## 1.5.24 - 17.09.2026
 
 ### Added

@@ -235,7 +235,7 @@ function escapeSoql(value) {
 }
 
 const CUSTOMER_FIELDS = [
-    "Id", "Name", "ExtID__c", "BillingStreet", "BillingPostalCode",
+    "Id", "Name", "Owner.Name", "ExtID__c", "BillingStreet", "BillingPostalCode",
     "BillingCity", "BillingCountry", "LastModifiedDate"
 ].join(", ");
 
@@ -244,6 +244,7 @@ function mapCustomer(record) {
         salesforceId: record.Id,
         customerNumber: record.ExtID__c ?? null,
         name: record.Name ?? "",
+        accountOwner: record.Owner?.Name ?? "",
         street: record.BillingStreet ?? "",
         postalCode: record.BillingPostalCode ?? "",
         city: record.BillingCity ?? "",

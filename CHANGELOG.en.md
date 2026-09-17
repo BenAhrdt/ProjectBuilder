@@ -2,6 +2,14 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.26 - 17.09.2026
+
+### Improved
+
+- The sales overview now presents metrics, the ten-year overview and the order-intake trend in clearly separated sections.
+- The order-intake trend uses the available width and a larger chart canvas.
+- The layout adapts to smaller screens and remains optimized for PDF export.
+
 ## 1.5.25 - 17.09.2026
 
 ### Added

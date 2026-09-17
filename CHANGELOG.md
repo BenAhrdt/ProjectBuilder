@@ -2,6 +2,14 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.26 - 17.09.2026
+
+### Verbessert
+
+- Die Vertriebsübersicht ist übersichtlicher gestaltet und trennt Kennzahlen, 10-Jahresübersicht und Umsatzverlauf klar voneinander.
+- Der Umsatzverlauf nutzt die verfügbare Breite und wird mit größerer Zeichenfläche dargestellt.
+- Die Darstellung reagiert auf kleinere Bildschirme und bleibt für den PDF-Druck optimiert.
+
 ## 1.5.25 - 17.09.2026
 
 ### Neu

@@ -2,6 +2,14 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.26 - 17.09.2026
+
+### Mejorado
+
+- El resumen de ventas presenta ahora las métricas, el resumen de diez años y la evolución de pedidos en secciones claramente separadas.
+- La evolución de pedidos utiliza el ancho disponible y un área de gráfico más grande.
+- El diseño se adapta a pantallas pequeñas y sigue optimizado para la exportación a PDF.
+
 ## 1.5.25 - 17.09.2026
 
 ### Nuevo

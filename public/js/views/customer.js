@@ -408,9 +408,13 @@ function renderSales(result, customer) {
             ${renderMetric(i18n.t("customer.fiveYearAverage"), metrics.fiveYearComparison === null ? "–" : formatPercent(metrics.fiveYearComparison), metrics.fiveYearComparison === null ? i18n.t("customer.notEnoughData") : i18n.t("customer.comparedToFiveYearAverage"))}
             ${renderMetric(i18n.t("customer.fiveYearDevelopment"), metrics.cagr === null ? "–" : `${formatPercent(metrics.cagr)} ${i18n.t("customer.perYear")}`, metrics.fiveYearTotal === null ? i18n.t("customer.notEnoughData") : i18n.t("customer.fiveYearTotalChange").replace("{value}", formatPercent(metrics.fiveYearTotal)).replace("{start}", metrics.trendStartYear).replace("{end}", metrics.trendEndYear))}
         </div>
-        <section class="customer-order-intake"><h3>${i18n.t("customer.tenYearOverview")}</h3>
+        <section class="customer-order-intake customer-sales-section">
+            <div class="customer-sales-section-heading"><h3>${i18n.t("customer.tenYearOverview")}</h3></div>
             <div class="customer-order-intake-grid customer-order-intake-grid-all">${historyYears.map((item, index) => renderOrderIntakeCard(item, index, result.currency)).join("")}</div></section>
-        <section class="customer-order-intake-chart-panel"><h3>${i18n.t("customer.orderIntakeTrend")}</h3>${renderOrderIntakeChart(years, result.currency)}</section>
+        <section class="customer-order-intake-chart-panel customer-sales-section">
+            <div class="customer-sales-section-heading"><h3>${i18n.t("customer.orderIntakeTrend")}</h3></div>
+            ${renderOrderIntakeChart(years, result.currency)}
+        </section>
     </div>`;
 }
 
@@ -502,12 +506,12 @@ function renderOrderIntakeCard(item, index, currency) {
 function renderOrderIntakeChart(years, currency) {
     const values = years.filter(item => item.hasData !== false && item.amountComplete !== false).reverse();
     if (!values.length) return `<p class="customer-order-intake-empty">${i18n.t("customer.notEnoughData")}</p>`;
-    const width = 720;
-    const height = 176;
-    const left = 74;
-    const right = 18;
-    const top = 14;
-    const bottom = 28;
+    const width = 1200;
+    const height = 300;
+    const left = 96;
+    const right = 28;
+    const top = 24;
+    const bottom = 48;
     const baseline = height - bottom;
     const maximum = Math.max(...values.map(item => Number(item.orderAmount) || 0), 1);
     const axisMaximum = getChartAxisMaximum(maximum);
@@ -532,6 +536,7 @@ function renderOrderIntakeChart(years, currency) {
 
     return `
         <svg class="customer-order-intake-chart" viewBox="0 0 ${width} ${height}"
+            preserveAspectRatio="none"
             role="img" aria-label="${i18n.t("customer.orderIntakeTrend")}">
             <defs>
                 <linearGradient id="order-intake-area" x1="0" y1="0" x2="0" y2="1">
@@ -553,11 +558,11 @@ function renderOrderIntakeChart(years, currency) {
             <polyline points="${line}" class="customer-order-chart-line" />
             ${points.map(point => `
                 <g class="customer-order-chart-point-group">
-                    <circle cx="${point.x}" cy="${point.y}" r="4"
+                    <circle cx="${point.x}" cy="${point.y}" r="5.5"
                         class="customer-order-chart-point" />
-                    <circle cx="${point.x}" cy="${point.y}" r="13"
+                    <circle cx="${point.x}" cy="${point.y}" r="18"
                         class="customer-order-chart-hit" />
-                    <text x="${point.x}" y="${height - 8}"
+                    <text x="${point.x}" y="${height - 16}"
                         class="customer-order-chart-label">${point.year}</text>
                     ${renderOrderIntakeChartTooltip(
                         point,
@@ -598,8 +603,8 @@ function formatChartAxisValue(value, currency) {
 }
 
 function renderOrderIntakeChartTooltip(point, formattedValue, chartWidth, chartTop) {
-    const tooltipWidth = 184;
-    const tooltipHeight = 59;
+    const tooltipWidth = 204;
+    const tooltipHeight = 68;
     const x = Math.min(
         Math.max(4, point.x - tooltipWidth / 2),
         chartWidth - tooltipWidth - 4
@@ -628,13 +633,13 @@ function renderOrderIntakeChartTooltip(point, formattedValue, chartWidth, chartT
     return `
         <g class="customer-order-chart-tooltip">
             <rect x="${x}" y="${y}" width="${tooltipWidth}" height="${tooltipHeight}" rx="7" />
-            <text x="${x + 9}" y="${y + 16}" class="customer-order-chart-tooltip-title">
+            <text x="${x + 10}" y="${y + 18}" class="customer-order-chart-tooltip-title">
                 ${point.year} · ${point.orderCount} ${orderLabel}
             </text>
-            <text x="${x + 9}" y="${y + 33}" class="customer-order-chart-tooltip-value">
+            <text x="${x + 10}" y="${y + 39}" class="customer-order-chart-tooltip-value">
                 ${formattedValue}
             </text>
-            <text x="${x + 9}" y="${y + 50}"
+            <text x="${x + 10}" y="${y + 59}"
                 class="customer-order-chart-tooltip-change ${changeClass}">
                 ${changeValue} ${i18n.t("customer.comparedToPreviousYear")}
             </text>

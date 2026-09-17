@@ -8,6 +8,15 @@ import { offerSalesforceConnection } from "../utils/salesforceConnection.js";
 
 const view =
     document.getElementById("view");
+let displayedCustomers = [];
+let customerSort = { key: null, direction: "asc" };
+const customerColumns = [
+    ["customerNumber", "customers.customerNumber", true],
+    ["name", "customers.name"],
+    ["street", "customers.address"],
+    ["postalCode", "customers.postalCode", true],
+    ["city", "customers.city"]
+];
 
 function escapeHtml(value) {
     return String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;")
@@ -25,6 +34,7 @@ async function renderView() {
 
     const customers =
         await response.json();
+    displayedCustomers = customers;
 
     // --------------------------------------------------
     // Rendern
@@ -134,61 +144,20 @@ async function renderView() {
 
                 <thead>
 
-                    <tr>
-
-                        <th>
-                            ${i18n.t("customers.customerNumber")}:
-                        </th>
-
-                        <th>
-                            ${i18n.t("customers.name")}
-                        </th>
-
-                        <th>
-                            ${i18n.t("customers.address")}
-                        </th>
-
-                        <th>
-                            ${i18n.t("customers.postalCode")}
-                        </th>
-
-                        <th>
-                            ${i18n.t("customers.city")}
-                        </th>
-
+                    <tr>${customerColumns.map(([key, label]) => `
+                        <th data-sort-key="${key}" aria-sort="none">
+                            <button class="customer-sort-button" type="button" data-sort-key="${key}">
+                                ${i18n.t(label)}
+                                <span class="customer-sort-indicator" aria-hidden="true">↕</span>
+                            </button>
+                        </th>`).join("")}
                     </tr>
 
                 </thead>
 
                 <tbody>
 
-                    ${customers.map(customer => `
-
-                        <tr class="customer-row" data-id="${customer.id}" tabindex="0" role="link">
-
-                            <td>
-                                ${escapeHtml(customer.customerNumber)}
-                            </td>
-
-                            <td>
-                                ${escapeHtml(customer.name)}
-                            </td>
-
-                            <td>
-                                ${escapeHtml(customer.street)}
-                            </td>
-
-                            <td>
-                                ${escapeHtml(customer.postalCode)}
-                            </td>
-
-                            <td>
-                                ${escapeHtml(customer.city)}
-                            </td>
-
-                        </tr>
-
-                    `).join("")}
+                    ${renderCustomerRows(sortCustomers(customers))}
 
                 </tbody>
 
@@ -201,6 +170,7 @@ async function renderView() {
     `;
 
     generateHandler();
+    updateCustomerSortHeaders();
 
 }
 
@@ -224,12 +194,13 @@ function generateHandler() {
 
             const response =
                 await fetch(
-                    `/api/customers?search=${value}`
+                    `/api/customers?search=${encodeURIComponent(value)}`
                 );
 
             const customers =
                 await response.json();
 
+            displayedCustomers = customers;
             renderCustomers(customers);
 
         }
@@ -256,6 +227,19 @@ function generateHandler() {
 
         }
     );
+
+    document.querySelectorAll(".customer-sort-button").forEach(button => {
+        button.addEventListener("click", () => {
+            const key = button.dataset.sortKey;
+            customerSort = {
+                key,
+                direction: customerSort.key === key && customerSort.direction === "asc"
+                    ? "desc"
+                    : "asc"
+            };
+            renderCustomers(displayedCustomers);
+        });
+    });
 
     document.getElementById("salesforce-search-button").addEventListener("click", () => {
         openSalesforceCustomerDialog({ onComplete: renderView });
@@ -399,8 +383,13 @@ function renderCustomers(customers) {
             ".customers-table tbody"
         );
 
-    tbody.innerHTML =
-        customers.map(customer => `
+    tbody.innerHTML = renderCustomerRows(sortCustomers(customers));
+    attachCustomerRowHandlers();
+    updateCustomerSortHeaders();
+}
+
+function renderCustomerRows(customers) {
+    return customers.map(customer => `
 
             <tr class="customer-row" data-id="${customer.id}" tabindex="0" role="link">
 
@@ -427,9 +416,35 @@ function renderCustomers(customers) {
             </tr>
 
         `).join("");
+}
 
-    attachCustomerRowHandlers();
+function sortCustomers(customers) {
+    if (!customerSort.key) return [...customers];
+    const numeric = Boolean(customerColumns.find(([key]) => key === customerSort.key)?.[2]);
+    const collator = new Intl.Collator(i18n.getCurrentLanguage(), {
+        numeric,
+        sensitivity: "base"
+    });
+    const factor = customerSort.direction === "desc" ? -1 : 1;
+    return [...customers].sort((first, second) => collator.compare(
+        String(first[customerSort.key] ?? ""),
+        String(second[customerSort.key] ?? "")
+    ) * factor);
+}
 
+function updateCustomerSortHeaders() {
+    document.querySelectorAll(".customer-sort-button").forEach(button => {
+        const direction = button.dataset.sortKey === customerSort.key
+            ? customerSort.direction
+            : null;
+        button.closest("th")?.setAttribute("aria-sort",
+            direction === "asc" ? "ascending" : direction === "desc" ? "descending" : "none");
+        button.querySelector(".customer-sort-indicator").textContent =
+            direction === "asc" ? "↑" : direction === "desc" ? "↓" : "↕";
+        button.title = direction === "asc"
+            ? i18n.t("projects.sortDescending")
+            : i18n.t("projects.sortAscending");
+    });
 }
 
 export {

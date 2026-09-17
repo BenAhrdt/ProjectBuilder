@@ -2,6 +2,22 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.24 - 17.09.2026
+
+### Added
+
+- Article search within a project can optionally search all available article data instead of only article number and name.
+
+### Improved
+
+- Every column in the customer overview can be sorted in ascending or descending order.
+- The Customers and Projects navigation entries remain visibly clickable shortcuts to their overview pages from open detail views.
+
+### Fixed
+
+- The direct Salesforce link is displayed again for linked customers.
+- Customer discounts are also derived from historical Salesforce opportunity line items that store list and sales prices but no separate base discount value.
+
 ## 1.5.23 - 16.09.2026
 
 ### Improved

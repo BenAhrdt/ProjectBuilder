@@ -224,7 +224,7 @@ async function renderView(
     registerSalesforceActions(customerId, customer);
     registerAdditionalInfoAutoResize();
     registerTabs(customerId, customer);
-    if (customer.salesforceId) loadSalesforceCustomerLink(customerId);
+    if (customer.salesforceId) loadSalesforceCustomerLink(customerId, customer.salesforceId);
     activateTab(customerViewState.activeTab, customerId, customer, false);
 
 }

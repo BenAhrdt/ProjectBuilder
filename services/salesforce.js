@@ -305,11 +305,10 @@ export async function getCustomerPricingGroupDiscounts(accountIds) {
     if (validIds.length === 0) return new Map();
     const list = validIds.map(id => `'${escapeSoql(id)}'`).join(", ");
     const lineItems = await queryAll(`
-        SELECT Opportunity.AccountId, Product2Id, BasicDiscount__c, LastModifiedDate
+        SELECT Opportunity.AccountId, Product2Id, BasicDiscount__c,
+            ListPrice, UnitPrice, LastModifiedDate
         FROM OpportunityLineItem
         WHERE Opportunity.AccountId IN (${list})
-          AND BasicDiscount__c != null
-          AND BasicDiscount__c != 0
         ORDER BY LastModifiedDate DESC
     `);
     const productIds = [...new Set(lineItems.map(item => String(item.Product2Id ?? "")).filter(Boolean))];
@@ -318,14 +317,14 @@ export async function getCustomerPricingGroupDiscounts(accountIds) {
     for (let offset = 0; offset < productIds.length; offset += 100) {
         const products = productIds.slice(offset, offset + 100)
             .map(id => `'${escapeSoql(id)}'`).join(", ");
-        const result = await query(`
+        const records = await queryAll(`
             SELECT Product__c, ProductPricingGroup__c
             FROM DistributionChain__c
             WHERE Product__c IN (${products})
               AND SalesOrganisation__c = '1100'
               AND DistributionChannel__c = '10'
         `);
-        for (const record of result.records) {
+        for (const record of records) {
             pricingGroupsByProduct.set(String(record.Product__c), record.ProductPricingGroup__c);
         }
     }

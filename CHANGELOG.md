@@ -2,6 +2,22 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.24 - 17.09.2026
+
+### Neu
+
+- Die Artikelsuche im Projekt kann optional alle verfügbaren Artikeldaten statt nur Artikelnummer und Bezeichnung durchsuchen.
+
+### Verbessert
+
+- Alle Spalten der Kundenübersicht lassen sich auf- und absteigend sortieren.
+- Die Navigationseinträge „Kunden“ und „Projekte“ bleiben auch in geöffneten Detailansichten als klickbare Rücksprünge erkennbar.
+
+### Behoben
+
+- Der direkte Salesforce-Link wird bei verknüpften Kunden wieder angezeigt.
+- Kundenrabatte werden auch aus historischen Salesforce-Opportunity-Positionen ermittelt, bei denen nur Listen- und Verkaufspreis, aber kein separates Basisrabattfeld gespeichert ist.
+
 ## 1.5.23 - 16.09.2026
 
 ### Verbessert

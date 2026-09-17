@@ -2,6 +2,22 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.24 - 17.09.2026
+
+### Nuevo
+
+- La búsqueda de artículos de un proyecto puede buscar opcionalmente en todos los datos disponibles, en lugar de limitarse al número y al nombre del artículo.
+
+### Mejorado
+
+- Todas las columnas del resumen de clientes pueden ordenarse de forma ascendente o descendente.
+- Las entradas de navegación Clientes y Proyectos siguen siendo accesos claramente clicables a sus páginas principales desde las vistas de detalle.
+
+### Corregido
+
+- El enlace directo a Salesforce vuelve a mostrarse para los clientes vinculados.
+- Los descuentos de clientes también se calculan a partir de posiciones históricas de oportunidades de Salesforce que solo contienen el precio de lista y de venta, sin un descuento base separado.
+
 ## 1.5.23 - 16.09.2026
 
 ### Mejorado

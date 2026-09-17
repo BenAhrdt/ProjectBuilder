@@ -111,7 +111,7 @@
 .navbar-item.active {
     background-color: var(--color-background);
     color: black;
-    cursor: default;
+    cursor: pointer;
 }
 .navbar-item-icon {
     grid-area: icon;

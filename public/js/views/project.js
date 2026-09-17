@@ -739,10 +739,16 @@ async function renderView(
 
                     </div>
 
-                    <input
-                        id="project-article-search"
-                        placeholder="${i18n.t("project.searchArticles")}..."
-                    >
+                    <div class="project-article-search-controls">
+                        <input
+                            id="project-article-search"
+                            placeholder="${i18n.t("project.searchArticles")}..."
+                        >
+                        <label class="project-article-search-all">
+                            <input id="project-article-search-all" type="checkbox">
+                            <span>${i18n.t("project.searchAllArticleData")}</span>
+                        </label>
+                    </div>
 
                 <div
                     id="project-article-list"
@@ -4469,9 +4475,8 @@ function registerArticleSearch(
 
     }
 
-    search.addEventListener(
-        "input",
-        () => {
+    const searchAll = document.getElementById("project-article-search-all");
+    const filterArticles = () => {
 
             const searchQuery =
                 normalizeSearchText(
@@ -4491,10 +4496,7 @@ function registerArticleSearch(
                             String(articleElement.dataset.articleNumber)
                         );
 
-                    const haystack =
-                        getArticleSearchText(
-                            article
-                        );
+                    const haystack = getArticleSearchText(article, searchAll?.checked);
 
                     const matches =
                         searchQuery.length === 0
@@ -4509,27 +4511,23 @@ function registerArticleSearch(
                             : "none";
 
                 });
+        };
 
-        }
-    );
+    search.addEventListener("input", filterArticles);
+    searchAll?.addEventListener("change", filterArticles);
 
 }
 
-function getArticleSearchText(
-    article = {}
-) {
-
+function getArticleSearchText(article = {}, includeAllData = false) {
+    const searchableArticle = includeAllData ? article : {
+        articleNumber: article.articleNumber,
+        manufacturerType: article.manufacturerType
+    };
     return normalizeSearchText(
-        Object
-            .values(article)
-            .filter(value =>
-                value !== null
-                &&
-                value !== undefined
-            )
+        Object.values(searchableArticle)
+            .filter(value => value !== null && value !== undefined)
             .join(" ")
     );
-
 }
 
 function normalizeSearchText(

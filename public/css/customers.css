@@ -120,6 +120,22 @@
 
 }
 
+.customer-sort-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.customer-sort-button:hover,
+.customer-sort-button:focus-visible { color: #175cd3; }
+.customer-sort-indicator { color: #667085; font-size: 12px; }
+
 #customers-header {
     gap: 18px;
     box-sizing: border-box;

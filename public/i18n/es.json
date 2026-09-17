@@ -340,6 +340,7 @@
     "project.gridVisUnchecked": "sin comprobar",
     "project.backToCustomer": "Volver al cliente",
     "project.searchArticles": "Buscar artículos",
+    "project.searchAllArticleData": "Buscar en todos los datos del artículo",
     "project.listPrice": "Precio de lista",
     "project.discount": "Descuento",
     "project.projectDiscount": "Descuento del proyecto",

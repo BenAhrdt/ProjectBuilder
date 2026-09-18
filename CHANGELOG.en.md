@@ -2,6 +2,13 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.27 - 18.09.2026
+
+### Added
+
+- The project overview now offers an extensible actions menu with delete and direct Salesforce send and load actions.
+- Direct duplication remains available as a visible quick action.
+
 ## 1.5.26 - 17.09.2026
 
 ### Improved

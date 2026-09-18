@@ -213,9 +213,9 @@
 .projects-table th:nth-child(4),
 .projects-table td:nth-child(4) {
 
-    width: 130px;
+    width: 210px;
 
-    min-width: 130px;
+    min-width: 210px;
 
     white-space: normal;
 
@@ -235,6 +235,67 @@
 }
 
 .projects-table .table-actions button:hover { background: #edf5ff; }
+
+.projects-table .table-actions {
+    white-space: nowrap;
+}
+
+.project-actions-menu {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.projects-table .project-actions-trigger {
+    min-width: 34px;
+    padding: 5px 8px;
+    font-size: 18px;
+    line-height: 1;
+}
+
+.project-actions-menu-options {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 5px);
+    right: 0;
+    min-width: 210px;
+    padding: 5px;
+    border: 1px solid #d4d8df;
+    border-radius: 7px;
+    background: #fff;
+    box-shadow: 0 10px 28px rgba(20, 31, 50, .18);
+}
+
+.project-actions-menu-options[hidden] {
+    display: none;
+}
+
+.projects-table .project-actions-menu-options button {
+    display: block;
+    width: 100%;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: #1f3552;
+    padding: 8px 10px;
+    text-align: left;
+}
+
+.projects-table .project-actions-menu-options button:hover,
+.projects-table .project-actions-menu-options button:focus-visible {
+    outline: none;
+    background: #edf5ff;
+}
+
+.projects-table .project-actions-menu-options .project-actions-danger {
+    color: #a32626;
+}
+
+.projects-table .project-actions-menu-options .project-actions-danger:hover,
+.projects-table .project-actions-menu-options .project-actions-danger:focus-visible {
+    background: #fff0f0;
+}
 
 /* --------------------------------------------------
    Meta Informationen

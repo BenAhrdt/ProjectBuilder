@@ -826,6 +826,7 @@ async function renderView(
     registerProjectSalesforceSync(projectId);
     registerProjectSalesforceLoad(projectId);
     registerProjectDelete(projectId, project);
+    triggerPendingProjectAction(projectId);
     registerProjectDescriptionPersistence(projectId);
     registerProjectStructurePriceToggle(projectId);
     registerProjectEditorResizer(projectId);
@@ -854,6 +855,21 @@ async function renderView(
         target?.classList.add("project-node-search-target");
         setTimeout(() => target?.classList.remove("project-node-search-target"), 2400);
     }
+}
+
+function triggerPendingProjectAction(projectId) {
+    const actionKey = `projectBuilder.projectAction.${projectId}`;
+    const action = sessionStorage.getItem(actionKey);
+    if (!action) return;
+    sessionStorage.removeItem(actionKey);
+
+    const buttonId = {
+        "salesforce-sync": "sync-project-salesforce",
+        "salesforce-load": "load-project-salesforce"
+    }[action];
+    if (!buttonId || !document.getElementById(buttonId)) return;
+
+    requestAnimationFrame(() => document.getElementById(buttonId)?.click());
 }
 
 function registerProjectSalesforceLoad(projectId) {

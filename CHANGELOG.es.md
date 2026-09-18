@@ -2,6 +2,13 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.27 - 18.09.2026
+
+### Nuevo
+
+- La vista general de proyectos ofrece ahora un menú de acciones ampliable con eliminar y acciones directas de Salesforce para enviar y cargar.
+- La duplicación directa sigue disponible como acción rápida visible.
+
 ## 1.5.26 - 17.09.2026
 
 ### Mejorado

@@ -399,6 +399,42 @@ function generateHandler() {
 
 function attachProjectRowHandlers() {
 
+    document.querySelectorAll(".project-actions-menu").forEach(menu => {
+        const trigger = menu.querySelector(".project-actions-trigger");
+        const options = menu.querySelector(".project-actions-menu-options");
+        if (!trigger || !options) return;
+
+        trigger.addEventListener("click", event => {
+            event.stopPropagation();
+            const willOpen = options.hidden;
+            closeProjectActionMenus(menu);
+            options.hidden = !willOpen;
+            trigger.setAttribute("aria-expanded", String(willOpen));
+            if (willOpen) options.querySelector("button")?.focus();
+        });
+
+        options.addEventListener("click", async event => {
+            const actionButton = event.target.closest("[data-project-action]");
+            if (!actionButton) return;
+            event.stopPropagation();
+            closeProjectActionMenus();
+
+            const projectId = actionButton.dataset.id;
+            const action = actionButton.dataset.projectAction;
+            if (action === "delete") {
+                await deleteProjectFromOverview(
+                    projectId,
+                    actionButton.dataset.name,
+                    actionButton
+                );
+                return;
+            }
+            if (action === "salesforce-sync" || action === "salesforce-load") {
+                openProjectSalesforceAction(projectId, action);
+            }
+        });
+    });
+
     document.querySelectorAll(".duplicate-project").forEach(button => {
         button.addEventListener("click", async event => {
             event.stopPropagation();
@@ -589,6 +625,57 @@ function renderProjects(projects) {
 
 }
 
+function closeProjectActionMenus(except = null) {
+    document.querySelectorAll(".project-actions-menu").forEach(menu => {
+        if (menu === except) return;
+        const options = menu.querySelector(".project-actions-menu-options");
+        const trigger = menu.querySelector(".project-actions-trigger");
+        if (!options || !trigger) return;
+        options.hidden = true;
+        trigger.setAttribute("aria-expanded", "false");
+    });
+}
+
+document.addEventListener("click", event => {
+    if (!event.target.closest(".project-actions-menu")) closeProjectActionMenus();
+});
+
+document.addEventListener("keydown", event => {
+    if (event.key !== "Escape") return;
+    closeProjectActionMenus();
+});
+
+async function deleteProjectFromOverview(projectId, projectName, button) {
+    const confirmed = await showConfirm(
+        i18n.t("project.deleteProjectConfirm").replace("{name}", projectName ?? ""),
+        {
+            title: i18n.t("project.deleteProject"),
+            confirmText: i18n.t("common.delete"),
+            danger: true
+        }
+    );
+    if (!confirmed) return;
+
+    button.disabled = true;
+    try {
+        const response = await fetch(`/api/projects/${projectId}`, { method: "DELETE" });
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || i18n.t("project.deleteProjectError"));
+        }
+        await renderView();
+    } catch (error) {
+        button.disabled = false;
+        await showAlert(error.message || i18n.t("project.deleteProjectError"));
+    }
+}
+
+function openProjectSalesforceAction(projectId, action) {
+    sessionStorage.setItem(`projectBuilder.projectTab.${projectId}`, "export");
+    sessionStorage.setItem(`projectBuilder.projectAction.${projectId}`, action);
+    router.navigate(`/project/${projectId}`);
+}
+
 async function importProjectFromSalesforce() {
     const search = await showPrompt(i18n.t("projects.salesforceOpportunitySearchHint"), {
         title: i18n.t("projects.importFromSalesforce"),
@@ -674,7 +761,39 @@ function renderProjectRows(projects) {
                     ${escapeHtml(project.description)}
                 </td>
 
-                <td class="table-actions"><button type="button" class="duplicate-project" data-id="${project.id}">${i18n.t("common.duplicate")}</button></td>
+                <td class="table-actions">
+                    <div class="project-actions-menu">
+                        <button type="button" class="duplicate-project" data-id="${project.id}">
+                            ${i18n.t("common.duplicate")}
+                        </button>
+                        <button
+                            type="button"
+                            class="project-actions-trigger"
+                            aria-haspopup="menu"
+                            aria-expanded="false"
+                            aria-label="${i18n.t("common.actions")}"
+                            title="${i18n.t("common.actions")}"
+                        >…</button>
+                        <div class="project-actions-menu-options" role="menu" hidden>
+                            <button type="button" role="menuitem" data-project-action="salesforce-sync" data-id="${project.id}">
+                                ${i18n.t("project.salesforceSync")}
+                            </button>
+                            ${project.salesforceOpportunityId ? `
+                                <button type="button" role="menuitem" data-project-action="salesforce-load" data-id="${project.id}">
+                                    ${i18n.t("project.salesforceLoad")}
+                                </button>
+                            ` : ""}
+                            <button
+                                type="button"
+                                role="menuitem"
+                                class="project-actions-danger"
+                                data-project-action="delete"
+                                data-id="${project.id}"
+                                data-name="${escapeHtml(project.name)}"
+                            >${i18n.t("project.deleteProject")}</button>
+                        </div>
+                    </div>
+                </td>
 
             </tr>
 

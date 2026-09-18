@@ -2,6 +2,13 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.27 - 18.09.2026
+
+### Neu
+
+- Die Projektübersicht bietet ein erweiterbares Aktionsmenü mit Löschen sowie direkten Salesforce-Aktionen zum Senden und Laden.
+- Das direkte Duplizieren bleibt als sichtbare Schnellaktion erhalten.
+
 ## 1.5.26 - 17.09.2026
 
 ### Verbessert

@@ -634,6 +634,8 @@ router.get(
 
                 projects.description,
 
+                projects.salesforceOpportunityId,
+
                 customers.name AS customerName
 
             FROM projects

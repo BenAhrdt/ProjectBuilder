@@ -2,6 +2,13 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.34 - 21.09.2026
+
+### Mejorado
+
+- Los transformadores CT-AC RCM y el módulo 800-CON ahora tienen 0 ítems GridVis por defecto.
+- Los artículos que requieren GridVis muestran un contador compacto con el total de la posición en el árbol del proyecto.
+
 ## 1.5.33 - 21.09.2026
 
 ### Mejorado

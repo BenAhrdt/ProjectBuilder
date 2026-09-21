@@ -2,6 +2,13 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.34 - 21.09.2026
+
+### Improved
+
+- CT-AC RCM current transformers and the 800-CON module now default to 0 GridVis items.
+- Articles requiring GridVis show a compact badge with the position's total item count in the project tree.
+
 ## 1.5.33 - 21.09.2026
 
 ### Improved

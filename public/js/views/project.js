@@ -2016,6 +2016,8 @@ function renderNodeArticle(
 
                 <div class="node-article-header">
 
+                    ${renderNodeGridVisBadge(fullArticle, quantity, nodeArticle)}
+
                     <span class="node-article-number">
 
                         ${articleNumber}
@@ -2091,6 +2093,33 @@ function renderNodeArticle(
 
         </div>
 
+    `;
+
+}
+
+function renderNodeGridVisBadge(
+    article,
+    quantity,
+    nodeArticle
+) {
+
+    if (nodeArticle.isOptional || nodeArticle.isAlternative) return "";
+
+    const itemsPerUnit = Number(article?.gridVisItems);
+    const totalItems = itemsPerUnit * quantity;
+
+    if (!Number.isFinite(totalItems) || totalItems <= 0) return "";
+
+    const count = formatQuantity(totalItems);
+    const label = `${i18n.t("project.gridVisItems")}: ${count}`;
+
+    return `
+        <span
+            class="node-article-gridvis-badge"
+            role="img"
+            aria-label="${label}"
+            title="${label}"
+        >${count}</span>
     `;
 
 }
@@ -4174,7 +4203,6 @@ function getProjectFormData() {
     };
 
 }
-
 
 function getNodeIcon(
     type

@@ -6,6 +6,11 @@ const ZERO_ITEM_PATTERNS = [
     /\b(?:Brosch(?:u|ü)re|Flyer|Whitepaper|Schulung|Training|Service)\b/i
 ];
 
+const ZERO_ITEM_NAME_PATTERNS = [
+    /\bCT[-\s]*AC[-\s]*RCM[-\s]*\d/i,
+    /\b800[-\s]*CON\b/i
+];
+
 const METER_PATTERNS = [
     /\bUMG\s*\d/i,
     /\bProData\b/i,
@@ -24,6 +29,8 @@ export function inferGridVisItems(article = {}) {
     if (!text.trim()) return null;
 
     if (/^UMG\s*800$/i.test(name)) return 0;
+
+    if (ZERO_ITEM_NAME_PATTERNS.some(pattern => pattern.test(name))) return 0;
 
     if (ZERO_ITEM_PATTERNS.some(pattern => pattern.test(text))) return 0;
 

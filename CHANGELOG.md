@@ -2,6 +2,13 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.34 - 21.09.2026
+
+### Verbessert
+
+- CT-AC-RCM-Wandler und das Modul 800-CON werden standardmäßig mit 0 GridVis-Items angesetzt.
+- Artikel mit GridVis-Bedarf zeigen im Projektbaum einen kleinen Zähler für die benötigte Gesamtzahl je Position.
+
 ## 1.5.33 - 21.09.2026
 
 ### Verbessert

@@ -136,6 +136,8 @@ async function renderView() {
                             ${i18n.t("articles.description")}
                         </th>
 
+                        <th>${i18n.t("articles.salesCategory")}</th>
+
                         <th>
                             ${i18n.t("articles.discountGroup")}
                         </th>
@@ -167,6 +169,8 @@ async function renderView() {
                             <td>
                                 ${article.description ?? ""}
                             </td>
+
+                            <td>${renderSalesCategory(article)}</td>
 
                             <td>
                                 ${renderDiscountGroup(article)}
@@ -296,6 +300,7 @@ function generateHandler() {
 
     attachArticlePriceHandlers();
     attachDiscountGroupHandlers();
+    attachSalesCategoryHandlers();
     attachGridVisItemHandlers();
     attachArticleDeleteHandlers();
 
@@ -478,6 +483,8 @@ function renderArticles(articles) {
                     ${article.description ?? ""}
                 </td>
 
+                <td>${renderSalesCategory(article)}</td>
+
                 <td>
                     ${renderDiscountGroup(article)}
                 </td>
@@ -494,6 +501,7 @@ function renderArticles(articles) {
 
     attachArticlePriceHandlers();
     attachDiscountGroupHandlers();
+    attachSalesCategoryHandlers();
     attachGridVisItemHandlers();
     attachArticleDeleteHandlers();
 
@@ -934,6 +942,61 @@ function renderDiscountGroup(article) {
             >${i18n.t("common.edit")}</button>
         </div>
     `;
+}
+
+function renderSalesCategory(article) {
+    const isManual = Number(article.salesCategoryManual) === 1;
+    const category = isManual ? article.salesCategory : article.salesCategorySuggested;
+    const label = category
+        ? i18n.t(`articles.salesCategory.${category}`)
+        : i18n.t("articles.salesCategory.other");
+    const source = isManual
+        ? i18n.t("articles.salesCategoryManual")
+        : i18n.t("articles.salesCategorySuggested");
+
+    return `
+        <div class="article-sales-category-editor">
+            <span title="${source}">${label}</span>
+            <button
+                class="article-sales-category-edit-button"
+                type="button"
+                data-article-number="${article.articleNumber ?? ""}"
+                title="${i18n.t("articles.editSalesCategory")}"
+            >${i18n.t("common.edit")}</button>
+        </div>
+    `;
+}
+
+function attachSalesCategoryHandlers() {
+    document.querySelectorAll(".article-sales-category-edit-button").forEach(button => {
+        button.addEventListener("click", async () => {
+            const category = await showChoice(i18n.t("articles.selectSalesCategory"), {
+                title: `${i18n.t("articles.articleNumber")} ${button.dataset.articleNumber}`,
+                choices: [
+                    { value: "auto", label: i18n.t("articles.salesCategoryAutomatic") },
+                    { value: "device", label: i18n.t("articles.salesCategory.device") },
+                    { value: "transformer", label: i18n.t("articles.salesCategory.transformer") },
+                    { value: "accessory", label: i18n.t("articles.salesCategory.accessory") },
+                    { value: "other", label: i18n.t("articles.salesCategory.other") }
+                ]
+            });
+            if (!category) return;
+            const response = await fetch(
+                `/api/articles/${encodeURIComponent(button.dataset.articleNumber)}/sales-category`,
+                {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ category })
+                }
+            );
+            const result = await response.json();
+            if (!response.ok) {
+                await showAlert(result.error || i18n.t("articles.salesCategorySaveFailed"));
+                return;
+            }
+            await refreshArticles();
+        });
+    });
 }
 
 function attachDiscountGroupHandlers() {

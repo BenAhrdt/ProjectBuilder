@@ -387,6 +387,7 @@
 
 .article-price-editor,
 .article-discount-group-editor,
+.article-sales-category-editor,
 .article-gridvis-items-editor {
 
     display: grid;
@@ -419,8 +420,15 @@
 
 }
 
+.article-sales-category-editor {
+
+    grid-template-columns: minmax(105px, 1fr) 58px;
+
+}
+
 .article-price-editor > span,
 .article-discount-group-editor > span,
+.article-sales-category-editor > span,
 .article-gridvis-items-editor > span {
 
     min-width: 0;
@@ -430,6 +438,7 @@
 
 .article-price-edit-button,
 .article-discount-group-edit-button,
+.article-sales-category-edit-button,
 .article-gridvis-items-edit-button {
 
     padding: 4px 8px;
@@ -456,6 +465,7 @@
 
 .article-price-edit-button:hover,
 .article-discount-group-edit-button:hover,
+.article-sales-category-edit-button:hover,
 .article-gridvis-items-edit-button:hover {
 
     background: #dfeaff;
@@ -527,6 +537,15 @@
 .articles-table th:nth-child(4),
 .articles-table td:nth-child(4) {
 
+    width: 190px;
+
+    min-width: 190px;
+
+}
+
+.articles-table th:nth-child(5),
+.articles-table td:nth-child(5) {
+
     width: 60px;
 
     min-width: 60px;
@@ -539,8 +558,8 @@
    GridVis-Items
 -------------------------------------------------- */
 
-.articles-table th:nth-child(5),
-.articles-table td:nth-child(5) {
+.articles-table th:nth-child(6),
+.articles-table td:nth-child(6) {
 
     width: 120px;
 
@@ -556,8 +575,8 @@
    Preis
 -------------------------------------------------- */
 
-.articles-table th:nth-child(6),
-.articles-table td:nth-child(6) {
+.articles-table th:nth-child(7),
+.articles-table td:nth-child(7) {
 
     width: 165px;
 

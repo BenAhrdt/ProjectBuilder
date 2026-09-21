@@ -348,9 +348,16 @@ router.get("/customers/:customerId/order-intake", async (req, res) => {
         const account = await salesforce.getAccountById(customer.salesforceId);
         if (!account) return res.json({ available: false, years: [] });
 
+        const manualArticleCategories = new Map(
+            database.articles.prepare(`
+                SELECT articleNumber, salesCategory
+                FROM articles
+                WHERE salesCategoryManual = 1
+            `).all().map(article => [String(article.articleNumber), article.salesCategory])
+        );
         const [years, topItems] = await Promise.all([
             salesforce.getAnnualOrderIntake(account.Id),
-            salesforce.getTopPurchasedItems(account.Id)
+            salesforce.getTopPurchasedItems(account.Id, undefined, manualArticleCategories)
         ]);
         res.json({
             available: true,

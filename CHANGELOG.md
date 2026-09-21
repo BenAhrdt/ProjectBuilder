@@ -2,6 +2,13 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.29 - 21.09.2026
+
+### Verbessert
+
+- Artikel erhalten einen automatischen Vorschlag für Gerät, Stromwandler/Sensor, Zubehör/Komponente oder Sonstiges. Die Kategorie lässt sich in der Artikelliste manuell ändern und bleibt bei Importen erhalten.
+- Die Geräte-Rangliste verwendet die gespeicherte Artikelzuordnung. CT24 wird automatisch als Stromwandler statt als Gerät eingeordnet.
+
 ## 1.5.28 - 21.09.2026
 
 ### Neu

@@ -12,6 +12,10 @@ import {
     inferGridVisItems,
     normalizeGridVisItems
 } from "../utils/gridVisItems.js";
+import {
+    inferSalesArticleCategory,
+    SALES_ARTICLE_CATEGORIES
+} from "../utils/salesArticleCategory.js";
 
 const router = express.Router();
 
@@ -409,7 +413,9 @@ router.get("/", (req, res) => {
                 salesforceImportedAt,
                 salesforceCurrencies,
                 gridVisItems,
-                gridVisItemsManual
+                gridVisItemsManual,
+                salesCategory,
+                salesCategoryManual
 
             FROM articles
 
@@ -443,7 +449,12 @@ router.get("/", (req, res) => {
 
         });
 
-    res.json(articles);
+    res.json(articles.map(article => ({
+        ...article,
+        salesCategorySuggested: Number(article.salesCategoryManual) === 1
+            ? article.salesCategory
+            : inferSalesArticleCategory(article)
+    })));
 
 });
 
@@ -697,6 +708,32 @@ router.patch("/:articleNumber/discount-group", (req, res) => {
     }
 
     res.json({ ok: true, articleNumber, discountGroup });
+});
+
+router.patch("/:articleNumber/sales-category", (req, res) => {
+    const articleNumber = req.params.articleNumber;
+    const category = String(req.body.category ?? "");
+    const isAutomatic = category === "auto";
+
+    if (!isAutomatic && !SALES_ARTICLE_CATEGORIES.includes(category)) {
+        return res.status(400).json({ ok: false, error: "Ungültige Vertriebskategorie" });
+    }
+
+    const result = database.articles.prepare(`
+        UPDATE articles
+        SET salesCategory = @salesCategory, salesCategoryManual = @salesCategoryManual
+        WHERE articleNumber = @articleNumber
+    `).run({
+        articleNumber,
+        salesCategory: isAutomatic ? null : category,
+        salesCategoryManual: isAutomatic ? 0 : 1
+    });
+
+    if (result.changes === 0) {
+        return res.status(404).json({ ok: false, error: "Artikel nicht gefunden" });
+    }
+
+    res.json({ ok: true, articleNumber, category: isAutomatic ? null : category });
 });
 
 router.patch("/:articleNumber/gridvis-items", (req, res) => {

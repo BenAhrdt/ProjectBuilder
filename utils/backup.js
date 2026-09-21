@@ -17,7 +17,8 @@ const tableColumns = {
         "salesforceProductId", "salesforcePricebookId", "salesforceActive",
         "salesforceFamily", "salesforceProductType", "salesforceLastModifiedAt",
         "salesforceImportedAt", "salesforceAvailabilityCheckedAt", "salesforceCurrencies",
-        "gridVisItems", "gridVisItemsManual", "discountGroupManual"
+        "gridVisItems", "gridVisItemsManual", "discountGroupManual",
+        "salesCategory", "salesCategoryManual"
     ],
     customers: [
         "id", "customerNumber", "name", "street", "postalCode", "city", "additionalInfo",

@@ -4,6 +4,7 @@ import path from "path";
 import open from "open";
 import { mapCustomerPricingGroupDiscounts } from "../utils/salesforceCustomerDiscounts.js";
 import { isSalesforceAuthenticationError } from "../utils/externalError.js";
+import { inferSalesArticleCategory } from "../utils/salesArticleCategory.js";
 import {
     buildAnnualOrderIntake,
     groupOrderItemNetAmounts
@@ -433,7 +434,11 @@ export async function getAnnualOrderIntake(accountId, currentYear = new Date().g
     ).map(year => ({ ...year, missingOrders: missingOrdersByYear.get(year.year) ?? [] }));
 }
 
-export async function getTopPurchasedItems(accountId, currentYear = new Date().getUTCFullYear()) {
+export async function getTopPurchasedItems(
+    accountId,
+    currentYear = new Date().getUTCFullYear(),
+    manualCategories = new Map()
+) {
     if (!accountId) {
         return {
             devices: { currentYear: [], tenYear: [] },
@@ -454,11 +459,6 @@ export async function getTopPurchasedItems(accountId, currentYear = new Date().g
     `);
     const currentYearTotals = { devices: new Map(), allArticles: new Map() };
     const tenYearTotals = { devices: new Map(), allArticles: new Map() };
-    const isDeviceName = name => {
-        if (/\bCT\s*-?\s*24\b/i.test(name)) return false;
-        return /\bUMG(?:\s*\d+)?\b|\bRCM[\s-]*\d+|\bRogo(?:Trans|Trand)\b|\bRogowski\b/i.test(name);
-    };
-
     for (const record of records) {
         const year = Number(String(record.Order?.EffectiveDate ?? "").slice(0, 4));
         const quantity = Number(record.Quantity);
@@ -478,7 +478,9 @@ export async function getTopPurchasedItems(accountId, currentYear = new Date().g
             totals.set(key, total);
         };
 
-        const isDevice = isDeviceName(product.name);
+        const category = manualCategories.get(productCode)
+            || inferSalesArticleCategory({ name: product.name });
+        const isDevice = category === "device";
         if (year === currentYear) {
             addQuantity(currentYearTotals.allArticles, quantity);
             if (isDevice) addQuantity(currentYearTotals.devices, quantity);

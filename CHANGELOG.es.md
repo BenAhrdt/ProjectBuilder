@@ -2,6 +2,13 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.29 - 21.09.2026
+
+### Mejorado
+
+- Los artículos reciben una categoría sugerida: dispositivo, transformador de corriente/sensor, accesorio/componente u otros. La categoría puede cambiarse en la lista de artículos y se conserva durante las importaciones.
+- La clasificación de dispositivos utiliza la categoría guardada. CT24 se clasifica automáticamente como transformador de corriente, no como dispositivo.
+
 ## 1.5.28 - 21.09.2026
 
 ### Nuevo

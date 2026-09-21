@@ -2,6 +2,13 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.29 - 21.09.2026
+
+### Improved
+
+- Articles now receive a suggested category: device, current transformer/sensor, accessory/component, or other. Categories can be changed in the article list and are preserved during imports.
+- The device ranking uses the saved article category. CT24 is automatically classified as a current transformer rather than a device.
+
 ## 1.5.28 - 21.09.2026
 
 ### Added

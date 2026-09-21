@@ -236,6 +236,7 @@
     "articles.salesCategory.transformer": "Transformador de corriente / sensor",
     "articles.salesCategory.accessory": "Accesorio / componente",
     "articles.salesCategory.other": "Otros",
+    "articles.salesCategory.unclassified": "Sin asignar",
     "articles.salesCategoryAutomatic": "Automático (sugerencia por nombre)",
     "articles.salesCategoryManual": "Asignado manualmente",
     "articles.salesCategorySuggested": "Sugerido por el nombre",

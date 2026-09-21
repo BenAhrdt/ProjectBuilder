@@ -2,6 +2,12 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.31 - 21.09.2026
+
+### Verbessert
+
+- Artikel werden nicht mehr allein anhand von UMG-, RCM- oder Rogo-Namen als Geräte eingestuft. Geräte müssen manuell zugeordnet werden; Artikel ohne eindeutige automatische Erkennung bleiben „Nicht zugeordnet“.
+
 ## 1.5.30 - 21.09.2026
 
 ### Verbessert

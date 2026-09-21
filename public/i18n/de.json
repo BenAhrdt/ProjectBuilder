@@ -236,6 +236,7 @@
     "articles.salesCategory.transformer": "Stromwandler / Sensor",
     "articles.salesCategory.accessory": "Zubehör / Komponente",
     "articles.salesCategory.other": "Sonstiges",
+    "articles.salesCategory.unclassified": "Nicht zugeordnet",
     "articles.salesCategoryAutomatic": "Automatisch (Namensvorschlag)",
     "articles.salesCategoryManual": "Manuell zugeordnet",
     "articles.salesCategorySuggested": "Automatischer Namensvorschlag",

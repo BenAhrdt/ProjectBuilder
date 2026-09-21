@@ -2,6 +2,12 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.31 - 21.09.2026
+
+### Mejorado
+
+- Los artículos ya no se clasifican como dispositivos únicamente por contener UMG, RCM o Rogo en el nombre. Los dispositivos deben asignarse manualmente; los artículos sin una coincidencia automática clara quedan sin asignar.
+
 ## 1.5.30 - 21.09.2026
 
 ### Mejorado

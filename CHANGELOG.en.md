@@ -2,6 +2,12 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.31 - 21.09.2026
+
+### Improved
+
+- Articles are no longer classified as devices solely from UMG, RCM or Rogo names. Devices must be assigned manually; items without a clear automatic match remain unassigned.
+
 ## 1.5.30 - 21.09.2026
 
 ### Improved

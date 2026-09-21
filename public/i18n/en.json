@@ -236,6 +236,7 @@
     "articles.salesCategory.transformer": "Current transformer / sensor",
     "articles.salesCategory.accessory": "Accessory / component",
     "articles.salesCategory.other": "Other",
+    "articles.salesCategory.unclassified": "Unassigned",
     "articles.salesCategoryAutomatic": "Automatic (name suggestion)",
     "articles.salesCategoryManual": "Assigned manually",
     "articles.salesCategorySuggested": "Suggested from name",

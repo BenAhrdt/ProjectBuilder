@@ -951,7 +951,7 @@ function renderSalesCategory(article) {
     const category = isManual ? article.salesCategory : article.salesCategorySuggested;
     const label = category
         ? i18n.t(`articles.salesCategory.${category}`)
-        : i18n.t("articles.salesCategory.other");
+        : i18n.t("articles.salesCategory.unclassified");
     const source = isManual
         ? i18n.t("articles.salesCategoryManual")
         : i18n.t("articles.salesCategorySuggested");
@@ -979,7 +979,8 @@ function attachSalesCategoryHandlers() {
                     { value: "device", label: i18n.t("articles.salesCategory.device") },
                     { value: "transformer", label: i18n.t("articles.salesCategory.transformer") },
                     { value: "accessory", label: i18n.t("articles.salesCategory.accessory") },
-                    { value: "other", label: i18n.t("articles.salesCategory.other") }
+                    { value: "other", label: i18n.t("articles.salesCategory.other") },
+                    { value: "unclassified", label: i18n.t("articles.salesCategory.unclassified") }
                 ]
             });
             if (!category) return;

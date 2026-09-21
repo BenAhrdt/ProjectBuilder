@@ -2,6 +2,12 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.35 - 21.09.2026
+
+### Improved
+
+- The GridVis counter now sits at the right side of the article row, just before the three-dot menu.
+
 ## 1.5.34 - 21.09.2026
 
 ### Improved

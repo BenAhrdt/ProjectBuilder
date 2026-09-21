@@ -2,6 +2,12 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.35 - 21.09.2026
+
+### Mejorado
+
+- El contador de GridVis ahora aparece a la derecha de la fila del artículo, justo antes del menú de tres puntos.
+
 ## 1.5.34 - 21.09.2026
 
 ### Mejorado

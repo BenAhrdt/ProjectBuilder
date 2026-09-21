@@ -2,6 +2,12 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.35 - 21.09.2026
+
+### Verbessert
+
+- Der GridVis-Zähler steht jetzt rechts in der Artikelzeile direkt links vom Dreipunktmenü.
+
 ## 1.5.34 - 21.09.2026
 
 ### Verbessert

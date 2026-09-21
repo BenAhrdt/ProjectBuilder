@@ -1896,6 +1896,7 @@ body.project-overview-open {
 
     display: inline-flex;
     flex: 0 0 auto;
+    align-self: center;
     align-items: center;
     justify-content: center;
     min-width: 23px;

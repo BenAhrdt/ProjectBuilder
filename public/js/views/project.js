@@ -2016,8 +2016,6 @@ function renderNodeArticle(
 
                 <div class="node-article-header">
 
-                    ${renderNodeGridVisBadge(fullArticle, quantity, nodeArticle)}
-
                     <span class="node-article-number">
 
                         ${articleNumber}
@@ -2045,6 +2043,8 @@ function renderNodeArticle(
                 </div>
 
             </div>
+
+            ${renderNodeGridVisBadge(fullArticle, quantity, nodeArticle)}
 
             <div class="node-article-menu">
 

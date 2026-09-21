@@ -348,11 +348,15 @@ router.get("/customers/:customerId/order-intake", async (req, res) => {
         const account = await salesforce.getAccountById(customer.salesforceId);
         if (!account) return res.json({ available: false, years: [] });
 
-        const years = await salesforce.getAnnualOrderIntake(account.Id);
+        const [years, topItems] = await Promise.all([
+            salesforce.getAnnualOrderIntake(account.Id),
+            salesforce.getTopPurchasedItems(account.Id)
+        ]);
         res.json({
             available: true,
             currency: account.CurrencyIsoCode || "EUR",
-            years
+            years,
+            topItems
         });
     } catch (error) {
         handleError(res, error);

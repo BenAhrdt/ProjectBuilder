@@ -736,6 +736,90 @@
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9);
 }
 
+.customer-top-devices {
+    min-width: 0;
+    padding: 18px 20px 20px;
+    border: 1px solid #d7e5f7;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #f8fbff 0%, #f2f7fd 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+.customer-top-devices-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+}
+.customer-top-devices-header .customer-sales-section-heading { margin-bottom: 0; }
+.customer-top-items-select {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #526173;
+    font-size: 12px;
+    font-weight: 700;
+}
+.customer-top-items-select select {
+    min-width: 190px;
+    padding: 8px 30px 8px 10px;
+    border: 1px solid #cbd8e8;
+    border-radius: 8px;
+    background: white;
+    color: #243b5a;
+    font: inherit;
+    cursor: pointer;
+}
+.customer-top-devices-hint {
+    margin: -3px 0 13px;
+    color: #667085;
+    font-size: 12px;
+}
+.customer-top-devices-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+.customer-top-devices-list {
+    min-width: 0;
+    padding: 13px 14px;
+    border: 1px solid #e0e8f2;
+    border-radius: 10px;
+    background: #fff;
+}
+.customer-top-devices-list h4 {
+    margin: 0 0 9px;
+    color: #344054;
+    font-size: 13px;
+}
+.customer-top-devices-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+.customer-top-devices-table th {
+    padding: 7px 6px;
+    border-bottom: 1px solid #e4eaf2;
+    color: #667085;
+    font-size: 10px;
+    text-align: left;
+}
+.customer-top-devices-table th:last-child { text-align: right; }
+.customer-top-devices-table td {
+    padding: 8px 6px;
+    border-bottom: 1px solid #edf1f6;
+    vertical-align: middle;
+}
+.customer-top-devices-table tr:last-child td { border-bottom: 0; }
+.customer-top-devices-table td strong,
+.customer-top-devices-table td small {
+    display: block;
+    overflow-wrap: anywhere;
+}
+.customer-top-devices-table td strong { color: #243b5a; font-size: 12px; }
+.customer-top-devices-table td small { margin-top: 2px; color: #7a8798; font-size: 10px; }
+.customer-top-devices-rank { width: 24px; color: #667085; font-weight: 700; }
+.customer-top-devices-quantity { color: #1f3552; font-weight: 800; text-align: right; white-space: nowrap; }
+
 .customer-order-intake-chart {
     display: block;
     width: 100%;
@@ -892,6 +976,7 @@
     .customer-project-form { grid-template-columns: 1fr 1fr; }
     .customer-order-intake-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .customer-order-intake-details-content { grid-template-columns: 1fr; }
+    .customer-top-devices-grid { grid-template-columns: 1fr; }
     .customer-sales-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
@@ -910,6 +995,9 @@
     .customer-sales-card { gap: 16px; padding: 20px 14px 18px; border-radius: 14px; }
     .customer-sales-header { flex-direction: column; }
     .customer-sales-header button { align-self: flex-start; }
+    .customer-top-devices-header { align-items: flex-start; flex-direction: column; }
+    .customer-top-items-select { width: 100%; justify-content: space-between; }
+    .customer-top-items-select select { flex: 1; min-width: 0; }
     .customer-order-intake,
     .customer-order-intake-chart-panel { padding: 14px 12px 16px; border-radius: 12px; }
     .customer-order-intake-chart-panel { padding-bottom: 10px; }
@@ -983,6 +1071,18 @@
         background: white;
         box-shadow: none;
     }
+    body.sales-analysis-printing .customer-top-devices {
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: white;
+        box-shadow: none;
+    }
+    body.sales-analysis-printing .customer-top-devices-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    body.sales-analysis-printing .customer-top-items-select { display: none; }
+    body.sales-analysis-printing .customer-top-devices-list { break-inside: avoid; }
     body.sales-analysis-printing .customer-order-intake-chart {
         max-height: 48mm;
     }

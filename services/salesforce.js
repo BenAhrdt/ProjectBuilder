@@ -433,6 +433,80 @@ export async function getAnnualOrderIntake(accountId, currentYear = new Date().g
     ).map(year => ({ ...year, missingOrders: missingOrdersByYear.get(year.year) ?? [] }));
 }
 
+export async function getTopPurchasedItems(accountId, currentYear = new Date().getUTCFullYear()) {
+    if (!accountId) {
+        return {
+            devices: { currentYear: [], tenYear: [] },
+            allArticles: { currentYear: [], tenYear: [] },
+            firstYear: currentYear - 9,
+            lastYear: currentYear
+        };
+    }
+
+    const firstYear = currentYear - 9;
+    const records = await queryAll(`
+        SELECT Product2Id, Product2.ProductCode, Product2.Name, Quantity, Order.EffectiveDate
+        FROM OrderItem
+        WHERE Order.AccountId = '${escapeSoql(accountId)}'
+          AND Order.EffectiveDate >= ${firstYear}-01-01
+          AND Order.EffectiveDate < ${currentYear + 1}-01-01
+          AND Product2Id != null
+    `);
+    const currentYearTotals = { devices: new Map(), allArticles: new Map() };
+    const tenYearTotals = { devices: new Map(), allArticles: new Map() };
+    const isDeviceName = name => {
+        if (/\bCT\s*-?\s*24\b/i.test(name)) return false;
+        return /\bUMG(?:\s*\d+)?\b|\bRCM[\s-]*\d+|\bRogo(?:Trans|Trand)\b|\bRogowski\b/i.test(name);
+    };
+
+    for (const record of records) {
+        const year = Number(String(record.Order?.EffectiveDate ?? "").slice(0, 4));
+        const quantity = Number(record.Quantity);
+        if (!Number.isInteger(year) || !Number.isFinite(quantity) || quantity <= 0) continue;
+
+        const productId = String(record.Product2Id ?? "");
+        const productCode = String(record.Product2?.ProductCode ?? "").trim();
+        const key = productCode || productId;
+        const product = {
+            articleNumber: productCode,
+            name: String(record.Product2?.Name ?? "").trim() || productCode || productId,
+            quantity: 0
+        };
+        const addQuantity = (totals, count) => {
+            const total = totals.get(key) ?? { ...product };
+            total.quantity += count;
+            totals.set(key, total);
+        };
+
+        const isDevice = isDeviceName(product.name);
+        if (year === currentYear) {
+            addQuantity(currentYearTotals.allArticles, quantity);
+            if (isDevice) addQuantity(currentYearTotals.devices, quantity);
+        }
+        addQuantity(tenYearTotals.allArticles, quantity);
+        if (isDevice) addQuantity(tenYearTotals.devices, quantity);
+    }
+
+    const topFive = totals => [...totals.values()]
+        .sort((first, second) => second.quantity - first.quantity
+            || first.name.localeCompare(second.name, "de", { sensitivity: "base" })
+            || first.articleNumber.localeCompare(second.articleNumber, "de", { numeric: true }))
+        .slice(0, 5);
+
+    return {
+        devices: {
+            currentYear: topFive(currentYearTotals.devices),
+            tenYear: topFive(tenYearTotals.devices)
+        },
+        allArticles: {
+            currentYear: topFive(currentYearTotals.allArticles),
+            tenYear: topFive(tenYearTotals.allArticles)
+        },
+        firstYear,
+        lastYear: currentYear
+    };
+}
+
 export async function getQuoteSyncOptions(accountId) {
     const [quoteDescription, contactsResult] = await Promise.all([
         cachedQuoteDescription ??= describe("Quote").catch(error => {

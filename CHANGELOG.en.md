@@ -2,6 +2,12 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.28 - 21.09.2026
+
+### Added
+
+- The sales page now shows the five most purchased items for the current year and the last ten years. A dropdown switches between devices and all items; CT24 is excluded from the device view.
+
 ## 1.5.27 - 18.09.2026
 
 ### Added

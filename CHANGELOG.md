@@ -2,6 +2,12 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.28 - 21.09.2026
+
+### Neu
+
+- Die Vertriebsseite zeigt die Top 5 meistgekauften Artikel für das laufende Jahr und die letzten zehn Jahre. Ein Dropdown wechselt zwischen Geräten und allen Artikeln; CT24 wird in der Geräteauswahl ausgeschlossen.
+
 ## 1.5.27 - 18.09.2026
 
 ### Neu

@@ -355,6 +355,7 @@ async function loadCustomerOrderIntake(customerId, customer, force = false) {
     if (state.sales && !force) {
         container.innerHTML = renderSales(state.sales, customer);
         registerSalesPdfExport(customer);
+        registerTopItemsFilter(state.sales.topItems);
         return;
     }
     if (state.salesPromise) return state.salesPromise;
@@ -373,6 +374,7 @@ async function loadCustomerOrderIntake(customerId, customer, force = false) {
             if (container.isConnected) {
                 container.innerHTML = renderSales(result, customer);
                 registerSalesPdfExport(customer);
+                registerTopItemsFilter(result.topItems);
             }
         } catch (error) {
             if (customerViewState === state && container.isConnected) {
@@ -415,7 +417,77 @@ function renderSales(result, customer) {
             <div class="customer-sales-section-heading"><h3>${i18n.t("customer.orderIntakeTrend")}</h3></div>
             ${renderOrderIntakeChart(years, result.currency)}
         </section>
+        ${renderTopItemRankings(result.topItems, current?.year)}
     </div>`;
+}
+
+function renderTopItemRankings(items, currentYear) {
+    const year = items?.lastYear ?? currentYear ?? new Date().getFullYear();
+    const firstYear = items?.firstYear ?? year - 9;
+    const lastYear = items?.lastYear ?? year;
+    return `<section class="customer-top-devices customer-sales-section">
+        <div class="customer-top-devices-header">
+            <div class="customer-sales-section-heading"><h3>${i18n.t("customer.topItemsTitle")}</h3></div>
+            <label class="customer-top-items-select">
+                <span>${i18n.t("customer.topItemsMode")}</span>
+                <select id="customer-top-items-mode">
+                    <option value="devices">${i18n.t("customer.topItemsDevices")}</option>
+                    <option value="allArticles">${i18n.t("customer.topItemsAll")}</option>
+                </select>
+            </label>
+        </div>
+        <p id="customer-top-items-hint" class="customer-top-devices-hint">${i18n.t("customer.topItemsDevicesHint")}</p>
+        <div id="customer-top-items-lists">${renderTopItemLists(items, "devices", year, firstYear, lastYear)}</div>
+    </section>`;
+}
+
+function registerTopItemsFilter(items) {
+    const select = document.getElementById("customer-top-items-mode");
+    if (!select) return;
+    select.addEventListener("change", () => {
+        const mode = select.value === "allArticles" ? "allArticles" : "devices";
+        const year = items?.lastYear ?? new Date().getFullYear();
+        const firstYear = items?.firstYear ?? year - 9;
+        const hint = document.getElementById("customer-top-items-hint");
+        const lists = document.getElementById("customer-top-items-lists");
+        if (hint) {
+            hint.textContent = i18n.t(mode === "allArticles"
+                ? "customer.topItemsAllHint" : "customer.topItemsDevicesHint");
+        }
+        if (lists) lists.innerHTML = renderTopItemLists(items, mode, year, firstYear, year);
+    });
+}
+
+function renderTopItemLists(items, mode, currentYear, firstYear, lastYear) {
+    const rankings = items?.[mode] ?? {};
+    return `<div class="customer-top-devices-grid">
+        ${renderTopItemList(
+            i18n.t("customer.topItemsCurrentYear").replace("{year}", currentYear),
+            rankings.currentYear ?? []
+        )}
+        ${renderTopItemList(
+            i18n.t("customer.topItemsTenYear").replace("{from}", firstYear).replace("{to}", lastYear),
+            rankings.tenYear ?? []
+        )}
+    </div>`;
+}
+
+function renderTopItemList(title, items) {
+    return `<section class="customer-top-devices-list">
+        <h4>${escapeHtml(title)}</h4>
+        ${items.length ? `<table class="customer-top-devices-table">
+            <thead><tr><th scope="col">#</th><th scope="col">${i18n.t("customer.topItemsArticle")}</th><th scope="col">${i18n.t("customer.topItemsQuantity")}</th></tr></thead>
+            <tbody>${items.map((item, index) => `<tr>
+                <td class="customer-top-devices-rank">${index + 1}</td>
+                <td><strong>${escapeHtml(item.name)}</strong>${item.articleNumber ? `<small>${escapeHtml(item.articleNumber)}</small>` : ""}</td>
+                <td class="customer-top-devices-quantity">${formatDeviceQuantity(item.quantity)}</td>
+            </tr>`).join("")}</tbody>
+        </table>` : `<p class="customer-order-intake-empty">${i18n.t("customer.topItemsEmpty")}</p>`}
+    </section>`;
+}
+
+function formatDeviceQuantity(value) {
+    return Number(value ?? 0).toLocaleString(i18n.getCurrentLanguage(), { maximumFractionDigits: 2 });
 }
 
 function registerSalesPdfExport(customer) {

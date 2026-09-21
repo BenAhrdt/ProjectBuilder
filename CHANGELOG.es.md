@@ -2,6 +2,12 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.28 - 21.09.2026
+
+### Nuevo
+
+- La página de ventas muestra los cinco artículos más comprados del año actual y de los últimos diez años. Un menú permite alternar entre dispositivos y todos los artículos; CT24 queda excluido de la vista de dispositivos.
+
 ## 1.5.27 - 18.09.2026
 
 ### Nuevo

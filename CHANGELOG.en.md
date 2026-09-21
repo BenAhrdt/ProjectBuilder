@@ -2,6 +2,12 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.32 - 21.09.2026
+
+### Improved
+
+- Automatic suggestions recognize UMG, RCM and RogoTrand as devices. CT items, RogoTrans and Rogowski coils are suggested as transformers/sensors; items without a clear match remain unassigned.
+
 ## 1.5.31 - 21.09.2026
 
 ### Improved

@@ -2,6 +2,12 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.32 - 21.09.2026
+
+### Verbessert
+
+- Die automatische Zuordnung erkennt UMG, RCM und RogoTrand als Geräte. CT-Artikel, RogoTrans und Rogowski-Spulen werden als Wandler/Sensor vorgeschlagen; nicht eindeutig erkannte Artikel bleiben unzugeordnet.
+
 ## 1.5.31 - 21.09.2026
 
 ### Verbessert

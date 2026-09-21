@@ -2,6 +2,12 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.32 - 21.09.2026
+
+### Mejorado
+
+- Las sugerencias automáticas reconocen UMG, RCM y RogoTrand como dispositivos. Los artículos CT, RogoTrans y las bobinas Rogowski se sugieren como transformadores/sensores; los artículos sin una coincidencia clara quedan sin asignar.
+
 ## 1.5.31 - 21.09.2026
 
 ### Mejorado

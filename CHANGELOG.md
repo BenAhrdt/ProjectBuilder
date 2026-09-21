@@ -2,6 +2,12 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.33 - 21.09.2026
+
+### Verbessert
+
+- Die Geräteerkennung berücksichtigt Modellbezeichnungen mit Buchstabenzusätzen wie RCM202AB und UMG 96RM-E.
+
 ## 1.5.32 - 21.09.2026
 
 ### Verbessert

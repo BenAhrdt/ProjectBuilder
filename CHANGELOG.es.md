@@ -2,6 +2,12 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.33 - 21.09.2026
+
+### Mejorado
+
+- La detección de dispositivos ahora reconoce modelos con sufijos de letras, como RCM202AB y UMG 96RM-E.
+
 ## 1.5.32 - 21.09.2026
 
 ### Mejorado

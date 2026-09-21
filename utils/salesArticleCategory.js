@@ -1,6 +1,6 @@
 const ACCESSORY_PATTERN = /\b(?:klemmleiste|hutschiene|erweiterungskabel|kabel|zubeh[oö]r|ersatzteil|adapter|halter|montage|netzteil|module?)\b/i;
 const TRANSFORMER_PATTERN = /\bCT[\s-]*(?:\d|AC\b)|\b(?:stromwandler|current transformer|wandler|rogowski)\b|\bRogoTrans\b/i;
-const DEVICE_PATTERN = /\b(?:UMG(?:\s*\d+)?|RCM[\s-]*\d+|RogoTrand)\b/i;
+const DEVICE_PATTERN = /\b(?:UMG(?:[\s-]*\d+[A-Z]*)?|RCM[\s-]*\d+[A-Z]*|RogoTrand)\b/i;
 
 export const SALES_ARTICLE_CATEGORIES = Object.freeze([
     "device",

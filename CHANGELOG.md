@@ -2,6 +2,12 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.30 - 21.09.2026
+
+### Verbessert
+
+- Die Artikelliste hält auf großen Bildschirmen lesbare Spaltenbreiten ein. Auf schmaleren Fenstern werden die Tabellenzeilen zu übersichtlichen Karten, und die Kopfzeile ordnet Suchfeld und Aktionen responsiv an.
+
 ## 1.5.29 - 21.09.2026
 
 ### Verbessert

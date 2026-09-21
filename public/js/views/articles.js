@@ -43,24 +43,26 @@ async function renderView() {
             <div id="articles-meta-infomrations" class="meta-informations">
                 ${i18n.t("articles.articleCount")}: ${articles.length} 
             </div>
-            <button id="add-article-button">
-                + ${i18n.t("articles.addArticle")}
-            </button>
-            <button id="import-salesforce-pricebook" type="button">
-                <span class="article-salesforce-button-icon">SF</span>
-                ${i18n.t("articles.importSalesforcePricebook")}
-            </button>
-            ${articles.length > 0 ? `
-                <button id="check-salesforce-availability" type="button">
+            <div class="articles-header-actions">
+                <button id="add-article-button">
+                    + ${i18n.t("articles.addArticle")}
+                </button>
+                <button id="import-salesforce-pricebook" type="button">
                     <span class="article-salesforce-button-icon">SF</span>
-                    ${i18n.t("articles.checkSalesforceAvailability")}
+                    ${i18n.t("articles.importSalesforcePricebook")}
                 </button>
-            ` : ""}
-            ${articles.length > 0 ? `
-                <button id="clear-articles-button" type="button">
-                    ${i18n.t("articles.clearList")}
-                </button>
-            ` : ""}
+                ${articles.length > 0 ? `
+                    <button id="check-salesforce-availability" type="button">
+                        <span class="article-salesforce-button-icon">SF</span>
+                        ${i18n.t("articles.checkSalesforceAvailability")}
+                    </button>
+                ` : ""}
+                ${articles.length > 0 ? `
+                    <button id="clear-articles-button" type="button">
+                        ${i18n.t("articles.clearList")}
+                    </button>
+                ` : ""}
+            </div>
         </div>
 
         <div id="articles-left" class="view-left"></div>
@@ -158,27 +160,27 @@ async function renderView() {
 
                         <tr>
 
-                            <td>
+                            <td data-label="${i18n.t("articles.articleNumber")}">
                                 ${renderArticleNumber(article)}
                             </td>
 
-                            <td>
+                            <td data-label="${i18n.t("articles.name")}">
                                 ${article.manufacturerType ?? ""}
                             </td>
 
-                            <td>
+                            <td data-label="${i18n.t("articles.description")}">
                                 ${article.description ?? ""}
                             </td>
 
-                            <td>${renderSalesCategory(article)}</td>
+                            <td data-label="${i18n.t("articles.salesCategory")}">${renderSalesCategory(article)}</td>
 
-                            <td>
+                            <td data-label="${i18n.t("articles.discountGroup")}">
                                 ${renderDiscountGroup(article)}
                             </td>
 
-                            <td>${renderGridVisItems(article)}</td>
+                            <td data-label="${i18n.t("articles.gridVisItems")}">${renderGridVisItems(article)}</td>
 
-                            <td>
+                            <td data-label="${i18n.t("articles.price")}">
                                 ${renderArticlePrice(article)}
                             </td>
 
@@ -471,27 +473,27 @@ function renderArticles(articles) {
 
             <tr>
 
-                <td>
+                <td data-label="${i18n.t("articles.articleNumber")}">
                     ${renderArticleNumber(article)}
                 </td>
 
-                <td>
+                <td data-label="${i18n.t("articles.name")}">
                     ${article.manufacturerType ?? ""}
                 </td>
 
-                <td>
+                <td data-label="${i18n.t("articles.description")}">
                     ${article.description ?? ""}
                 </td>
 
-                <td>${renderSalesCategory(article)}</td>
+                <td data-label="${i18n.t("articles.salesCategory")}">${renderSalesCategory(article)}</td>
 
-                <td>
+                <td data-label="${i18n.t("articles.discountGroup")}">
                     ${renderDiscountGroup(article)}
                 </td>
 
-                <td>${renderGridVisItems(article)}</td>
+                <td data-label="${i18n.t("articles.gridVisItems")}">${renderGridVisItems(article)}</td>
 
-                <td>
+                <td data-label="${i18n.t("articles.price")}">
                     ${renderArticlePrice(article)}
                 </td>
 

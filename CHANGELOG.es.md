@@ -2,6 +2,12 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.30 - 21.09.2026
+
+### Mejorado
+
+- La lista de artículos mantiene columnas legibles en pantallas grandes. En ventanas estrechas, las filas se muestran como tarjetas y la cabecera reorganiza el buscador y las acciones de forma adaptable.
+
 ## 1.5.29 - 21.09.2026
 
 ### Mejorado

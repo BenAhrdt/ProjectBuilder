@@ -2,6 +2,12 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.30 - 21.09.2026
+
+### Improved
+
+- The article list now keeps readable column widths on large screens. On narrower windows, table rows become clear cards, and the header rearranges its search field and actions responsively.
+
 ## 1.5.29 - 21.09.2026
 
 ### Improved

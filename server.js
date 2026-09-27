@@ -36,6 +36,16 @@ app.use(express.json({ limit: "5mb" }))
 // Frontend
 // --------------------------------------------------
 
+// Das zentrale Electron-/Windows-Icon ist auch für das Browser-Favicon
+// erreichbar. Cache-Control verhindert, dass manuelle Icon-Änderungen im
+// laufenden Entwicklungsserver verborgen bleiben.
+app.get("/icon.png", (req, res) => {
+
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate")
+    res.sendFile(path.join(__dirname, "icon.png"))
+
+})
+
 app.use(express.static(path.join(__dirname, "public")))
 
 // --------------------------------------------------
@@ -137,11 +147,23 @@ app.use((req, res) => {
 export function startServer({ port = 3000, host = "127.0.0.1" } = {}) {
     startAutomaticBackupScheduler();
     return new Promise((resolve, reject) => {
-        const server = app.listen(port, host, () => {
+        const server = app.listen(port, host);
+        const handleError = error => reject(error);
+
+        server.once("error", handleError);
+        server.once("listening", () => {
+            const address = server.address();
+            if (!address || typeof address !== "object") {
+                reject(new Error("Der lokale ProjectBuilder-Server konnte keinen Port ermitteln."));
+                return;
+            }
+
+            server.removeListener("error", handleError);
+            server.projectBuilderPort = address.port;
+            server.projectBuilderUrl = `http://127.0.0.1:${address.port}`;
             warmSalesforceConnection().catch(() => {});
             resolve(server);
         });
-        server.once("error", reject);
     });
 }
 
@@ -151,7 +173,7 @@ const isDirectStart = process.argv[1]
 if (isDirectStart) {
     const port = Number.parseInt(process.env.PORT ?? "3000", 10);
     const server = await startServer({ port });
-    console.log(`Server läuft auf http://127.0.0.1:${server.address().port}`);
+    console.log(`Server läuft auf ${server.projectBuilderUrl}`);
 }
 
 export { app };

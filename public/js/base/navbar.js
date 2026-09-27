@@ -42,39 +42,58 @@ navbar.innerHTML = `
                 <span class="navbar-item-icon">${utils.icons.excel}</span>
                 <div class="navbar-item-text">${i18n.t("navbar.importPricelist")}</div>
             </div>
-            <div id="navbar-backups" data-view="backups" class="navbar-item">
-                <span class="navbar-item-icon">${utils.icons.backup}</span>
-                <div class="navbar-item-text">${i18n.t("navbar.backups")}</div>
-            </div>
-            <div id="navbar-settings" data-view="settings" class="navbar-item">
+            <div id="navbar-settings" class="navbar-item navbar-item-parent" data-nav-toggle="settings"
+                role="button" tabindex="0" aria-expanded="false" aria-controls="navbar-settings-submenu">
                 <span class="navbar-item-icon">${utils.icons.settings}</span>
-                <div class="navbar-item-text">${i18n.t("navbar.settings")}</div>
+                <div class="navbar-item-text">
+                    <span>${i18n.t("navbar.settings")}</span>
+                    <span class="navbar-item-caret" aria-hidden="true">›</span>
+                </div>
+                <div id="navbar-settings-submenu" class="navbar-submenu" hidden>
+                    <div id="navbar-backups" data-view="backups" class="navbar-item navbar-subitem">
+                        <span class="navbar-item-icon">${utils.icons.backup}</span>
+                        <div class="navbar-item-text">${i18n.t("navbar.backups")}</div>
+                    </div>
+                    <div id="navbar-appearance" data-view="settings" class="navbar-item navbar-subitem">
+                        <span class="navbar-item-icon">${utils.icons.settings}</span>
+                        <div class="navbar-item-text">${i18n.t("navbar.appearance")}</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
     <div id="navbar-informations">
-        <div id="navbar-information-1" class="navbar-information">
-        </div>
-        <div id="navbar-information-version" class="navbar-information">
-            <div class="navbar-runtime-information">
-                <span>${i18n.t("navbar.currentVersion")}: ${version}</span>
-                ${electronPort ? `<span class="navbar-local-port">${i18n.t("navbar.localPort")}: ${electronPort}</span>` : ""}
+        <div id="navbar-info-toggle" class="navbar-item navbar-item-parent" role="button" tabindex="0"
+            aria-expanded="false" aria-controls="navbar-info-panel">
+            <span class="navbar-item-icon">${utils.icons.book}</span>
+            <div class="navbar-item-text">
+                <span>${i18n.t("navbar.info")}</span>
+                <span class="navbar-item-caret" aria-hidden="true">›</span>
             </div>
-            <button
-                id="navbar-changelog-button"
-                type="button"
-                title="${i18n.t("navbar.openChangelog")}"
-                aria-label="${i18n.t("navbar.openChangelog")}"
-            >
-                ${utils.icons.book}
-            </button>
         </div>
-        <div id="navbar-update-status" class="navbar-information" hidden aria-live="polite">
-            <div class="navbar-update-label">
-                <span id="navbar-update-text"></span>
-                <span id="navbar-update-percent"></span>
+        <div id="navbar-info-panel" hidden>
+            <div id="navbar-information-1" class="navbar-information"></div>
+            <div id="navbar-information-version" class="navbar-information">
+                <div class="navbar-runtime-information">
+                    <span>${i18n.t("navbar.currentVersion")}: ${version}</span>
+                    ${electronPort ? `<span class="navbar-local-port">${i18n.t("navbar.localPort")}: ${electronPort}</span>` : ""}
+                </div>
+                <button
+                    id="navbar-changelog-button"
+                    type="button"
+                    title="${i18n.t("navbar.openChangelog")}"
+                    aria-label="${i18n.t("navbar.openChangelog")}"
+                >
+                    ${utils.icons.book}
+                </button>
             </div>
-            <progress id="navbar-update-progress" max="100" value="0"></progress>
+            <div id="navbar-update-status" class="navbar-information" hidden aria-live="polite">
+                <div class="navbar-update-label">
+                    <span id="navbar-update-text"></span>
+                    <span id="navbar-update-percent"></span>
+                </div>
+                <progress id="navbar-update-progress" max="100" value="0"></progress>
+            </div>
         </div>
     </div>
 `;
@@ -83,7 +102,12 @@ document.dispatchEvent(new CustomEvent("projectbuilder:navbar-ready"));
 
 document.getElementById("navbar-changelog-button").addEventListener(
     "click",
-    () => router.navigate("/changelog")
+    () => {
+        setSettingsExpanded(false);
+        setInfoExpanded(false);
+        window.dispatchEvent(new CustomEvent("projectbuilder:close-navigation"));
+        router.navigate("/changelog");
+    }
 );
 
 const updateStatusElement = document.getElementById("navbar-update-status");
@@ -120,16 +144,65 @@ if (window.projectBuilder?.onUpdateStatus) {
 }
 
 // Clickhandler
-const navbarItems = document.querySelectorAll(".navbar-item");
+const navbarItems = document.querySelectorAll(".navbar-item[data-view]");
 navbarItems.forEach(item => {
     item.addEventListener("click", () => {
+        setSettingsExpanded(false);
+        setInfoExpanded(false);
+        window.dispatchEvent(new CustomEvent("projectbuilder:close-navigation"));
         // Prüfen, ob in data-vie etwas liegt und rendern
         const view = item.dataset.view;
         router.navigate(`/${view}`);
     });
 });
 
+const settingsParent = document.querySelector("[data-nav-toggle=\"settings\"]");
+const settingsSubmenu = document.getElementById("navbar-settings-submenu");
+const infoToggle = document.getElementById("navbar-info-toggle");
+const infoPanel = document.getElementById("navbar-info-panel");
+
+function setSettingsExpanded(expanded) {
+    settingsSubmenu.hidden = !expanded;
+    settingsParent?.classList.toggle("is-expanded", expanded);
+    settingsParent?.setAttribute("aria-expanded", String(expanded));
+}
+
+settingsParent?.addEventListener("click", event => {
+    if (event.target.closest("[data-view]")) return;
+    setInfoExpanded(false);
+    setSettingsExpanded(settingsSubmenu.hidden);
+});
+
+settingsParent?.addEventListener("keydown", event => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    setSettingsExpanded(settingsSubmenu.hidden);
+});
+
+function setInfoExpanded(expanded) {
+    infoPanel.hidden = !expanded;
+    infoToggle?.classList.toggle("is-expanded", expanded);
+    infoToggle?.setAttribute("aria-expanded", String(expanded));
+}
+
+infoToggle?.addEventListener("click", () => {
+    setSettingsExpanded(false);
+    setInfoExpanded(infoPanel.hidden);
+});
+
+infoToggle?.addEventListener("keydown", event => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    setInfoExpanded(infoPanel.hidden);
+});
+
+document.getElementById("global-search-input")?.addEventListener("focus", () => {
+    setSettingsExpanded(false);
+    setInfoExpanded(false);
+});
+
 export function setItemsActive(dataView) {
+        settingsParent?.classList.remove("active");
         // active von allen entfernen
         navbarItems.forEach(i => {
             i.classList.remove("active");
@@ -138,4 +211,9 @@ export function setItemsActive(dataView) {
         // Item active setzen
         const item = document.querySelector(`[data-view="${dataView}"]`);
         item?.classList.add("active");
+
+        const settingsView = dataView === "settings" || dataView === "backups";
+        settingsParent?.classList.toggle("active", settingsView);
+        setInfoExpanded(false);
+        setSettingsExpanded(false);
 }

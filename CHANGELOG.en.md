@@ -2,6 +2,28 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.36 - 2026-09-27
+
+### Added
+
+- ProjectBuilder now uses one consistent ProjectBuilder symbol based on the white Janitza J with an integrated project mark for Electron, Windows, and the favicon.
+
+### Improved
+
+- Customer, project, article, and sales views now follow a shared GridVis-inspired design with a gray workspace, white content areas, dark blue section headers, flush tabs, and consistent angular controls.
+- Project structure, favorites, article search, export, customer projects, and business development are more clearly organized with consistent table and section layouts.
+- Main lists now sit with an even inset on the gray workspace, keeping the GridVis contrast visible on all four sides.
+- Customer detail views now use a clearly visible shared gray outer inset so section headers and content align as one layout.
+- The business development overview now has its own outer frame around the complete section again.
+- The same gray spacing is now visible between the business development header and the current-year section as between the other sections.
+- Backup & Restore and Appearance now use the shared gray workspace, white content areas, and dark blue section headers as well.
+- Legacy outer frames were removed from the main lists; the gray workspace separates areas while functional table and column dividers remain visible.
+
+### Fixed
+
+- Electron now reliably uses the server URL captured when the server starts, including when the preferred port is occupied and an available fallback port is selected automatically.
+- The browser favicon is now loaded directly from the central `icon.png`, so it is displayed reliably in Chromium.
+
 ## 1.5.35 - 21.09.2026
 
 ### Improved

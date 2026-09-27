@@ -5,38 +5,71 @@ const view = document.getElementById('view');
 
 function renderView() {
     view.innerHTML = `
-        <div id="import.header" class="view-header">
+        <div id="import-header" class="view-header">
             ${i18n.t("importPricelist.importPricelist")}
         </div>
         <div id="import-left" class="view-left"></div>
         <div id="import-content" class="view-content">
-            <div id="importPriclistDescription">${i18n.t("importPricelist.decription")}</div>
-        <div id="upload-wrapper">
-            <div id="upload-area">
-                <div>
-                    ${i18n.t("importPricelist.selectFile")}
+            <div class="import-toolbar">
+                <div class="import-toolbar-title">${i18n.t("importPricelist.source")}</div>
+                <div id="importPriclistDescription" class="import-toolbar-description">
+                    ${i18n.t("importPricelist.decription")}
                 </div>
             </div>
+
+            <div class="import-panel-grid">
+                <section class="import-panel import-source-panel">
+                    <div class="import-panel-header">
+                        <h2>${i18n.t("importPricelist.source")}</h2>
+                        <span>.xlsx / .xls</span>
+                    </div>
+                    <div class="import-panel-body">
+                        <div class="import-panel-intro">
+                            ${i18n.t("importPricelist.selectFile")}
+                        </div>
+                        <div id="upload-wrapper">
+                            <div id="upload-area" role="button" tabindex="0">
+                                <div>${i18n.t("importPricelist.selectFile")}</div>
+                            </div>
+                        </div>
+                        <input type="file" id="price-list-file" accept=".xlsx,.xls" hidden>
+                    </div>
+                </section>
+
+                <section class="import-panel import-options-panel">
+                    <div class="import-panel-header">
+                        <h2>${i18n.t("importPricelist.options")}</h2>
+                    </div>
+                    <div class="import-panel-body">
+                        <label id="preserve-price-option" class="import-option">
+                            <input
+                                id="preserve-existing-prices-from-zero"
+                                type="checkbox"
+                                checked
+                            >
+                            <span>${i18n.t("importPricelist.preserveExistingPrices")}</span>
+                        </label>
+                        <label id="clear-articles-option" class="import-option import-option-danger">
+                            <input
+                                id="clear-existing-articles-before-import"
+                                type="checkbox"
+                            >
+                            <span>${i18n.t("importPricelist.clearExistingArticles")}</span>
+                        </label>
+                    </div>
+                </section>
+
+                <section class="import-panel import-status-panel">
+                    <div class="import-panel-header">
+                        <h2 id="import-status-header">${i18n.t("importPricelist.status")}</h2>
+                    </div>
+                    <div class="import-panel-body">
+                        <div id="import-status">${i18n.t("importPricelist.ready")}</div>
+                    </div>
+                </section>
+            </div>
         </div>
-        <label id="preserve-price-option">
-            <input
-                id="preserve-existing-prices-from-zero"
-                type="checkbox"
-                checked
-            >
-            ${i18n.t("importPricelist.preserveExistingPrices")}
-        </label>
-        <label id="clear-articles-option">
-            <input
-                id="clear-existing-articles-before-import"
-                type="checkbox"
-            >
-            ${i18n.t("importPricelist.clearExistingArticles")}
-        </label>
-        <div id="import-status-header">${i18n.t("importPricelist.status")}:</div>
-        <div id="import-status">${i18n.t("importPricelist.ready")}</div>
-        <input type="file" id="price-list-file" accept=".xlsx,.xls" hidden>
-        <div id="import-right" class="view-right"/></div>
+        <div id="import-right" class="view-right"></div>
     `;
 
     generateHandler();

@@ -740,6 +740,9 @@ async function renderView(
                     </div>
 
                     <div class="project-article-search-controls">
+                        <span class="project-article-search-title">
+                            ${i18n.t("project.searchArticles")}
+                        </span>
                         <input
                             id="project-article-search"
                             placeholder="${i18n.t("project.searchArticles")}..."
@@ -748,6 +751,14 @@ async function renderView(
                             <input id="project-article-search-all" type="checkbox">
                             <span>${i18n.t("project.searchAllArticleData")}</span>
                         </label>
+                    </div>
+
+                    <div class="project-article-list-header" role="row">
+                        <span>${i18n.t("articles.articleNumber")}</span>
+                        <span aria-label="Icon"></span>
+                        <span>${i18n.t("articles.name")} / ${i18n.t("articles.description")}</span>
+                        <span>${i18n.t("articles.price")}</span>
+                        <span>${i18n.t("articles.discountGroup")}</span>
                     </div>
 
                 <div
@@ -1359,9 +1370,9 @@ function renderFavoriteArticles(
 
                 ${favoriteArticles.map(article => `
 
-                    <button
+                    <div
                         class="project-article-favorite"
-                        type="button"
+                        role="listitem"
                         draggable="true"
                         data-article-number="${article.articleNumber}"
                         title="${i18n.t("project.addArticle")}"
@@ -1386,7 +1397,15 @@ function renderFavoriteArticles(
 
                         </span>
 
-                    </button>
+                        <button
+                            class="project-article-favorite-remove"
+                            type="button"
+                            data-article-number="${article.articleNumber}"
+                            title="${i18n.t("project.toggleFavorite")}"
+                            aria-label="${i18n.t("project.toggleFavorite")}"
+                        >★</button>
+
+                    </div>
 
                 `).join("")}
 
@@ -4602,6 +4621,11 @@ function registerArticleFavorites(
         projectId
     );
 
+    registerFavoriteArticleRemoveButtons(
+        articles,
+        projectId
+    );
+
     registerFavoriteArticleDragAndDrop();
 
     syncArticleListHeight();
@@ -4732,6 +4756,11 @@ function renderArticleFavoritesPanel(
         projectId
     );
 
+    registerFavoriteArticleRemoveButtons(
+        articles,
+        projectId
+    );
+
     registerFavoriteArticleDragAndDrop();
 
     syncArticleListHeight();
@@ -4771,6 +4800,41 @@ function registerArticleFavoritesToggle(
 
         }
     );
+
+}
+
+function registerFavoriteArticleRemoveButtons(
+    articles,
+    projectId
+) {
+
+    document
+        .querySelectorAll(
+            ".project-article-favorite-remove"
+        )
+        .forEach(button => {
+
+            button.addEventListener(
+                "click",
+                event => {
+
+                    event.stopPropagation();
+
+                    const articleNumber =
+                        String(button.dataset.articleNumber);
+
+                    const favoriteArticleNumbers =
+                        getFavoriteArticleNumbers();
+
+                    favoriteArticleNumbers.delete(articleNumber);
+                    saveFavoriteArticleNumbers(favoriteArticleNumbers);
+                    syncArticleFavoriteButtons(articleNumber, false);
+                    renderArticleFavoritesPanel(articles, projectId);
+
+                }
+            );
+
+        });
 
 }
 

@@ -1,0 +1,2582 @@
+/*
+ * GridVis-inspired application shell.
+ * The selectors intentionally sit in one final stylesheet so the existing
+ * feature-specific views keep their behaviour while sharing one visual system.
+ */
+
+:root {
+    --gridvis-black: #050505;
+    --gridvis-navy: #243e5e;
+    --gridvis-blue: #4d7eaf;
+    --gridvis-blue-dark: #19324f;
+    --gridvis-cyan: #1685aa;
+    --gridvis-workspace: #d1d7dc;
+    --gridvis-line: #c8d0d8;
+    --gridvis-line-dark: #9eacba;
+    --gridvis-text: #23364d;
+    --gridvis-muted: #6f7f8e;
+    --header-height: 56px;
+    --navbar-width: 246px;
+}
+
+html,
+body {
+    background: var(--gridvis-workspace);
+    color: var(--gridvis-text);
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+    overflow: hidden;
+}
+
+#header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    padding: 0 18px 0 10px;
+    box-sizing: border-box;
+    background: var(--gridvis-black);
+    color: #fff;
+    box-shadow: none;
+}
+
+.header-start {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    height: 100%;
+    gap: 7px;
+}
+
+.header-menu-toggle {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 0;
+    border-radius: 2px;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+}
+
+.header-menu-toggle {
+    font-size: 25px;
+    line-height: 1;
+}
+
+.header-menu-toggle:hover,
+.header-menu-toggle:focus-visible {
+    background: #1d536f;
+    outline: none;
+}
+
+.header-primary-nav {
+    display: flex;
+    align-items: stretch;
+    align-self: stretch;
+    gap: 6px;
+    margin-left: 10px;
+}
+
+.header-primary-nav button {
+    position: relative;
+    padding: 0 17px;
+    border: 0;
+    border-radius: 2px;
+    background: transparent;
+    color: #fff;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.header-primary-nav button:hover,
+.header-primary-nav button:focus-visible {
+    color: #55b8dd;
+    outline: none;
+}
+
+.header-primary-nav button.active {
+    background: #17364b;
+    color: #55b8dd;
+}
+
+.header-spacer {
+    flex: 1 1 auto;
+    min-width: 12px;
+}
+
+.header-brand {
+    display: flex;
+    align-items: center;
+    align-self: stretch;
+    padding: 0;
+}
+
+.header-brand img {
+    width: 128px;
+    height: auto;
+    filter: invert(1);
+}
+
+
+.header-history {
+    order: 4;
+}
+
+.header-history button {
+    color: #fff;
+}
+
+.header-history button:hover:not(:disabled),
+.header-history button:focus-visible {
+    border-color: #1d536f;
+    background: #1d536f;
+    color: #fff;
+}
+
+.salesforce-header-status {
+    display: inline-flex;
+    order: 4;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    color: #d9e5ef;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.salesforce-header-dot {
+    width: 8px;
+    height: 8px;
+    flex: 0 0 8px;
+    border-radius: 50%;
+    background: #9eacba;
+}
+
+.salesforce-header-status[data-state="connected"] .salesforce-header-dot {
+    background: #36a269;
+    box-shadow: 0 0 0 2px rgba(54, 162, 105, .18);
+}
+
+.salesforce-header-status[data-state="disconnected"] .salesforce-header-dot {
+    background: #d98b2b;
+    box-shadow: 0 0 0 2px rgba(217, 139, 43, .18);
+}
+
+#salesforce-header-connect {
+    min-height: 24px;
+    padding: 3px 7px;
+    border: 1px solid #9fb8d2;
+    border-radius: 2px;
+    background: #f7fbff;
+    color: var(--gridvis-blue-dark);
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+#salesforce-header-connect:hover {
+    border-color: var(--gridvis-cyan);
+    background: #eaf3fc;
+}
+
+.language-selector {
+    order: 5;
+    color: #fff;
+}
+
+.language-dropdown-trigger {
+    min-width: 112px;
+    border-color: #405064;
+    border-radius: 2px;
+    background: #111820;
+    color: #fff;
+}
+
+.language-dropdown-menu {
+    border-radius: 2px;
+}
+
+#below {
+    position: relative;
+    display: block;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--gridvis-workspace);
+}
+
+#below::before {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    display: none;
+    background: transparent;
+    content: "";
+    pointer-events: none;
+}
+
+body.gridvis-nav-open #below::before {
+    display: block;
+}
+
+#navbar {
+    position: absolute;
+    inset: 0 auto auto 0;
+    z-index: 30;
+    display: flex;
+    width: var(--navbar-width);
+    max-height: calc(100% - 8px);
+    min-height: 0;
+    flex-direction: column;
+    background: #171717;
+    color: #fff;
+    box-shadow: 8px 0 20px rgba(15, 27, 39, .22);
+    transform: translateX(-101%);
+    transition: transform .18s ease;
+}
+
+#navbar.is-open {
+    transform: translateX(0);
+}
+
+.navbar-global-search {
+    top: 13px;
+    left: 12px;
+    width: calc(100% - 24px);
+}
+
+.global-search-control input {
+    height: 34px;
+    border-color: #55616d;
+    border-radius: 2px;
+    background: #242424;
+    color: #fff;
+}
+
+.global-search-control input::placeholder {
+    color: #aab4be;
+}
+
+#navbar-item-range {
+    display: flex;
+    min-height: 0;
+    margin-top: 61px;
+    flex: 0 0 auto;
+    flex-direction: column;
+    overflow: visible;
+}
+
+.navbar-item-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.navbar-item-group + .navbar-item-group {
+    margin-top: 18px;
+}
+
+#navbar-item-group-3 {
+    display: flex;
+    min-width: 0;
+    flex: 0 0 auto;
+    flex-direction: column;
+    position: relative;
+    margin-top: 18px;
+    align-items: stretch;
+    grid-template-rows: none;
+    grid-template-areas: none;
+}
+
+.navbar-item {
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    height: 39px;
+    align-items: center;
+    color: #fff;
+    border-bottom: 1px solid #3f3f3f;
+}
+
+.navbar-item:hover,
+.navbar-item:focus-visible {
+    background: #2a2a2a;
+    outline: none;
+}
+
+.navbar-item.active {
+    background: var(--gridvis-blue);
+    color: #fff;
+}
+
+.navbar-item.active::before,
+.navbar-item.active::after {
+    display: none;
+}
+
+.navbar-item-icon {
+    justify-content: center;
+    padding-right: 0;
+    color: #fff;
+}
+
+.navbar-item-icon svg {
+    width: 22px;
+    height: 22px;
+    color: #fff;
+    stroke: currentColor !important;
+}
+
+.navbar-item-icon svg * {
+    stroke: currentColor !important;
+}
+
+.navbar-item-text {
+    padding-left: 0;
+    font-size: 13px;
+}
+
+.navbar-item-parent .navbar-item-text {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-right: 14px;
+}
+
+.navbar-item-parent {
+    position: relative;
+    overflow: visible;
+}
+
+.navbar-item-caret {
+    color: #c6d0d9;
+    font-size: 20px;
+    line-height: 1;
+    transform: rotate(0deg);
+    transition: transform .15s ease;
+}
+
+.navbar-item-parent.is-expanded .navbar-item-caret {
+    transform: rotate(90deg);
+}
+
+.navbar-submenu {
+    position: absolute;
+    top: 0;
+    left: 100%;
+    bottom: auto;
+    z-index: 31;
+    width: 230px;
+    border: 1px solid #3f3f3f;
+    box-shadow: 8px 0 20px rgba(15, 27, 39, .22);
+    background: #232323;
+}
+
+.navbar-submenu[hidden] {
+    display: none;
+}
+
+.navbar-subitem {
+    grid-template-columns: 40px 1fr;
+    min-height: 36px;
+    height: 36px;
+    background: #232323;
+}
+
+.navbar-subitem .navbar-item-icon {
+    padding-left: 9px;
+}
+
+.navbar-subitem .navbar-item-text {
+    font-size: 12px;
+}
+
+#navbar-informations {
+    display: block;
+    flex: 0 0 auto;
+    padding: 8px 0 0;
+}
+
+#navbar-information-1 {
+    display: none;
+}
+
+#navbar-info-toggle {
+    border-top: 1px solid #3f3f3f;
+}
+
+#navbar-info-panel {
+    border-top: 1px solid #3f3f3f;
+    background: #111;
+}
+
+#navbar-info-panel[hidden] {
+    display: none;
+}
+
+#navbar-information-version {
+    display: flex;
+    padding: 8px 16px 12px;
+    color: #c9d1d8;
+}
+
+.navbar-local-port {
+    color: #92a0ad;
+}
+
+#navbar-changelog-button {
+    color: #fff;
+}
+
+#view {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    grid-template-columns: 0 100% 0;
+    grid-template-rows: 54px minmax(0, 1fr);
+    grid-template-areas:
+        "left header right"
+        "left content right";
+    overflow: hidden;
+    background: var(--gridvis-workspace);
+}
+
+.view-header {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 12px;
+    padding: 0 12px;
+    border-bottom: 1px solid #bec8d1;
+    background: #fff;
+    color: var(--gridvis-text);
+    font-size: 20px;
+    font-weight: 400;
+}
+
+.view-content,
+.view-content-scrollable {
+    min-width: 0;
+    margin: 8px;
+    border: 0;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(29, 46, 65, .12);
+}
+
+.header-search {
+    flex: 0 1 260px;
+    min-width: 160px;
+}
+
+.searchBox input,
+.header-search input,
+#customers-search,
+#projects-search {
+    box-sizing: border-box;
+    width: 100%;
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid #9fb8d2;
+    border-radius: 2px;
+    background: #fff;
+    color: var(--gridvis-text);
+    font-size: 13px;
+}
+
+.searchBox input:focus,
+.header-search input:focus {
+    border-color: var(--gridvis-blue);
+    box-shadow: 0 0 0 2px rgba(77, 126, 175, .18);
+    outline: none;
+}
+
+.meta-informations {
+    color: var(--gridvis-muted);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.customers-header-actions {
+    gap: 6px;
+}
+
+.customers-action-button,
+#add-customer-button,
+#add-project-button,
+#import-project-button,
+#save-customer-button,
+#save-project-button {
+    min-height: 34px;
+    padding: 7px 12px;
+    border: 1px solid #9bb8d4;
+    border-radius: 2px;
+    background: #fff;
+    color: var(--gridvis-blue-dark);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.customers-action-button:hover,
+#add-customer-button:hover,
+#add-project-button:hover,
+#import-project-button:hover,
+#save-customer-button:hover,
+#save-project-button:hover {
+    border-color: var(--gridvis-blue);
+    background: #edf4fb;
+}
+
+.customers-action-primary,
+#add-project-button {
+    border-color: var(--gridvis-blue);
+    background: var(--gridvis-blue);
+    color: #fff;
+}
+
+.customers-action-primary:hover,
+#add-project-button:hover {
+    background: #3e6d9a;
+    color: #fff;
+}
+
+.customers-table,
+.projects-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.customers-table thead,
+.projects-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.customers-table th,
+.projects-table th {
+    padding: 8px 10px;
+    border-right: 1px solid #5a718b;
+    border-bottom: 1px solid #172d46;
+    background: var(--gridvis-navy);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.customers-table td,
+.projects-table td {
+    padding: 7px 10px;
+    border-right: 1px solid #d3d9df;
+    border-bottom: 1px solid #d3d9df;
+    color: var(--gridvis-text);
+    vertical-align: middle;
+}
+
+.customers-table tbody tr:nth-child(even),
+.projects-table tbody tr:nth-child(even) {
+    background: #f4f6f8;
+}
+
+.customers-table tbody tr:hover,
+.projects-table tbody tr:hover,
+.customers-table tbody .customer-row:focus-visible,
+.projects-table tbody .project-row:focus-visible {
+    background: #e4eef8;
+    box-shadow: inset 3px 0 0 var(--gridvis-blue);
+    outline: none;
+}
+
+.customer-sort-button,
+.project-sort-button {
+    color: inherit;
+}
+
+.customer-sort-button:hover,
+.customer-sort-button:focus-visible,
+.project-sort-button:hover,
+.project-sort-button:focus-visible {
+    background: rgba(255, 255, 255, .12);
+    color: #fff;
+    outline: none;
+}
+
+.app-modal-overlay,
+.salesforce-dialog-overlay {
+    background: rgba(23, 42, 61, .54);
+}
+
+.app-modal,
+.salesforce-dialog {
+    border: 1px solid #9fb5c9;
+    border-radius: 2px;
+    box-shadow: 0 18px 44px rgba(20, 38, 56, .32);
+}
+
+.app-modal-header,
+.salesforce-dialog-header {
+    background: #fff;
+}
+
+.app-modal-actions,
+.salesforce-dialog-actions {
+    background: #eef2f5;
+    border-color: #c7d0d8;
+}
+
+.app-modal-actions button,
+.salesforce-dialog-actions button {
+    border-radius: 2px;
+}
+
+@media (max-width: 900px) {
+    .header-primary-nav button {
+        padding: 0 8px;
+        font-size: 13px;
+    }
+
+    .header-brand img {
+        width: 100px;
+    }
+
+
+    .language-selector {
+        display: none;
+    }
+
+    .view-header {
+        flex-wrap: wrap;
+        min-height: 54px;
+        height: auto;
+        padding: 8px 10px;
+    }
+
+    #view {
+        grid-template-rows: auto minmax(0, 1fr);
+    }
+}
+
+/* --------------------------------------------------
+   Listenansicht nach GridVis-Muster
+-------------------------------------------------- */
+
+#articles-header {
+    display: flex;
+    height: 54px;
+    box-sizing: border-box;
+    padding: 0 14px;
+    background: #fff;
+}
+
+#view:has(#articles-header) {
+    grid-template-rows: 54px minmax(0, 1fr);
+}
+
+#view:has(#project-content) {
+    grid-template-rows: 108px minmax(0, 1fr);
+}
+
+#view:has(#project-content) > .project-view-header {
+    min-height: 108px;
+    box-sizing: border-box;
+    align-items: flex-start;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    overflow: visible;
+}
+
+#view:has(#project-content) .project-view-links {
+    flex-wrap: wrap;
+}
+
+#view:has(#project-content) .project-salesforce-links {
+    flex: 0 0 auto;
+}
+
+#project-content {
+    min-height: 0;
+    margin-top: 8px;
+}
+
+#articles-header .header-text {
+    color: var(--gridvis-muted);
+    font-size: 25px;
+    font-weight: 400;
+}
+
+#articles-meta-infomrations {
+    margin-left: 10px;
+    color: var(--gridvis-muted);
+    font-size: 12px;
+}
+
+#articles-content {
+    display: flex;
+    min-height: 0;
+    margin: 8px;
+    overflow: hidden;
+    border: 1px solid #aab8c5;
+    border-radius: 0;
+    background: var(--gridvis-workspace);
+    box-shadow: none;
+    flex-direction: column;
+}
+
+.articles-toolbar {
+    display: flex;
+    min-height: 48px;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 9px;
+    border-bottom: 1px solid #aab8c5;
+    background: var(--gridvis-workspace);
+}
+
+.articles-toolbar-search {
+    width: min(265px, 28vw);
+    min-width: 170px;
+}
+
+.articles-toolbar .searchBox {
+    justify-content: flex-start;
+}
+
+.articles-toolbar .searchBox input {
+    width: 100%;
+}
+
+.articles-header-actions {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+}
+
+#articles-header button,
+.articles-toolbar button,
+#add-article-button,
+#import-salesforce-pricebook,
+#check-salesforce-availability,
+#clear-articles-button {
+    min-height: 34px;
+    box-sizing: border-box;
+    padding: 7px 11px;
+    border-radius: 2px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+#add-article-button {
+    border: 1px solid var(--gridvis-blue);
+    background: var(--gridvis-blue);
+    color: #fff;
+}
+
+#add-article-button:hover {
+    background: #3e6d9a;
+}
+
+#import-salesforce-pricebook,
+#check-salesforce-availability {
+    border-color: #9bb8d4;
+    background: #f7fbff;
+    color: var(--gridvis-blue-dark);
+}
+
+#clear-articles-button {
+    border-color: #cf7772;
+    background: #fff;
+    color: #b42318;
+}
+
+.articles-table-scroll {
+    min-height: 0;
+    overflow: auto;
+    background: #fff;
+    flex: 1 1 auto;
+}
+
+.articles-table {
+    min-width: 1500px;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.articles-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.articles-table th {
+    padding: 8px 10px;
+    border-right: 1px solid #5a718b;
+    border-bottom: 1px solid #172d46;
+    background: var(--gridvis-navy);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    vertical-align: middle;
+}
+
+.articles-table td {
+    padding: 8px 10px;
+    border-right: 1px solid #d3d9df;
+    border-bottom: 1px solid #d3d9df;
+    color: var(--gridvis-text);
+    vertical-align: middle;
+}
+
+/* Keep the article list dense like the GridVis overview. Long descriptions
+   stay available through the cell tooltip instead of stretching every row. */
+#articles-content .articles-table {
+    width: 100%;
+    min-width: 1420px;
+    table-layout: fixed;
+}
+
+#articles-content .articles-table th,
+#articles-content .articles-table td {
+    box-sizing: border-box;
+    height: 42px;
+    padding: 6px 10px;
+    vertical-align: middle;
+}
+
+#articles-content .articles-table th:nth-child(1),
+#articles-content .articles-table td:nth-child(1) {
+    width: 245px;
+}
+
+#articles-content .articles-table th:nth-child(2),
+#articles-content .articles-table td:nth-child(2) {
+    width: 235px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#articles-content .articles-table th:nth-child(3),
+#articles-content .articles-table td:nth-child(3) {
+    width: 340px;
+    max-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#articles-content .articles-table th:nth-child(4),
+#articles-content .articles-table td:nth-child(4) {
+    width: 220px;
+}
+
+#articles-content .articles-table th:nth-child(5),
+#articles-content .articles-table td:nth-child(5) {
+    width: 110px;
+}
+
+#articles-content .articles-table th:nth-child(6),
+#articles-content .articles-table td:nth-child(6) {
+    width: 145px;
+}
+
+#articles-content .articles-table th:nth-child(7),
+#articles-content .articles-table td:nth-child(7) {
+    width: 150px;
+}
+
+#articles-content .articles-table td:nth-child(3) {
+    color: #36516e;
+}
+
+#articles-content .article-description-text {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.articles-table tbody tr,
+.articles-table tbody tr:nth-child(even) {
+    background: #fff;
+}
+
+.articles-table tbody tr:nth-child(even) {
+    background: #f7f8f9;
+}
+
+.articles-table tbody tr:hover {
+    background: #e4eef8;
+    box-shadow: inset 3px 0 0 var(--gridvis-blue);
+}
+
+.article-price-edit-button,
+.article-discount-group-edit-button,
+.article-sales-category-edit-button,
+.article-gridvis-items-edit-button {
+    min-height: 28px;
+    padding: 4px 8px;
+    border-color: #9fb8d2;
+    border-radius: 2px;
+    background: #eef4fb;
+    color: #2f64c8;
+    font-size: 11px;
+}
+
+.article-price-edit-button:hover,
+.article-discount-group-edit-button:hover,
+.article-sales-category-edit-button:hover,
+.article-gridvis-items-edit-button:hover {
+    background: #dceaf8;
+}
+
+@media (max-width: 1450px) {
+    .articles-toolbar {
+        flex-wrap: wrap;
+        padding-bottom: 8px;
+    }
+
+    .articles-header-actions {
+        margin-left: 0;
+    }
+}
+
+/* Import page: compact GridVis-style workspace instead of a mostly empty form. */
+#view:has(#import-content) {
+    grid-template-rows: 54px minmax(0, 1fr);
+}
+
+#import-content {
+    display: flex;
+    min-height: 0;
+    margin: 8px;
+    overflow: auto;
+    border: 1px solid #aab8c5;
+    background: var(--gridvis-workspace);
+    box-shadow: none;
+    flex-direction: column;
+}
+
+.import-toolbar {
+    display: flex;
+    min-height: 48px;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 12px;
+    padding: 7px 10px;
+    border-bottom: 1px solid #aab8c5;
+    background: #e3e8ed;
+}
+
+.import-toolbar-title {
+    color: var(--gridvis-text);
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.import-toolbar-description {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--gridvis-muted);
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.import-panel-grid {
+    display: grid;
+    grid-template-columns: minmax(280px, .8fr) minmax(360px, 1.2fr);
+    align-content: start;
+    gap: 8px;
+    padding: 8px;
+}
+
+.import-panel {
+    min-width: 0;
+    border: 1px solid #b7c2cd;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(29, 46, 65, .1);
+}
+
+.import-panel-header {
+    display: flex;
+    min-height: 38px;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 7px 10px;
+    background: var(--gridvis-navy);
+    color: #fff;
+}
+
+.import-panel-header h2 {
+    margin: 0;
+    color: inherit;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.import-panel-header span {
+    color: #d7e4f1;
+    font-size: 11px;
+}
+
+.import-panel-body {
+    padding: 14px;
+}
+
+.import-panel-intro {
+    margin-bottom: 10px;
+    color: var(--gridvis-muted);
+    font-size: 12px;
+}
+
+.import-status-panel {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 700px) {
+    .import-toolbar {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .import-toolbar-description {
+        white-space: normal;
+    }
+
+    .import-panel-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .import-status-panel {
+        grid-column: auto;
+    }
+}
+
+/* Flat detail-page chrome for projects and customers. */
+#view:has(#project-content) {
+    grid-template-rows: 78px minmax(0, 1fr);
+}
+
+#view:has(#project-content) > .project-view-header {
+    min-height: 78px;
+    box-sizing: border-box;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 8px 12px;
+    overflow: hidden;
+}
+
+#view:has(#project-content) .project-view-heading {
+    flex: 0 1 600px;
+    max-width: min(600px, 42vw);
+    min-width: 0;
+    gap: 4px;
+}
+
+#view:has(#project-content) .project-view-title {
+    font-size: 23px;
+    line-height: 1.15;
+}
+
+#view:has(#project-content) .project-view-links {
+    flex-wrap: nowrap;
+    gap: 5px;
+    min-width: 0;
+    overflow: hidden;
+}
+
+#view:has(#project-content) #project-salesforce-links,
+#view:has(#project-content) .project-salesforce-links {
+    display: contents;
+}
+
+#view:has(#project-content) .project-view-links button,
+#view:has(#project-content) .project-view-links a {
+    min-height: 28px;
+    box-sizing: border-box;
+    padding: 4px 9px;
+    border: 1px solid #9fb8d2;
+    border-radius: 2px;
+    background: #f7fbff;
+    color: var(--gridvis-blue-dark);
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+#view:has(#project-content) .project-view-links button:hover,
+#view:has(#project-content) .project-view-links a:hover {
+    border-color: var(--gridvis-blue);
+    background: #eaf3fc;
+}
+
+#view:has(#project-content) .project-price-summary {
+    margin: 0;
+    padding: 6px 8px;
+    border-color: #c5d2df;
+    border-radius: 2px;
+    background: #f7fafc;
+    box-shadow: none;
+}
+
+#view:has(#project-content) .project-price-summary-item {
+    padding: 0 10px;
+    font-size: 11px;
+}
+
+#view:has(#project-content) .project-price-summary-item strong {
+    font-size: 13px;
+}
+
+#project-content,
+#customer-content {
+    border-radius: 0;
+}
+
+#project-content .project-card,
+#project-content .project-export-card,
+#customer-content .customer-card,
+#customer-content .customer-projects-card,
+#customer-content .customer-sales-card,
+#customer-content .customer-tab-status,
+#customer-content .customer-sales-empty {
+    border-radius: 2px;
+    box-shadow: none;
+}
+
+.project-tabs,
+.customer-tabs {
+    position: sticky;
+    z-index: 20;
+    top: 0;
+    gap: 0;
+    margin: 0 -16px 8px;
+    padding: 0 8px;
+    border: 0;
+    border-bottom: 1px solid #aab8c5;
+    border-radius: 0;
+    background: #e3e8ed;
+    box-shadow: none;
+    overflow-x: auto;
+}
+
+.project-tabs::after,
+.customer-tabs::after {
+    display: none;
+}
+
+.project-tab,
+.customer-tab {
+    min-width: 0;
+    padding: 10px 16px 8px;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    color: var(--gridvis-muted);
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.project-tab:hover,
+.customer-tab:hover {
+    background: #eef4f9;
+    color: var(--gridvis-blue-dark);
+}
+
+.project-tab[aria-selected="true"],
+.customer-tab[aria-selected="true"] {
+    z-index: 2;
+    border: 0;
+    border-bottom: 3px solid var(--gridvis-cyan);
+    border-radius: 0;
+    background: #fff;
+    color: var(--gridvis-blue-dark);
+    box-shadow: none;
+}
+
+.project-tab[aria-selected="true"]::before,
+.project-tab[aria-selected="true"]::after,
+.customer-tab[aria-selected="true"]::before,
+.customer-tab[aria-selected="true"]::after {
+    display: none;
+}
+
+@media (max-width: 1250px) {
+    #view:has(#project-content) {
+        grid-template-rows: 106px minmax(0, 1fr);
+    }
+
+    #view:has(#project-content) > .project-view-header {
+        min-height: 106px;
+    }
+
+    #view:has(#project-content) .project-view-heading {
+        max-width: 100%;
+    }
+
+    #view:has(#project-content) .project-view-links {
+        flex-wrap: wrap;
+    }
+
+    #view:has(#project-content) #project-salesforce-links,
+    #view:has(#project-content) .project-salesforce-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-left: 0;
+    }
+}
+
+/* Project structure: hierarchy on the left, two article lists on the right. */
+#project-panel-structure {
+    min-height: 0;
+}
+
+#project-panel-structure .project-editor {
+    grid-template-columns: minmax(340px, var(--project-structure-width, 495px)) 10px minmax(0, 1fr);
+    height: calc(100vh - var(--header-height) - 150px);
+    min-height: 480px;
+}
+
+#project-panel-structure .project-structure-card,
+#project-panel-structure .project-articles-card {
+    min-width: 0;
+    border: 1px solid #aab8c5;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: none;
+}
+
+#project-panel-structure .project-structure-card {
+    padding: 0;
+}
+
+#project-panel-structure .project-structure-header {
+    min-height: 38px;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 5px 10px;
+    background: var(--gridvis-navy);
+    color: #fff;
+}
+
+#project-panel-structure .project-structure-header h2 {
+    color: inherit;
+    font-size: 14px;
+}
+
+#project-panel-structure .project-structure-price-toggle {
+    border-color: #9fb8d2;
+    border-radius: 2px;
+    background: #c8d3de;
+}
+
+#project-panel-structure .project-structure-price-toggle button {
+    padding: 5px 8px;
+    border-left-color: #aebdcb;
+    background: transparent;
+    color: var(--gridvis-blue-dark);
+    font-size: 11px;
+}
+
+#project-panel-structure .project-structure-price-toggle button.active {
+    background: #fff;
+    color: var(--gridvis-blue-dark);
+    box-shadow: inset 0 0 0 1px #b4c4d2;
+}
+
+#project-panel-structure .project-root-actions {
+    margin: 0;
+    padding: 8px;
+    border-bottom: 1px solid #c8d0d8;
+    background: #e3e8ed;
+    gap: 6px;
+}
+
+#project-panel-structure .project-root-action {
+    min-height: 30px;
+    box-sizing: border-box;
+    padding: 5px 8px;
+    border-color: #9fb8d2;
+    border-radius: 2px;
+    background: #f7fbff;
+    color: var(--gridvis-blue-dark);
+    font-size: 11px;
+    box-shadow: none;
+}
+
+#project-panel-structure .project-root-action:hover {
+    border-color: var(--gridvis-blue);
+    background: #eaf3fc;
+    box-shadow: none;
+    transform: none;
+}
+
+#project-panel-structure #project-tree {
+    padding: 0 8px 8px;
+}
+
+#project-panel-structure .project-articles-card {
+    padding: 0;
+}
+
+#project-panel-structure .project-articles-card > h2 {
+    min-height: 38px;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 10px;
+    background: var(--gridvis-navy);
+    color: #fff;
+    font-size: 14px;
+}
+
+#project-panel-structure #project-article-favorites {
+    margin: 0;
+    padding: 0;
+    border-bottom: 1px solid #c8d0d8;
+    background: #e3e8ed;
+}
+
+#project-panel-structure #project-article-favorites-toggle {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 8px 10px;
+    border: 0;
+    border-bottom: 1px solid #c8d0d8;
+    background: #e3e8ed;
+    color: var(--gridvis-text);
+    cursor: pointer;
+    font-size: 12px;
+    text-align: left;
+}
+
+#project-panel-structure #project-article-favorites-toggle:hover {
+    background: #eef4f9;
+}
+
+#project-panel-structure .project-article-favorites-list {
+    max-height: 156px;
+    padding: 8px;
+    background: #d1d7dc;
+    gap: 6px;
+}
+
+#project-panel-structure .project-article-favorite {
+    grid-template-columns: 28px minmax(0, 1fr) 22px;
+    min-width: 190px;
+    max-width: 230px;
+    padding: 5px 7px;
+    border-color: #b7c2cd;
+    border-radius: 2px;
+    background: #fff;
+}
+
+#project-panel-structure .project-article-favorite:hover {
+    background: #eef4f9;
+}
+
+#project-panel-structure .project-article-favorite-icon img {
+    width: 28px;
+    height: 28px;
+}
+
+#project-panel-structure .project-article-favorite-remove {
+    display: inline-grid;
+    width: 22px;
+    height: 22px;
+    place-items: center;
+    padding: 0;
+    border: 1px solid #c4d0dc;
+    border-radius: 2px;
+    background: #f7fbff;
+    color: #d99b00;
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+}
+
+#project-panel-structure .project-article-favorite-remove:hover {
+    border-color: #b78527;
+    background: #fffaf0;
+}
+
+#project-panel-structure .project-article-search-controls {
+    display: flex;
+    min-height: 44px;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px;
+    border-bottom: 1px solid #aab8c5;
+    background: #e3e8ed;
+}
+
+#project-panel-structure .project-article-search-title {
+    flex: 0 0 auto;
+    color: var(--gridvis-text);
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+#project-panel-structure .project-article-search-controls #project-article-search {
+    min-width: 120px;
+    height: 30px;
+    padding: 5px 8px;
+    border: 1px solid #9fb8d2;
+    border-radius: 2px;
+    background: #fff;
+    color: var(--gridvis-text);
+    font-size: 12px;
+}
+
+#project-panel-structure .project-article-search-controls #project-article-search:focus {
+    border-color: var(--gridvis-blue);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(77, 126, 175, .18);
+}
+
+#project-panel-structure .project-article-search-all {
+    gap: 5px;
+    font-size: 11px;
+}
+
+#project-panel-structure .project-article-list-header {
+    display: grid;
+    grid-template-columns: 98px 56px minmax(0, 1fr) 80px 55px;
+    gap: 5px 12px;
+    align-items: center;
+    box-sizing: border-box;
+    min-height: 32px;
+    padding: 7px 12px;
+    border-bottom: 1px solid #172d46;
+    background: var(--gridvis-navy);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+#project-panel-structure .project-article-list-header span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#project-panel-structure #project-article-list {
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    background: #fff;
+}
+
+#project-panel-structure .project-article {
+    grid-template-columns: 98px 56px minmax(0, 1fr) 80px 55px;
+    grid-template-areas:
+        "number icon name price pg"
+        "number icon description price pg";
+    gap: 5px 12px;
+    min-height: 62px;
+    box-sizing: border-box;
+    padding: 8px 12px;
+}
+
+#project-panel-structure .project-article:hover {
+    background: #eef4f9;
+}
+
+#project-panel-structure .project-article-description {
+    min-width: 0;
+    overflow: hidden;
+    color: #36516e;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#project-panel-structure .project-article-name {
+    min-width: 0;
+    overflow: hidden;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#project-panel-structure .project-article-icon {
+    gap: 4px;
+    font-size: 18px;
+}
+
+#project-panel-structure .project-article-icon img {
+    width: 32px;
+    height: 32px;
+}
+
+#project-panel-structure .article-favorite-toggle {
+    width: 20px;
+    height: 20px;
+    font-size: 16px;
+}
+
+#project-panel-structure .project-article-price,
+#project-panel-structure .project-article-pg {
+    align-self: center;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+    #project-panel-structure .project-editor {
+        grid-template-columns: minmax(280px, 38%) 8px minmax(0, 1fr);
+        min-height: 420px;
+    }
+
+    #project-panel-structure .project-article-search-controls {
+        align-items: stretch;
+        flex-wrap: wrap;
+    }
+
+    #project-panel-structure .project-article-search-controls #project-article-search {
+        flex-basis: 100%;
+        order: 2;
+    }
+
+    #project-panel-structure .project-article-list-header {
+        grid-template-columns: 82px 42px minmax(0, 1fr) 68px 42px;
+        gap: 5px 8px;
+        padding-right: 8px;
+        padding-left: 8px;
+    }
+
+    #project-panel-structure .project-article {
+        grid-template-columns: 82px 42px minmax(0, 1fr) 68px 42px;
+        gap: 5px 8px;
+        padding-right: 8px;
+        padding-left: 8px;
+    }
+}
+
+/* --------------------------------------------------
+   Einheitliche Dialoge, Buttons und aktive Bereiche
+-------------------------------------------------- */
+
+/* Aktive Bereiche werden nicht mehr durch eine Unterstreichung markiert. */
+.project-tab,
+.customer-tab {
+    border-bottom: 0;
+    border-radius: 2px 2px 0 0;
+}
+
+.project-tab[aria-selected="true"],
+.customer-tab[aria-selected="true"] {
+    border: 1px solid #aab8c5;
+    border-bottom-color: #fff;
+    border-radius: 2px 2px 0 0;
+    margin-bottom: -1px;
+    background: #fff;
+    color: var(--gridvis-blue-dark);
+    box-shadow: none;
+}
+
+/* Die allgemeine Formensprache für Bedienbuttons bleibt eckig und ruhig. */
+#header button,
+#view button,
+.app-modal button,
+.salesforce-dialog button {
+    border-radius: 2px;
+}
+
+/* Gruppierte Buttonleisten behalten ihre bündige Darstellung. */
+.project-overview-option-controls button,
+.project-overview-view-controls button,
+.project-overview-zoom-controls button,
+.project-structure-price-toggle button {
+    border-radius: 0;
+}
+
+/* Alle Dialogvarianten verwenden denselben Rahmen, Schatten und Radius. */
+.app-modal,
+.salesforce-dialog,
+.project-modal,
+.project-overview-dialog,
+.project-tender-modal,
+.project-properties-modal {
+    border: 1px solid #9fb5c9;
+    border-radius: 2px !important;
+    box-shadow: 0 18px 44px rgba(20, 38, 56, .32);
+}
+
+.app-modal-input,
+.app-modal-field select,
+.salesforce-filters input,
+.project-modal-input,
+.project-properties-modal input,
+.project-properties-modal select,
+.project-tender-modal input,
+.project-tender-modal select {
+    border-radius: 2px;
+}
+
+.project-tender-modal fieldset,
+.project-properties-modal fieldset {
+    border-radius: 2px;
+}
+
+.app-modal-actions button,
+.salesforce-dialog-actions button,
+.project-modal-actions button,
+.project-overview-toolbar button,
+.project-export-actions button,
+.salesforce-connect,
+.salesforce-cancel {
+    min-height: 32px;
+    border-radius: 2px;
+    box-shadow: none;
+}
+
+/* Export- und Übersichtskarten nutzen dieselbe GridVis-Buttonbasis. */
+#project-content .project-export-actions button,
+#project-content .project-overview-toolbar button {
+    border-color: #9fb8d2;
+    background: #f7fbff;
+    color: var(--gridvis-blue-dark);
+}
+
+#project-content .project-export-actions button:hover,
+#project-content .project-overview-toolbar button:hover {
+    border-color: var(--gridvis-blue);
+    background: #eaf3fc;
+    color: var(--gridvis-blue-dark);
+}
+
+#project-content .project-export-actions button.project-salesforce-action {
+    border-color: #9fb8d2;
+    background: #f7fbff;
+    color: var(--gridvis-blue-dark);
+}
+
+#project-content .project-export-actions button.project-salesforce-action:hover {
+    border-color: var(--gridvis-blue);
+    background: #eaf3fc;
+}
+
+/* --------------------------------------------------
+   Feinschliff nach dem GridVis-Vergleich
+-------------------------------------------------- */
+
+/* GridVis kennzeichnet den aktiven Hauptbereich ueber die Schriftfarbe,
+   nicht ueber einen gefuellten Navigationsblock. */
+.header-primary-nav button.active {
+    background: transparent;
+    color: var(--gridvis-cyan);
+}
+
+.header-primary-nav button:hover,
+.header-primary-nav button:focus-visible {
+    background: #111820;
+}
+
+/* Projektkopf kompakter halten, damit die eigentliche Arbeitsflaeche frueher
+   beginnt. */
+#view:has(#project-content) {
+    grid-template-rows: 68px minmax(0, 1fr);
+    background: var(--gridvis-workspace);
+}
+
+#view:has(#project-content) > .project-view-header {
+    min-height: 68px;
+    padding: 6px 10px;
+    gap: 12px;
+    border-bottom: 1px solid #aab8c5;
+    background: #fff;
+}
+
+#view:has(#project-content) .project-view-heading {
+    flex-basis: 520px;
+    max-width: min(520px, 40vw);
+    gap: 3px;
+}
+
+#view:has(#project-content) .project-view-title {
+    font-size: 21px;
+    line-height: 1.08;
+}
+
+#view:has(#project-content) .project-price-summary {
+    width: min(1080px, 76%);
+    min-height: 44px;
+    padding: 4px 6px;
+}
+
+#view:has(#project-content) .project-price-summary-item {
+    padding: 0 8px;
+    gap: 2px;
+    font-size: 10px;
+}
+
+#view:has(#project-content) .project-price-summary-item strong {
+    font-size: 12px;
+}
+
+/* Graue Arbeitsflaeche, weisse Listenflaechen. */
+#project-content {
+    margin: 6px;
+    padding: 0;
+    border: 1px solid #aab8c5;
+    background: var(--gridvis-workspace);
+}
+
+#project-content .project-tabs {
+    margin: 0 0 8px;
+    padding-right: 0;
+    padding-left: 0;
+}
+
+#project-panel-structure {
+    padding: 8px;
+    background: #fff;
+}
+
+#project-panel-structure .project-editor {
+    grid-template-columns: minmax(340px, var(--project-structure-width, 495px)) 8px minmax(0, 1fr);
+    height: calc(100vh - var(--header-height) - 132px);
+    min-height: 440px;
+    background: #fff;
+}
+
+#project-panel-structure .project-structure-card,
+#project-panel-structure .project-articles-card {
+    background: #fff;
+}
+
+/* Favoriten wie eine kompakte GridVis-Auswahlliste anordnen. */
+#project-panel-structure .project-article-favorites-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    max-height: 156px;
+    overflow-y: auto;
+}
+
+#project-panel-structure .project-article-favorite {
+    width: auto;
+    min-width: 0;
+    max-width: none;
+    min-height: 36px;
+    box-sizing: border-box;
+}
+
+/* Die leere Icon-Spalte der Artikeltabelle bekommt eine sichtbare
+   GridVis-typische Spaltenbezeichnung. */
+#project-panel-structure .project-article-list-header span:nth-child(2)::before {
+    content: "Icon";
+}
+
+#project-panel-structure .project-article-list-header,
+#project-panel-structure .project-article {
+    color: var(--gridvis-text);
+}
+
+#project-panel-structure .project-article-list-header {
+    color: #fff;
+}
+
+#project-panel-structure .project-article-description {
+    color: #506a84;
+    font-size: 11px;
+}
+
+@media (max-width: 1250px) {
+    #view:has(#project-content) {
+        grid-template-rows: 92px minmax(0, 1fr);
+    }
+
+    #view:has(#project-content) > .project-view-header {
+        min-height: 92px;
+    }
+
+    #view:has(#project-content) .project-price-summary {
+        width: min(100%, 720px);
+    }
+}
+
+/* Einheitliche weisse Projektarbeitsflaeche fuer alle Tabs. Die Tab-Leiste
+   bleibt grau, damit der aktive weisse Tab eindeutig lesbar bleibt. */
+#project-content,
+#project-content > .project-tab-panel,
+#project-panel-data,
+#project-panel-structure,
+#project-panel-export {
+    background: #fff;
+}
+
+#project-content > .project-tab-panel {
+    min-height: 0;
+}
+
+#project-content .project-tab[aria-selected="true"] {
+    border: 1px solid #aab8c5;
+    border-bottom-color: #fff;
+    background: #fff;
+    color: var(--gridvis-blue-dark);
+    box-shadow: none;
+}
+
+/* Tabs ohne Zwischenraum und ohne eigenen Scrollbereich. Der Kontrast zur
+   weißen Arbeitsfläche trennt die Tab-Leiste vom darunterliegenden Inhalt. */
+.project-tabs,
+.customer-tabs,
+#project-content .project-tabs {
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    border-bottom: 0;
+    overflow: hidden;
+    scrollbar-width: none;
+}
+
+.project-tabs::-webkit-scrollbar,
+.customer-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.project-tab,
+.customer-tab {
+    margin: 0;
+}
+
+#project-panel-data {
+    padding: 8px;
+}
+
+#project-panel-data .project-card {
+    margin: 0;
+    border: 1px solid #aab8c5;
+    background: #fff;
+}
+
+#project-panel-export {
+    padding: 8px;
+}
+
+#project-panel-export .project-export-card {
+    margin: 0;
+    border: 1px solid #aab8c5;
+    background: #fff;
+}
+
+/* Projektdaten: die drei Felder nutzen die breite Arbeitsfläche und folgen
+   derselben kantigen Formensprache wie die übrigen GridVis-Steuerelemente. */
+@media (min-width: 1251px) {
+    #project-panel-data .project-form-top {
+        grid-template-columns: minmax(0, 1.35fr) minmax(0, 1.15fr) minmax(260px, .75fr);
+        gap: 32px;
+    }
+
+    #project-panel-data .project-form-row {
+        grid-template-columns: max-content minmax(0, 1fr);
+        gap: 12px;
+    }
+}
+
+#project-panel-data .project-form input,
+#project-panel-data .project-form select,
+#project-panel-data .project-form textarea {
+    border-color: #aab8c5;
+    border-radius: 2px;
+    background: #fff;
+    box-shadow: none;
+}
+
+#project-panel-data .project-form input:focus,
+#project-panel-data .project-form select:focus,
+#project-panel-data .project-form textarea:focus {
+    border-color: var(--gridvis-blue);
+    box-shadow: 0 0 0 2px rgba(76, 139, 245, .16);
+}
+
+/* Der Projektname bekommt den tatsächlich verfügbaren Platz. Ellipsen werden
+   erst verwendet, wenn der Preisblock daneben nicht weiter schrumpfen kann. */
+#view:has(#project-content) .project-view-heading {
+    flex: 1 1 auto;
+    max-width: none;
+    min-width: 0;
+}
+
+#view:has(#project-content) .project-view-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Alle Projektbereiche verwenden denselben blauen Abschnittskopf. Die
+   eigentliche Arbeitsfläche darunter bleibt weiß und kantig. */
+#project-panel-data .project-card,
+#project-panel-export .project-export-card {
+    padding: 0;
+    border: 1px solid #aab8c5;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: none;
+}
+
+#project-panel-data .project-card-header,
+#project-panel-export .project-export-card > h2 {
+    min-height: 38px;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 5px 12px;
+    background: var(--gridvis-navy);
+    color: #fff;
+    font-size: 14px;
+}
+
+#project-panel-data .project-card-header h2,
+#project-panel-export .project-export-card > h2 {
+    color: inherit;
+    font-size: inherit;
+}
+
+#project-panel-data .project-form {
+    border-radius: 0;
+    background: #fff;
+}
+
+#project-panel-data #delete-project {
+    min-height: 28px;
+    padding: 4px 9px;
+    border-color: #e4a3a0;
+    border-radius: 2px;
+    background: #fff;
+    color: #b42318;
+    box-shadow: none;
+}
+
+#project-panel-export .project-export-card > p {
+    margin: 0;
+    padding: 12px 14px 6px;
+    color: var(--gridvis-muted);
+}
+
+#project-panel-export .project-export-actions {
+    padding: 0 14px 14px;
+}
+
+/* Dezente vertikale Linien markieren nur die fachlichen Artikelspalten. */
+#project-panel-structure .project-article-list-header > span:nth-child(n + 2),
+#project-panel-structure .project-article-icon,
+#project-panel-structure .project-article-name,
+#project-panel-structure .project-article-description,
+#project-panel-structure .project-article-price,
+#project-panel-structure .project-article-pg {
+    border-left: 1px solid #dfe4e9;
+    padding-left: 10px;
+}
+
+#project-panel-structure .project-article-list-header > span:nth-child(n + 2) {
+    border-left-color: #5a718b;
+}
+
+/* Gemeinsame graue Rahmenebene für Detailseiten. Die Registerkarten liegen
+   direkt auf dieser Ebene; die aktiven weißen Tabs bleiben klar abgesetzt. */
+#project-content,
+#customer-content {
+    margin: 6px;
+    padding: 0;
+    border: 1px solid #aab8c5;
+    border-radius: 0;
+    background: var(--gridvis-workspace);
+    box-shadow: none;
+}
+
+#project-content > .project-tab-panel,
+#customer-content > .customer-tab-panel {
+    padding: 8px;
+    background: var(--gridvis-workspace);
+}
+
+#project-content > .project-tabs,
+#customer-content > .customer-tabs {
+    margin: 0;
+    padding: 0;
+    border-bottom: 0;
+    background: #e3e8ed;
+}
+
+/* Kundendaten und Kundenprojekte erhalten dieselbe Bereichsstruktur wie die
+   Projektseite: blauer Kopf, weißer und kantiger Körper. */
+#customer-panel-general .customer-card,
+#customer-projects-content .customer-projects-card {
+    margin: 0;
+    padding: 0;
+    border: 1px solid #aab8c5;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: none;
+}
+
+#customer-panel-general .customer-card-header,
+#customer-projects-content .customer-projects-header {
+    min-height: 38px;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 5px 12px;
+    border: 0;
+    background: var(--gridvis-navy);
+    color: #fff;
+}
+
+#customer-panel-general .customer-card-header h2,
+#customer-projects-content .customer-projects-header h2 {
+    color: inherit;
+    font-size: 14px;
+}
+
+#customer-panel-general .customer-card-actions button,
+#customer-panel-general .customer-card-actions .salesforce-record-link,
+#customer-projects-content #add-customer-project {
+    min-height: 28px;
+    box-sizing: border-box;
+    padding: 4px 9px;
+    border-radius: 2px;
+    box-shadow: none;
+}
+
+#customer-panel-general .customer-card-actions button:not(#delete-customer),
+#customer-panel-general .customer-card-actions .salesforce-record-link,
+#customer-projects-content #add-customer-project {
+    border-color: #9fb8d2;
+    background: #f7fbff;
+    color: var(--gridvis-blue-dark);
+}
+
+#customer-panel-general #delete-customer {
+    border-color: #e4a3a0;
+    background: #fff;
+    color: #b42318;
+}
+
+#customer-panel-general .customer-form {
+    margin: 0;
+    border-radius: 0;
+    background: #fff;
+}
+
+#customer-panel-general .customer-form input,
+#customer-panel-general .customer-form textarea,
+#customer-projects-content .customer-project-form input,
+#customer-projects-content .customer-project-form textarea {
+    border-color: #aab8c5;
+    border-radius: 2px;
+    box-shadow: none;
+}
+
+#customer-projects-content .customer-projects-header span {
+    color: #dce7f1;
+}
+
+#customer-projects-content .customer-projects-table th {
+    border-right: 1px solid #5a718b;
+    border-bottom: 1px solid #172d46;
+    background: var(--gridvis-navy);
+    color: #fff;
+}
+
+#customer-projects-content .customer-projects-table td {
+    border-right: 1px solid #d3d9df;
+}
+
+/* Vertriebsübersicht: ein gemeinsamer Kopf, danach klar getrennte weiße
+   Tabellen-/Diagrammflächen statt frei schwebender Karten. */
+#customer-panel-sales .customer-sales-card {
+    margin: 0;
+    padding: 0;
+    gap: 0;
+    border: 1px solid #aab8c5;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: none;
+}
+
+#customer-panel-sales .customer-sales-header {
+    min-height: 38px;
+    box-sizing: border-box;
+    align-items: center;
+    padding: 5px 12px;
+    background: var(--gridvis-navy);
+    color: #fff;
+}
+
+#customer-panel-sales .customer-sales-header h2 {
+    color: inherit;
+    font-size: 14px;
+    letter-spacing: 0;
+}
+
+#customer-panel-sales .customer-sales-section-note {
+    color: #dce7f1;
+    font-size: 11px;
+    font-weight: 400;
+}
+
+#customer-panel-sales .customer-sales-header button {
+    min-height: 28px;
+    padding: 4px 9px;
+    border-radius: 2px;
+    background: #f7fbff;
+    color: var(--gridvis-blue-dark);
+    box-shadow: none;
+}
+
+#customer-panel-sales .customer-sales-metrics {
+    margin: 12px;
+    gap: 0;
+    border: 1px solid #aab8c5;
+}
+
+#customer-panel-sales .customer-sales-metric,
+#customer-panel-sales .customer-sales-metric:first-child {
+    min-height: 88px;
+    padding: 11px 12px;
+    border: 0;
+    border-right: 1px solid #d3d9df;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: none;
+    transform: none;
+}
+
+#customer-panel-sales .customer-sales-metric:last-child {
+    border-right: 0;
+}
+
+#customer-panel-sales .customer-sales-section {
+    margin: 0 12px 12px;
+    padding: 0;
+    border: 1px solid #aab8c5;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: none;
+}
+
+#customer-panel-sales .customer-sales-section-heading {
+    min-height: 38px;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 9px 12px;
+    background: var(--gridvis-navy);
+    color: #fff;
+}
+
+#customer-panel-sales .customer-sales-section-heading::before {
+    display: none;
+}
+
+#customer-panel-sales .customer-sales-section-heading h3 {
+    color: inherit;
+    font-size: 14px;
+}
+
+#customer-panel-sales .customer-order-intake-grid {
+    padding: 10px;
+    gap: 0;
+}
+
+#customer-panel-sales .customer-order-intake-card {
+    min-height: 76px;
+    padding: 10px 11px;
+    border: 0;
+    border-right: 1px solid #d3d9df;
+    border-bottom: 1px solid #d3d9df;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: none;
+    transform: none;
+}
+
+#customer-panel-sales .customer-order-intake-card:nth-child(5n) {
+    border-right: 0;
+}
+
+#customer-panel-sales .customer-order-intake-card:nth-last-child(-n + 5) {
+    border-bottom: 0;
+}
+
+#customer-panel-sales .customer-order-intake-chart-panel {
+    padding: 0;
+}
+
+#customer-panel-sales .customer-order-intake-chart,
+#customer-panel-sales .customer-order-intake-empty {
+    margin: 0;
+    padding: 12px;
+}
+
+#customer-panel-sales .customer-top-devices {
+    padding: 0;
+}
+
+#customer-panel-sales .customer-top-devices-header {
+    min-height: 38px;
+    box-sizing: border-box;
+    padding: 0 12px;
+    background: var(--gridvis-navy);
+}
+
+#customer-panel-sales .customer-top-devices-header .customer-sales-section-heading {
+    flex: 1 1 auto;
+    padding: 9px 0;
+}
+
+#customer-panel-sales .customer-top-items-select {
+    color: #fff;
+}
+
+#customer-panel-sales .customer-top-items-select select {
+    min-height: 28px;
+    padding: 4px 26px 4px 8px;
+    border-radius: 2px;
+    border-color: #9fb8d2;
+}
+
+#customer-panel-sales .customer-top-devices-hint {
+    margin: 0;
+    padding: 10px 12px 0;
+}
+
+#customer-panel-sales #customer-top-items-lists {
+    padding: 10px 12px 12px;
+}
+
+#customer-panel-sales .customer-top-devices-grid {
+    gap: 12px;
+}
+
+#customer-panel-sales .customer-top-devices-list {
+    padding: 0;
+    border: 1px solid #aab8c5;
+    border-radius: 0;
+    background: #fff;
+}
+
+#customer-panel-sales .customer-top-devices-list h4 {
+    margin: 0;
+    padding: 9px 10px;
+    border-bottom: 1px solid #aab8c5;
+    background: #e3e8ed;
+    color: var(--gridvis-blue-dark);
+}
+
+#customer-panel-sales .customer-top-devices-table th {
+    border-right: 1px solid #c8d0d8;
+    border-bottom: 1px solid #aab8c5;
+    background: #f1f4f7;
+    color: var(--gridvis-text);
+}
+
+#customer-panel-sales .customer-top-devices-table td {
+    border-right: 1px solid #dfe4e9;
+}
+
+#customer-panel-sales .customer-top-devices-table th:last-child,
+#customer-panel-sales .customer-top-devices-table td:last-child {
+    border-right: 0;
+}
+
+/* --------------------------------------------------
+   Graue Arbeitsfläche als gemeinsame Trennung
+-------------------------------------------------- */
+
+/* Weiße Inhaltsflächen werden ausschließlich durch die graue Arbeitsfläche
+   voneinander getrennt. Außenrahmen an den einzelnen Bereichen entfallen. */
+#project-panel-data,
+#project-panel-structure,
+#project-panel-export,
+#customer-panel-general,
+#customer-panel-projects,
+#customer-panel-sales {
+    background: var(--gridvis-workspace);
+}
+
+#project-panel-data .project-card,
+#project-panel-export .project-export-card,
+#project-panel-structure .project-structure-card,
+#project-panel-structure .project-articles-card,
+#customer-panel-general .customer-card,
+#customer-projects-content .customer-projects-card,
+#customer-panel-sales .customer-sales-card,
+#customer-content .customer-tab-status,
+#customer-content .customer-sales-empty {
+    border: 0;
+}
+
+#project-panel-structure .project-editor {
+    background: var(--gridvis-workspace);
+}
+
+#project-panel-export .project-export-card > h2 {
+    color: #fff !important;
+}
+
+/* Vertrieb: der Bereichskopf bleibt blau, die einzelnen weißen Blöcke liegen
+   mit sichtbarem grauem Abstand darunter. */
+#customer-panel-sales .customer-sales-card {
+    background: var(--gridvis-workspace);
+    border: 1px solid #aab8c5;
+}
+
+#customer-panel-sales .customer-sales-card::before {
+    display: none;
+}
+
+#customer-panel-sales .customer-sales-section {
+    border: 0;
+}
+
+#customer-panel-sales .customer-sales-kpi-section {
+    margin-top: 12px;
+}
+
+#customer-panel-sales .customer-sales-kpi-section .customer-sales-metrics {
+    margin: 0;
+    border: 0;
+    background: #fff;
+}
+
+/* Die Projektübersicht im Kundenbereich hat nur einen blauen Bereichskopf;
+   die Spaltenzeile darunter bleibt bewusst hell. */
+#customer-projects-content .customer-projects-table th {
+    border-right: 1px solid #c8d0d8;
+    border-bottom: 1px solid #aab8c5;
+    background: #e3e8ed;
+    color: var(--gridvis-text);
+}
+
+#customer-projects-content .customer-projects-table th:last-child,
+#customer-projects-content .customer-projects-table td:last-child {
+    border-right: 0;
+}
+
+/* GridVis verwendet an Listen und Bedienelementen einen kaum sichtbaren
+   Radius. Er bleibt bewusst klein und wird zentral über diese Variable
+   geführt, damit Tabellenköpfe und Controls nicht unterschiedlich wirken. */
+:root {
+    --gridvis-radius: 2px;
+}
+
+.customers-table,
+.projects-table,
+.articles-table,
+#project-panel-structure .project-article-list-header {
+    border-radius: var(--gridvis-radius);
+}
+
+.customers-table thead tr:first-child th:first-child,
+.projects-table thead tr:first-child th:first-child,
+.articles-table thead tr:first-child th:first-child {
+    border-top-left-radius: var(--gridvis-radius);
+}
+
+.customers-table thead tr:first-child th:last-child,
+.projects-table thead tr:first-child th:last-child,
+.articles-table thead tr:first-child th:last-child {
+    border-top-right-radius: var(--gridvis-radius);
+}
+
+/* Gemeinsame GridVis-Kante für Bereichsköpfe und Listen. Bei Tabellen mit
+   border-collapse sitzt die sichtbare Rundung am umgebenden Listenbereich,
+   nicht am einzelnen Tabellenknoten. */
+#project-panel-structure .project-structure-header,
+#project-panel-structure .project-articles-card > h2,
+#project-panel-structure .project-article-list-header,
+#project-panel-data .project-card-header,
+#project-panel-export .project-export-card > h2,
+#customer-panel-general .customer-card-header,
+#customer-projects-content .customer-projects-header,
+#customer-panel-sales .customer-sales-header,
+#customer-panel-sales .customer-sales-section-heading {
+    border-radius: var(--gridvis-radius) var(--gridvis-radius) 0 0;
+}
+
+#customer-projects-content .customer-projects-table-wrap,
+.articles-table-scroll {
+    border-radius: var(--gridvis-radius);
+}
+
+#project-panel-structure #project-article-list {
+    border-radius: 0 0 var(--gridvis-radius) var(--gridvis-radius);
+}
+
+/* Favoriten sind eine Unterliste von „Artikel“, kein eigener grauer Balken. */
+#project-panel-structure #project-article-favorites {
+    border-bottom: 1px solid #c8d0d8;
+    background: #fff;
+}
+
+#project-panel-structure #project-article-favorites-toggle {
+    border-bottom: 1px solid #c8d0d8;
+    background: #fff;
+}
+
+#project-panel-structure #project-article-favorites-toggle:hover {
+    background: #f4f7fa;
+}
+
+/* Kein grauer Außenstreifen um die Detailansicht: Die Arbeitsfläche beginnt
+   bündig am Fenster. Grau bleibt nur dort sichtbar, wo es Bereiche trennt. */
+#project-content,
+#customer-content {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+/* Die Kundenliste soll wie die übrigen Hauptlisten ohne den alten grauen
+   Außenrahmen und ohne den zusätzlichen View-Abstand starten. */
+#customers-content {
+    margin: 8px;
+    padding: 8px;
+    border: 0;
+    border-radius: 0;
+    background: var(--gridvis-workspace);
+    box-shadow: none;
+    box-sizing: border-box;
+}
+
+/* Auch Artikel- und Projektübersicht verwenden nur noch den grauen
+   Arbeitsflächenhintergrund als äußere Trennung. Der Rahmen bleibt den
+   eigentlichen Tabellen und ihren Spalten vorbehalten. */
+#articles-content,
+#projects-content,
+#import-content {
+    margin: 8px;
+    padding: 8px;
+    border: 0;
+    border-radius: 0;
+    background: var(--gridvis-workspace);
+    box-shadow: none;
+    box-sizing: border-box;
+}
+
+#customers-content .customers-table,
+#projects-content .projects-table,
+#articles-content .articles-table {
+    background: #fff;
+}
+
+#customers-content .customers-table tbody tr:nth-child(odd),
+#projects-content .projects-table tbody tr:nth-child(odd) {
+    background: #fff;
+}
+
+/* Auf der Kundendetailseite bleibt zwischen Titelzeile und Tab-Leiste ein
+   schmaler Arbeitsflächenabstand, damit das Menü nicht am Titel klebt. */
+#customer-content {
+    margin-top: 6px;
+}
+
+#project-content > .project-tab-panel {
+    padding: 0;
+}
+
+#customer-content > .customer-tab-panel {
+    padding: 14px;
+}
+
+/* Backup und Darstellung folgen ebenfalls der gemeinsamen GridVis-Fläche:
+   außen grau, innen weiße Arbeitsbereiche mit dunkelblauem Bereichskopf. */
+#view:has(.backup-content),
+#view:has(.settings-content) {
+    grid-template-rows: 54px minmax(0, 1fr);
+}
+
+.backup-content,
+.settings-content {
+    margin: 8px;
+    padding: 8px;
+    border: 0;
+    border-radius: 0;
+    background: var(--gridvis-workspace);
+    box-shadow: none;
+    box-sizing: border-box;
+    overflow: auto;
+}
+
+.backup-content {
+    display: grid;
+    gap: 18px;
+}
+
+.backup-card,
+.settings-card {
+    padding: 14px;
+    border: 0;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: none;
+    box-sizing: border-box;
+}
+
+.backup-card h2,
+.settings-card h2 {
+    min-height: 38px;
+    box-sizing: border-box;
+    margin: -14px -14px 14px;
+    padding: 9px 12px;
+    background: var(--gridvis-navy);
+    color: #fff;
+    font-size: 14px;
+    line-height: 20px;
+}
+
+.settings-card h2 {
+    margin-bottom: 14px;
+}
+
+.backup-option {
+    border-color: #c8d0d8;
+    border-radius: 2px;
+    background: #f1f4f7;
+}
+
+.backup-card button,
+.settings-card button,
+.backup-form-grid select,
+.backup-form-grid input,
+.settings-field input {
+    border-radius: 2px;
+}
+
+.backup-restore-preview {
+    border-top-color: #c8d0d8;
+}
+
+@media (max-width: 1250px) {
+    #project-panel-structure .project-article-favorites-list {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 900px) {
+    #project-panel-structure .project-article-favorites-list {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+

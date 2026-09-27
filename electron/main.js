@@ -177,7 +177,7 @@ async function createWindow() {
         console.warn(`Port ${preferredPort} ist belegt; ein freier Port wird verwendet.`);
         expressServer = await startServer({ port: 0, host: "127.0.0.1" });
     }
-    const appUrl = `http://127.0.0.1:${expressServer.address().port}`;
+    const appUrl = expressServer.projectBuilderUrl;
 
     mainWindow = new BrowserWindow({
         width: 1400,

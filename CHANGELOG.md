@@ -2,6 +2,28 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.36 - 27.09.2026
+
+### Neu
+
+- ProjectBuilder verwendet jetzt ein einheitliches ProjectBuilder-Symbol auf Basis des weißen Janitza-J mit integriertem Projektsymbol für Electron, Windows und Favicon.
+
+### Verbessert
+
+- Kunden-, Projekt-, Artikel- und Vertriebsansichten folgen einem gemeinsamen GridVis-inspirierten Design mit grauer Arbeitsfläche, weißen Inhaltsflächen, dunkelblauen Bereichsköpfen, bündigen Tabs und einheitlichen kantigen Bedienelementen.
+- Projektstruktur, Favoriten, Artikelsuche, Export, Kundenprojekte und Geschäftsentwicklung sind klarer gegliedert und verwenden konsistente Tabellen- und Abschnittsaufteilungen.
+- Hauptlisten liegen jetzt mit gleichmäßigem Abstand auf der grauen Arbeitsfläche, sodass der GridVis-Kontrast rundum sichtbar bleibt.
+- Kunden-Detailansichten erhalten ebenfalls einen deutlich sichtbaren gemeinsamen grauen Außenabstand, damit Bereichsköpfe und Inhalte sauber zusammengehören.
+- Die Vertriebsübersicht erhält wieder einen eigenen äußeren Rahmen um den gesamten Bereich.
+- Zwischen dem Kopf der Vertriebsübersicht und dem Bereich „Laufendes Jahr“ ist nun derselbe graue Abstand wie zwischen den übrigen Bereichen sichtbar.
+- Backup & Wiederherstellung sowie Darstellung verwenden jetzt ebenfalls die gemeinsame graue Arbeitsfläche, weiße Inhaltsbereiche und dunkelblaue Bereichsköpfe.
+- Äußere Alt-Rahmen der Hauptlisten wurden entfernt; die graue Arbeitsfläche trennt die Bereiche, während fachliche Tabellen- und Spaltengrenzen erhalten bleiben.
+
+### Behoben
+
+- Electron verwendet die beim Start ermittelte Server-URL zuverlässig auch dann, wenn der bevorzugte Port belegt ist und automatisch auf einen freien Port ausgewichen wird.
+- Das Browser-Favicon wird direkt aus dem zentralen `icon.png` geladen und wird dadurch auch in Chromium zuverlässig angezeigt.
+
 ## 1.5.35 - 21.09.2026
 
 ### Verbessert

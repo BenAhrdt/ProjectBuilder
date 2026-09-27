@@ -35,39 +35,42 @@ async function renderView() {
             <span class="header-text">
                 ${i18n.t("articles.articles")}
             </span>
-            <div class="header-search">
-                <div class="searchBox">
-                    <input id="articles-search" type="text" placeholder="${i18n.t("articles.search")}...">
-                </div>
-            </div>
             <div id="articles-meta-infomrations" class="meta-informations">
                 ${i18n.t("articles.articleCount")}: ${articles.length} 
-            </div>
-            <div class="articles-header-actions">
-                <button id="add-article-button">
-                    + ${i18n.t("articles.addArticle")}
-                </button>
-                <button id="import-salesforce-pricebook" type="button">
-                    <span class="article-salesforce-button-icon">SF</span>
-                    ${i18n.t("articles.importSalesforcePricebook")}
-                </button>
-                ${articles.length > 0 ? `
-                    <button id="check-salesforce-availability" type="button">
-                        <span class="article-salesforce-button-icon">SF</span>
-                        ${i18n.t("articles.checkSalesforceAvailability")}
-                    </button>
-                ` : ""}
-                ${articles.length > 0 ? `
-                    <button id="clear-articles-button" type="button">
-                        ${i18n.t("articles.clearList")}
-                    </button>
-                ` : ""}
             </div>
         </div>
 
         <div id="articles-left" class="view-left"></div>
 
         <div id="articles-content" class="view-content">
+
+            <div class="articles-toolbar">
+                <button id="add-article-button">
+                    + ${i18n.t("articles.addArticle")}
+                </button>
+                <div class="articles-toolbar-search">
+                    <div class="searchBox">
+                        <input id="articles-search" type="text" placeholder="${i18n.t("articles.search")}...">
+                    </div>
+                </div>
+                <div class="articles-header-actions">
+                    <button id="import-salesforce-pricebook" type="button">
+                        <span class="article-salesforce-button-icon">SF</span>
+                        ${i18n.t("articles.importSalesforcePricebook")}
+                    </button>
+                    ${articles.length > 0 ? `
+                        <button id="check-salesforce-availability" type="button">
+                            <span class="article-salesforce-button-icon">SF</span>
+                            ${i18n.t("articles.checkSalesforceAvailability")}
+                        </button>
+                    ` : ""}
+                    ${articles.length > 0 ? `
+                        <button id="clear-articles-button" type="button">
+                            ${i18n.t("articles.clearList")}
+                        </button>
+                    ` : ""}
+                </div>
+            </div>
 
             <div id="article-form-container" class="hidden">
 
@@ -120,6 +123,7 @@ async function renderView() {
 
             </div>
 
+            <div class="articles-table-scroll">
             <table class="articles-table">
 
                 <thead>
@@ -169,7 +173,10 @@ async function renderView() {
                             </td>
 
                             <td data-label="${i18n.t("articles.description")}">
-                                ${article.description ?? ""}
+                                <span
+                                    class="article-description-text"
+                                    title="${escapeHtml(article.description ?? "") }"
+                                >${article.description ?? ""}</span>
                             </td>
 
                             <td data-label="${i18n.t("articles.salesCategory")}">${renderSalesCategory(article)}</td>
@@ -191,6 +198,7 @@ async function renderView() {
                 </tbody>
 
             </table>
+            </div>
 
         </div>
 
@@ -482,7 +490,10 @@ function renderArticles(articles) {
                 </td>
 
                 <td data-label="${i18n.t("articles.description")}">
-                    ${article.description ?? ""}
+                    <span
+                        class="article-description-text"
+                        title="${escapeHtml(article.description ?? "") }"
+                    >${article.description ?? ""}</span>
                 </td>
 
                 <td data-label="${i18n.t("articles.salesCategory")}">${renderSalesCategory(article)}</td>
@@ -507,6 +518,16 @@ function renderArticles(articles) {
     attachGridVisItemHandlers();
     attachArticleDeleteHandlers();
 
+}
+
+function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>\"']/g, character => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    }[character]));
 }
 
 function renderArticleNumber(article) {

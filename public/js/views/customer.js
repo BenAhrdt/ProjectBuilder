@@ -400,16 +400,19 @@ function renderSales(result, customer) {
     return `<div class="customer-sales-card">
         <div class="customer-sales-print-title">${escapeHtml(customer?.name)}</div>
         <div class="customer-sales-header">
-            <div><h2>${i18n.t("customer.salesOverview")}</h2><p>${i18n.t("customer.salesOverviewHint")}</p></div>
+            <h2>${i18n.t("customer.salesOverview")}</h2>
             <button id="export-sales-pdf" type="button">${i18n.t("customer.exportPdf")}</button>
         </div>
-        <div class="customer-sales-metrics">
+        <section class="customer-sales-kpi-section customer-sales-section">
+            <div class="customer-sales-section-heading"><h3>${i18n.t("customer.currentYearSection")} <span class="customer-sales-section-note">(${i18n.t("customer.salesOverviewHint")})</span></h3></div>
+            <div class="customer-sales-metrics">
             ${renderMetric(i18n.t("customer.orderIntakeYear").replace("{year}", current?.year ?? ""), currentAmountComplete ? formatCurrency(current.orderAmount, result.currency) : "–", currentAmountComplete ? formatChange(current?.changePercent, current?.previousYearHasData) : formatAmountCoverage(current))}
             ${renderMetric(i18n.t("customer.ordersCurrentYear"), currentHasData ? String(current.orderCount ?? 0) : "–", currentHasData ? i18n.t("customer.ordersLabel") : i18n.t("customer.notEnoughData"))}
             ${renderMetric(i18n.t("customer.averageOrderValue"), metrics.currentAverageOrder === null ? "–" : formatCurrency(metrics.currentAverageOrder, result.currency), i18n.t("customer.currentYear"))}
             ${renderMetric(i18n.t("customer.fiveYearAverage"), metrics.fiveYearComparison === null ? "–" : formatPercent(metrics.fiveYearComparison), metrics.fiveYearComparison === null ? i18n.t("customer.notEnoughData") : i18n.t("customer.comparedToFiveYearAverage"))}
             ${renderMetric(i18n.t("customer.fiveYearDevelopment"), metrics.cagr === null ? "–" : `${formatPercent(metrics.cagr)} ${i18n.t("customer.perYear")}`, metrics.fiveYearTotal === null ? i18n.t("customer.notEnoughData") : i18n.t("customer.fiveYearTotalChange").replace("{value}", formatPercent(metrics.fiveYearTotal)).replace("{start}", metrics.trendStartYear).replace("{end}", metrics.trendEndYear))}
-        </div>
+            </div>
+        </section>
         <section class="customer-order-intake customer-sales-section">
             <div class="customer-sales-section-heading"><h3>${i18n.t("customer.tenYearOverview")}</h3></div>
             <div class="customer-order-intake-grid customer-order-intake-grid-all">${historyYears.map((item, index) => renderOrderIntakeCard(item, index, result.currency)).join("")}</div></section>

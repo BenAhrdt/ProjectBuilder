@@ -9,6 +9,18 @@ let searchRequestId = 0;
 const isElectron = Boolean(window.projectBuilder);
 
 header.innerHTML = `
+    <div class="header-start">
+        <button id="navigation-toggle" class="header-menu-toggle" type="button"
+            aria-label="Navigation öffnen" aria-expanded="false" aria-controls="navbar">
+            <span aria-hidden="true">☰</span>
+        </button>
+        <nav class="header-primary-nav" aria-label="Hauptnavigation">
+            <button type="button" data-header-path="/customers" data-header-view="customers">${i18n.t("navbar.customers")}</button>
+            <button type="button" data-header-path="/projects" data-header-view="projects">${i18n.t("navbar.projects")}</button>
+            <button type="button" data-header-path="/articles" data-header-view="articles">${i18n.t("navbar.article")}</button>
+        </nav>
+    </div>
+    <div class="header-spacer"></div>
     <div class="header-brand" aria-label="Janitza">
         <img src="/icons/janitza-logo.svg" alt="Janitza">
     </div>
@@ -20,6 +32,13 @@ header.innerHTML = `
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
         </button>
     </nav>` : "<div></div>"}
+    <div id="salesforce-header-status" class="salesforce-header-status" data-state="checking" role="status">
+        <span class="salesforce-header-dot" aria-hidden="true"></span>
+        <span id="salesforce-header-label">${i18n.t("salesforce.headerChecking")}</span>
+        <button id="salesforce-header-connect" type="button" hidden>
+            ${i18n.t("salesforce.headerConnect")}
+        </button>
+    </div>
     <div class="language-selector">
         <span>${i18n.t("header.language")}</span>
         <div class="language-dropdown">
@@ -43,6 +62,105 @@ header.innerHTML = `
         </div>
     </div>
 `;
+
+const navigationToggle = document.getElementById("navigation-toggle");
+const headerPrimaryItems = [...document.querySelectorAll("[data-header-view]")];
+const salesforceHeaderStatus = document.getElementById("salesforce-header-status");
+const salesforceHeaderLabel = document.getElementById("salesforce-header-label");
+const salesforceHeaderConnect = document.getElementById("salesforce-header-connect");
+
+function setNavigationOpen(open) {
+    const navbarElement = document.getElementById("navbar");
+    document.body.classList.toggle("gridvis-nav-open", open);
+    navbarElement?.classList.toggle("is-open", open);
+    navigationToggle?.setAttribute("aria-expanded", String(open));
+}
+
+function updateHeaderNavigation(path = window.location.pathname) {
+    const activeView = path === "/" || path.startsWith("/customer")
+        ? "customers"
+        : path.startsWith("/project")
+            ? "projects"
+            : path.startsWith("/article")
+                ? "articles"
+                : "";
+    headerPrimaryItems.forEach(item => {
+        item.classList.toggle("active", item.dataset.headerView === activeView);
+    });
+}
+
+function renderSalesforceHeaderStatus(state) {
+    if (!salesforceHeaderStatus || !salesforceHeaderLabel || !salesforceHeaderConnect) return;
+
+    const checking = state === "checking";
+    const connected = state === "connected";
+    salesforceHeaderStatus.dataset.state = state;
+    salesforceHeaderLabel.textContent = checking
+        ? i18n.t("salesforce.headerChecking")
+        : `${i18n.t("salesforce.headerLabel")}: ${connected
+            ? i18n.t("salesforce.headerConnected")
+            : i18n.t("salesforce.headerDisconnected")}`;
+    salesforceHeaderConnect.hidden = connected || checking;
+    salesforceHeaderConnect.disabled = checking;
+    salesforceHeaderConnect.textContent = i18n.t("salesforce.headerConnect");
+}
+
+async function refreshSalesforceHeaderStatus() {
+    renderSalesforceHeaderStatus("checking");
+    try {
+        const response = await fetch("/api/salesforce/status", { cache: "no-store" });
+        if (!response.ok) throw new Error("Salesforce status unavailable");
+        const result = await response.json();
+        renderSalesforceHeaderStatus(result.connected ? "connected" : "disconnected");
+    } catch {
+        renderSalesforceHeaderStatus("disconnected");
+    }
+}
+
+navigationToggle?.addEventListener("click", () => {
+    setNavigationOpen(!document.body.classList.contains("gridvis-nav-open"));
+});
+
+window.addEventListener("projectbuilder:close-navigation", () => setNavigationOpen(false));
+
+headerPrimaryItems.forEach(item => {
+    item.addEventListener("click", () => navigate(item.dataset.headerPath));
+});
+
+salesforceHeaderConnect?.addEventListener("click", async () => {
+    if (!salesforceHeaderConnect) return;
+    renderSalesforceHeaderStatus("checking");
+    try {
+        const response = await fetch("/api/salesforce/login", { method: "POST" });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || i18n.t("salesforce.error"));
+        renderSalesforceHeaderStatus("connected");
+    } catch (error) {
+        renderSalesforceHeaderStatus("disconnected");
+        salesforceHeaderStatus?.setAttribute("title", error.message || i18n.t("salesforce.error"));
+    }
+});
+
+refreshSalesforceHeaderStatus();
+window.addEventListener("focus", refreshSalesforceHeaderStatus);
+
+document.addEventListener("click", event => {
+    if (event.target.closest(".navbar-item[data-view]")) setNavigationOpen(false);
+    if (
+        document.body.classList.contains("gridvis-nav-open") &&
+        !event.target.closest("#navbar") &&
+        !event.target.closest("#navigation-toggle")
+    ) {
+        setNavigationOpen(false);
+    }
+});
+
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape") setNavigationOpen(false);
+});
+
+updateHeaderNavigation();
+window.addEventListener("popstate", () => updateHeaderNavigation());
 
 const languageSelect = document.getElementById("language-select");
 const historyBackButton = document.getElementById("history-back");

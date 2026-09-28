@@ -16,6 +16,7 @@
     --gridvis-text: #23364d;
     --gridvis-muted: #6f7f8e;
     --header-height: 56px;
+    --footer-height: 42px;
     --navbar-width: 246px;
 }
 
@@ -40,6 +41,14 @@ body {
     background: var(--gridvis-black);
     color: #fff;
     box-shadow: none;
+}
+
+#app {
+    grid-template-rows: var(--header-height) minmax(0, 1fr) var(--footer-height);
+    grid-template-areas:
+        "header"
+        "below"
+        "footer";
 }
 
 .header-start {
@@ -115,13 +124,45 @@ body {
     display: flex;
     align-items: center;
     align-self: stretch;
+    gap: 10px;
     padding: 0;
+    min-width: 0;
+    white-space: nowrap;
 }
 
-.header-brand img {
+.header-brand-janitza {
     width: 128px;
     height: auto;
     filter: invert(1);
+}
+
+.header-brand-name {
+    color: #fff;
+    font-family: "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+    font-size: 16px;
+    font-style: italic;
+    font-weight: 700;
+    letter-spacing: .025em;
+}
+
+.header-brand-project-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    color: #fff;
+}
+
+.header-brand-project-icon svg {
+    width: 28px;
+    height: 28px;
+    color: currentColor;
+    stroke: currentColor !important;
+}
+
+.header-brand-project-icon svg * {
+    stroke: currentColor !important;
 }
 
 
@@ -395,41 +436,88 @@ body.gridvis-nav-open #below::before {
     font-size: 12px;
 }
 
-#navbar-informations {
-    display: block;
-    flex: 0 0 auto;
-    padding: 8px 0 0;
-}
-
-#navbar-information-1 {
-    display: none;
-}
-
-#navbar-info-toggle {
-    border-top: 1px solid #3f3f3f;
-}
-
-#navbar-info-panel {
-    border-top: 1px solid #3f3f3f;
-    background: #111;
-}
-
-#navbar-info-panel[hidden] {
-    display: none;
-}
-
-#navbar-information-version {
-    display: flex;
-    padding: 8px 16px 12px;
-    color: #c9d1d8;
-}
-
-.navbar-local-port {
-    color: #92a0ad;
-}
-
-#navbar-changelog-button {
+#app-footer {
+    display: grid;
+    grid-area: footer;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 0 16px;
+    border-top: 1px solid #202020;
+    background: var(--gridvis-black);
     color: #fff;
+    font-size: 11px;
+}
+
+.app-footer-website {
+    color: #fff;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.app-footer-website:hover,
+.app-footer-website:focus-visible {
+    color: #55b8dd;
+}
+
+.app-footer-meta {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+#app-footer-changelog-button {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+    font: inherit;
+    white-space: nowrap;
+}
+
+#app-footer-changelog-button:hover,
+#app-footer-changelog-button:focus-visible {
+    color: #55b8dd;
+    outline: none;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.app-footer-local-port {
+    color: #92a0ad;
+    white-space: nowrap;
+}
+
+.app-footer-version {
+    color: #fff;
+    white-space: nowrap;
+}
+
+#app-footer-update-status {
+    min-width: 150px;
+    color: #d9e5ef;
+}
+
+#app-footer-update-status[hidden] {
+    display: none;
+}
+
+.app-footer-update-label {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 3px;
+}
+
+#app-footer-update-progress {
+    display: block;
+    width: 100%;
+    height: 5px;
+    accent-color: var(--gridvis-blue);
 }
 
 #view {
@@ -642,8 +730,14 @@ body.gridvis-nav-open #below::before {
         font-size: 13px;
     }
 
-    .header-brand img {
+    .header-brand-janitza {
         width: 100px;
+    }
+
+    .header-brand-project-icon,
+    .header-brand-project-icon svg {
+        width: 26px;
+        height: 26px;
     }
 
 
@@ -705,16 +799,23 @@ body.gridvis-nav-open #below::before {
     margin-top: 8px;
 }
 
+/* Kunden, Projekte und Artikel verwenden dieselbe kompakte Kopfzeile. */
+#customers-header .header-text,
+#projects-header .header-text,
 #articles-header .header-text {
-    color: var(--gridvis-muted);
-    font-size: 25px;
+    color: var(--gridvis-text);
+    font-size: 20px;
     font-weight: 400;
 }
 
+#customers-meta-infomrations,
+#projects-meta-infomrations,
 #articles-meta-infomrations {
-    margin-left: 10px;
+    margin-left: 0;
     color: var(--gridvis-muted);
-    font-size: 12px;
+    font-size: medium;
+    font-weight: 400;
+    line-height: normal;
 }
 
 #articles-content {
@@ -847,9 +948,13 @@ body.gridvis-nav-open #below::before {
 #articles-content .articles-table th,
 #articles-content .articles-table td {
     box-sizing: border-box;
-    height: 42px;
     padding: 6px 10px;
     vertical-align: middle;
+}
+
+#articles-content .articles-table th {
+    height: auto;
+    padding: 8px 10px;
 }
 
 #articles-content .articles-table th:nth-child(1),
@@ -2165,6 +2270,10 @@ body.gridvis-nav-open #below::before {
 
 #customer-panel-sales .customer-sales-metric:last-child {
     border-right: 0;
+}
+
+#customer-panel-sales .customer-sales-metric::before {
+    display: none;
 }
 
 #customer-panel-sales .customer-sales-section {

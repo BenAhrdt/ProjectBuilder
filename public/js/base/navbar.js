@@ -9,6 +9,9 @@ const { version } = versionResponse.ok
     ? await versionResponse.json()
     : { version: i18n.t("navbar.unknownVersion") };
 const electronPort = window.projectBuilder ? window.location.port : null;
+const websiteHost = i18n.getCurrentLanguage() === "de"
+    ? "www.janitza.de"
+    : "www.janitza.com";
 
 navbar.innerHTML = `
     <div class="navbar-global-search global-search">
@@ -62,60 +65,55 @@ navbar.innerHTML = `
             </div>
         </div>
     </div>
-    <div id="navbar-informations">
-        <div id="navbar-info-toggle" class="navbar-item navbar-item-parent" role="button" tabindex="0"
-            aria-expanded="false" aria-controls="navbar-info-panel">
-            <span class="navbar-item-icon">${utils.icons.book}</span>
-            <div class="navbar-item-text">
-                <span>${i18n.t("navbar.info")}</span>
-                <span class="navbar-item-caret" aria-hidden="true">›</span>
-            </div>
-        </div>
-        <div id="navbar-info-panel" hidden>
-            <div id="navbar-information-1" class="navbar-information"></div>
-            <div id="navbar-information-version" class="navbar-information">
-                <div class="navbar-runtime-information">
-                    <span>${i18n.t("navbar.currentVersion")}: ${version}</span>
-                    ${electronPort ? `<span class="navbar-local-port">${i18n.t("navbar.localPort")}: ${electronPort}</span>` : ""}
-                </div>
-                <button
-                    id="navbar-changelog-button"
-                    type="button"
-                    title="${i18n.t("navbar.openChangelog")}"
-                    aria-label="${i18n.t("navbar.openChangelog")}"
-                >
-                    ${utils.icons.book}
-                </button>
-            </div>
-            <div id="navbar-update-status" class="navbar-information" hidden aria-live="polite">
-                <div class="navbar-update-label">
-                    <span id="navbar-update-text"></span>
-                    <span id="navbar-update-percent"></span>
-                </div>
-                <progress id="navbar-update-progress" max="100" value="0"></progress>
-            </div>
-        </div>
-    </div>
 `;
+
+const appFooter = document.getElementById("app-footer");
+if (appFooter) {
+    appFooter.innerHTML = `
+        <div class="app-footer-spacer" aria-hidden="true"></div>
+        <a class="app-footer-website" href="https://${websiteHost}/" target="_blank" rel="noreferrer">
+            ${websiteHost}
+        </a>
+        <div class="app-footer-meta">
+            <button
+                id="app-footer-changelog-button"
+                type="button"
+                title="${i18n.t("navbar.openChangelog")}"
+                aria-label="${i18n.t("navbar.openChangelog")}"
+            >
+                ${i18n.t("changelog.title")}
+            </button>
+            <span class="app-footer-version">${i18n.t("navbar.currentVersion")}: ${version}</span>
+            ${electronPort ? `<span class="app-footer-local-port">${i18n.t("navbar.localPort")}: ${electronPort}</span>` : ""}
+            <div id="app-footer-update-status" hidden aria-live="polite">
+                <div class="app-footer-update-label">
+                    <span id="app-footer-update-text"></span>
+                    <span id="app-footer-update-percent"></span>
+                </div>
+                <progress id="app-footer-update-progress" max="100" value="0"></progress>
+            </div>
+        </div>
+    `;
+}
 
 document.dispatchEvent(new CustomEvent("projectbuilder:navbar-ready"));
 
-document.getElementById("navbar-changelog-button").addEventListener(
+document.getElementById("app-footer-changelog-button")?.addEventListener(
     "click",
     () => {
         setSettingsExpanded(false);
-        setInfoExpanded(false);
         window.dispatchEvent(new CustomEvent("projectbuilder:close-navigation"));
         router.navigate("/changelog");
     }
 );
 
-const updateStatusElement = document.getElementById("navbar-update-status");
-const updateTextElement = document.getElementById("navbar-update-text");
-const updatePercentElement = document.getElementById("navbar-update-percent");
-const updateProgressElement = document.getElementById("navbar-update-progress");
+const updateStatusElement = document.getElementById("app-footer-update-status");
+const updateTextElement = document.getElementById("app-footer-update-text");
+const updatePercentElement = document.getElementById("app-footer-update-percent");
+const updateProgressElement = document.getElementById("app-footer-update-progress");
 
 function renderUpdateStatus(status = {}) {
+    if (!updateStatusElement || !updateTextElement || !updatePercentElement || !updateProgressElement) return;
     if (!status.state || status.state === "idle") {
         updateStatusElement.hidden = true;
         return;
@@ -148,7 +146,6 @@ const navbarItems = document.querySelectorAll(".navbar-item[data-view]");
 navbarItems.forEach(item => {
     item.addEventListener("click", () => {
         setSettingsExpanded(false);
-        setInfoExpanded(false);
         window.dispatchEvent(new CustomEvent("projectbuilder:close-navigation"));
         // Prüfen, ob in data-vie etwas liegt und rendern
         const view = item.dataset.view;
@@ -158,8 +155,6 @@ navbarItems.forEach(item => {
 
 const settingsParent = document.querySelector("[data-nav-toggle=\"settings\"]");
 const settingsSubmenu = document.getElementById("navbar-settings-submenu");
-const infoToggle = document.getElementById("navbar-info-toggle");
-const infoPanel = document.getElementById("navbar-info-panel");
 
 function setSettingsExpanded(expanded) {
     settingsSubmenu.hidden = !expanded;
@@ -169,7 +164,6 @@ function setSettingsExpanded(expanded) {
 
 settingsParent?.addEventListener("click", event => {
     if (event.target.closest("[data-view]")) return;
-    setInfoExpanded(false);
     setSettingsExpanded(settingsSubmenu.hidden);
 });
 
@@ -179,26 +173,8 @@ settingsParent?.addEventListener("keydown", event => {
     setSettingsExpanded(settingsSubmenu.hidden);
 });
 
-function setInfoExpanded(expanded) {
-    infoPanel.hidden = !expanded;
-    infoToggle?.classList.toggle("is-expanded", expanded);
-    infoToggle?.setAttribute("aria-expanded", String(expanded));
-}
-
-infoToggle?.addEventListener("click", () => {
-    setSettingsExpanded(false);
-    setInfoExpanded(infoPanel.hidden);
-});
-
-infoToggle?.addEventListener("keydown", event => {
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    setInfoExpanded(infoPanel.hidden);
-});
-
 document.getElementById("global-search-input")?.addEventListener("focus", () => {
     setSettingsExpanded(false);
-    setInfoExpanded(false);
 });
 
 export function setItemsActive(dataView) {
@@ -214,6 +190,5 @@ export function setItemsActive(dataView) {
 
         const settingsView = dataView === "settings" || dataView === "backups";
         settingsParent?.classList.toggle("active", settingsView);
-        setInfoExpanded(false);
         setSettingsExpanded(false);
 }

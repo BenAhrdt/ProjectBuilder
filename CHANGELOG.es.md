@@ -2,6 +2,19 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.37 - 28.09.2026
+
+### Mejorado
+
+- La carcasa de la aplicación inspirada en GridVis ahora tiene un pie fijo con un enlace visible al registro de cambios, un enlace de Janitza según el idioma, la versión y el estado de actualización.
+- El encabezado ahora muestra Janitza, Project Builder y el icono de proyecto utilizado por la navegación principal en una misma línea de marca.
+- Las listas de clientes, proyectos y artículos utilizan ahora tamaños coherentes para los encabezados y los encabezados de tabla.
+
+### Corregido
+
+- Se eliminó la franja azul decorativa sobre los indicadores de la sección «Año actual».
+- La sección Info anterior se eliminó de la navegación desplegable sin perder el acceso a la versión, el registro de cambios ni el estado de actualización.
+
 ## 1.5.36 - 27.09.2026
 
 ### Nuevo

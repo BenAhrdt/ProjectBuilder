@@ -2,6 +2,19 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.37 - 28.09.2026
+
+### Verbessert
+
+- Die GridVis-App-Schale besitzt jetzt einen festen Footer mit sichtbarem Changelog-Link, sprachabhängigem Janitza-Link, Version und Update-Status.
+- Der Header zeigt Janitza, Project Builder und das Projekt-Symbol aus der Hauptnavigation in einer gemeinsamen Markenzeile.
+- Kunden-, Projekt- und Artikellisten verwenden einheitliche Kopfzeilen- und Tabellenkopfgrößen.
+
+### Behoben
+
+- Der dekorative blaue Streifen oberhalb der Kennzahlen im Bereich „Laufendes Jahr“ wurde entfernt.
+- Die bisherige Info-Rubrik wurde aus der ausklappbaren Navigation entfernt, ohne den Zugriff auf Version, Changelog und Update-Status zu verlieren.
+
 ## 1.5.36 - 27.09.2026
 
 ### Neu

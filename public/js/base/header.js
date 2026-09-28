@@ -1,5 +1,6 @@
 import * as i18n from "../utils/i18n.js";
 import * as navigationHistory from "../utils/navigationHistory.js";
+import * as iconUtils from "../utils/icons.js";
 await i18n.loadLanguage();
 
 const header = document.getElementById("header");
@@ -21,8 +22,10 @@ header.innerHTML = `
         </nav>
     </div>
     <div class="header-spacer"></div>
-    <div class="header-brand" aria-label="Janitza">
-        <img src="/icons/janitza-logo.svg" alt="Janitza">
+    <div class="header-brand" aria-label="Janitza Project Builder">
+        <img class="header-brand-janitza" src="/icons/janitza-logo.svg" alt="Janitza">
+        <span class="header-brand-name">${i18n.t("header.projectname")}</span>
+        <span class="header-brand-project-icon" aria-hidden="true">${iconUtils.icons.projects}</span>
     </div>
     ${isElectron ? `<nav class="header-history" aria-label="${i18n.t("header.history")}">
         <button id="history-back" type="button" aria-label="${i18n.t("header.back")}" title="${i18n.t("header.back")}">

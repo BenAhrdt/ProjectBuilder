@@ -26,7 +26,9 @@ export function buildProjectFilePayload({ project, nodes, positions }) {
             id: position.id, nodeId: position.nodeId ?? position.projectNodeId,
             articleNumber: position.articleNumber, quantity: position.quantity,
             positionName: position.positionName, sortOrder: position.sortOrder ?? 0,
-            isOptional: Boolean(position.isOptional), isAlternative: Boolean(position.isAlternative)
+            isOptional: Boolean(position.isOptional), isAlternative: Boolean(position.isAlternative),
+            specialDiscount: position.specialDiscount ?? null,
+            specialPrice: position.specialPrice ?? null
         }))
     };
 }

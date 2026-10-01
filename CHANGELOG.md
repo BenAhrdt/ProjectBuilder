@@ -2,6 +2,29 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.38 - 01.10.2026
+
+### Neu
+
+- Artikelnummern können in der Projektstruktur über das Drei-Punkt-Menü getauscht werden.
+- Positionen unterstützen einen positionsbezogenen Sonderrabatt oder Festpreis pro Stück.
+- PG14 wird als gültige Rabattgruppe unterstützt; PG2, PG9 und PG10 werden nicht mehr verwendet.
+
+### Verbessert
+
+- Der Übersichtsplan zeigt Messstellenverbindungen und lange Texte übersichtlicher an.
+- Der Übersichtsplan wird in Salesforce mit dem Projektnamen als Titel übertragen; die technische Projektdatei behält ihren festen Namen.
+- „Zusätzlichen Rabatt immer anzeigen“ ist bei neuen oder noch nicht konfigurierten Projekten standardmäßig aktiv und merkt sich ein bewusstes Abwählen.
+- Salesforce-Synchronisationen behandeln vorübergehende Datensatzsperren automatisch mit Wiederholungen.
+
+### Behoben
+
+- Kundenrabatte werden beim Navigieren nicht mehr durch einen verzögerten Autosave überschrieben.
+- Leere Kundennummern verursachen beim Autosave keinen Unique-Constraint-Fehler mehr.
+- Bereits angelegte Salesforce-Opportunities und Angebote werden auch nach einem unvollständigen Sync angezeigt.
+
+## 1.5.37 - 28.09.2026
+
 ## 1.5.37 - 28.09.2026
 
 ### Verbessert

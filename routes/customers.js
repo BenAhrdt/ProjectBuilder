@@ -2,6 +2,8 @@ import express from "express";
 
 import * as database
 from "../database/index.js";
+import { customerDiscountGroupKeys } from "../utils/discountGroups.js";
+import { readCustomerDiscountHistory, logCustomerDiscountChange } from "../utils/customerDiscountHistory.js";
 
 const router =
     express.Router();
@@ -75,6 +77,15 @@ router.get(
 
 // Kundenansicht (Einzelner Kunde)
 router.get(
+    "/:id/discount-history",
+    (req, res) => {
+        res.json(
+            readCustomerDiscountHistory(req.params.id, req.query.limit)
+        );
+    }
+);
+
+router.get(
     "/:id",
     (req, res) => {
 
@@ -144,7 +155,7 @@ router.post(
         insertCustomer.run({
 
             customerNumber:
-                req.body.customerNumber,
+                normalizeCustomerNumber(req.body.customerNumber),
 
             name:
                 req.body.name,
@@ -181,93 +192,99 @@ router.put(
     "/:id",
     (req, res) => {
 
-        database.customers.prepare(`
+        const body = req.body ?? {};
+        const current = database.customers.prepare(`
+            SELECT *
+            FROM customers
+            WHERE id = ?
+        `).get(req.params.id) ?? {};
+        if (!current.id) {
+            res.status(404).json({
+                success: false,
+                error: "Kunde nicht gefunden"
+            });
+            return;
+        }
+        const before = current;
+        const discountFields =
+            customerDiscountGroupKeys.filter(field =>
+                Object.prototype.hasOwnProperty.call(body, field)
+            );
+        const updateFields = [
+            "customerNumber = @customerNumber",
+            "name = @name",
+            "street = @street",
+            "postalCode = @postalCode",
+            "city = @city",
+            "additionalInfo = @additionalInfo",
+            ...discountFields.map(field => `${field} = @${field}`)
+        ];
 
-            UPDATE customers
+        const values = {
+            id: req.params.id,
+            customerNumber: normalizeCustomerNumber(
+                getBodyValue(body, "customerNumber", current.customerNumber)
+            ),
+            name: getBodyValue(body, "name", current.name),
+            street: getBodyValue(body, "street", current.street),
+            postalCode: getBodyValue(body, "postalCode", current.postalCode),
+            city: getBodyValue(body, "city", current.city),
+            additionalInfo: getBodyValue(body, "additionalInfo", current.additionalInfo),
+            ...Object.fromEntries(
+                discountFields.map(field => [field, normalizeCustomerDiscount(body[field])])
+            )
+        };
 
-            SET
+        try {
+            database.customers.prepare(`
 
-                customerNumber =
-                    @customerNumber,
+                UPDATE customers
 
-                name = @name,
+                SET
+                    ${updateFields.join(",\n                ")}
 
-                street = @street,
+                WHERE id = @id
 
-                postalCode = @postalCode,
+            `).run(values);
+        } catch (error) {
+            logCustomerDiscountChange({
+                customerId: req.params.id,
+                source: req.get("x-projectbuilder-source") || "customer-api",
+                requestMethod: req.method,
+                requestPath: req.originalUrl,
+                before,
+                requested: Object.fromEntries(
+                    discountFields.map(field => [field, body[field]])
+                ),
+                after: before,
+                status: "failed",
+                errorMessage: error?.message ?? String(error)
+            });
+            if (String(error?.message ?? "").includes("customers.customerNumber")) {
+                res.status(409).json({
+                    success: false,
+                    error: "Diese Kundennummer ist bereits einem anderen Kunden zugeordnet."
+                });
+                return;
+            }
+            throw error;
+        }
 
-                city =
-                    @city,
-
-                additionalInfo =
-                    @additionalInfo,
-
-                pg1 = @pg1,
-                pg2 = @pg2,
-                pg3 = @pg3,
-                pg4 = @pg4,
-                pg5 = @pg5,
-                pg6 = @pg6,
-                pg7 = @pg7,
-                pg8 = @pg8,
-                pg9 = @pg9,
-                pg10 = @pg10
-
-            WHERE id = @id
-
-        `).run({
-
-            id:
-                req.params.id,
-
-            customerNumber:
-                req.body.customerNumber,
-
-            name:
-                req.body.name,
-
-            street:
-                req.body.street,
-
-            postalCode:
-                req.body.postalCode,
-
-            city:
-                req.body.city,
-
-            additionalInfo:
-                req.body.additionalInfo,
-
-            pg1:
-                req.body.pg1,
-
-            pg2:
-                req.body.pg2,
-
-            pg3:
-                req.body.pg3,
-
-            pg4:
-                req.body.pg4,
-
-            pg5:
-                req.body.pg5,
-
-            pg6:
-                req.body.pg6,
-
-            pg7:
-                req.body.pg7,
-
-            pg8:
-                req.body.pg8,
-
-            pg9:
-                req.body.pg9,
-
-            pg10:
-                req.body.pg10
-
+        const after = database.customers.prepare(`
+            SELECT ${customerDiscountGroupKeys.join(", ")}
+            FROM customers
+            WHERE id = ?
+        `).get(req.params.id) ?? {};
+        logCustomerDiscountChange({
+            customerId: req.params.id,
+            source: req.get("x-projectbuilder-source") || "customer-api",
+            requestMethod: req.method,
+            requestPath: req.originalUrl,
+            before,
+            requested: Object.fromEntries(
+                discountFields.map(field => [field, body[field]])
+            ),
+            after
         });
 
         res.json({
@@ -276,6 +293,30 @@ router.put(
 
     }
 );
+
+function normalizeCustomerDiscount(value) {
+    if (value === null || value === undefined || String(value).trim() === "") {
+        return null;
+    }
+
+    const discount = Number(String(value).trim().replace(",", "."));
+    return Number.isFinite(discount)
+        ? Math.min(Math.max(discount, 0), 100)
+        : null;
+}
+
+function normalizeCustomerNumber(value) {
+    if (value === null || value === undefined || String(value).trim() === "") {
+        return null;
+    }
+    return String(value).trim();
+}
+
+function getBodyValue(body, key, fallback) {
+    return Object.prototype.hasOwnProperty.call(body, key)
+        ? body[key]
+        : fallback;
+}
 
 
 // --------------------------------------------------

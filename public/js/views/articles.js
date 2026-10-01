@@ -1030,9 +1030,9 @@ function attachDiscountGroupHandlers() {
                 title: `${i18n.t("articles.articleNumber")} ${button.dataset.articleNumber}`,
                 choices: [
                     { value: "none", label: i18n.t("articles.noDiscountGroup") },
-                    ...Array.from({ length: 8 }, (_, index) => ({
-                        value: `PG${index + 1}`,
-                        label: `PG${index + 1}`
+                    ...[1, 3, 4, 5, 6, 7, 8, 14].map(group => ({
+                        value: `PG${group}`,
+                        label: `PG${group}`
                     }))
                 ]
             });

@@ -1,15 +1,18 @@
+import { normalizeDiscountGroup } from "./discountGroups.js";
+
 export function mapCustomerPricingGroupDiscounts(lineItems, pricingGroupsByProduct) {
     const discountsByAccount = new Map();
     for (const line of lineItems) {
         const accountId = String(line?.Opportunity?.AccountId ?? "").trim();
         const productId = String(line?.Product2Id ?? "").trim();
-        const groupMatch = String(pricingGroupsByProduct.get(productId) ?? "").match(/\d+/);
-        const group = groupMatch ? Number(groupMatch[0]) : NaN;
+        const discountGroup = normalizeDiscountGroup(
+            pricingGroupsByProduct.get(productId)
+        );
         const discount = getLineDiscountPercent(line);
-        if (!accountId || !Number.isInteger(group) || group < 1 || group > 8) continue;
+        if (!accountId || !discountGroup) continue;
         if (!Number.isFinite(discount) || discount <= 0) continue;
 
-        const key = `pg${group}`;
+        const key = discountGroup.toLowerCase();
         if (!discountsByAccount.has(accountId)) discountsByAccount.set(accountId, {});
         const discounts = discountsByAccount.get(accountId);
         // The Salesforce query is newest-first. Keep the most recent usable SAP result.

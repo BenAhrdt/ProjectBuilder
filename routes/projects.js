@@ -29,6 +29,8 @@ import {
     projectFileFormat,
     projectFileSchemaVersion
 } from "../utils/projectFile.js";
+import { customerDiscountGroupKeys } from "../utils/discountGroups.js";
+import { logCustomerDiscountChange } from "../utils/customerDiscountHistory.js";
 
 const router =
     express.Router();
@@ -54,13 +56,17 @@ const upload =
 const exportVersion =
     1;
 
+const customerDiscountSelect =
+    customerDiscountGroupKeys
+        .map(key => `customers.${key}`)
+        .join(", ");
+
 function getProjectExportData(projectId) {
     const project = database.projects.prepare(`
         SELECT projects.*, customers.customerNumber, customers.name AS customerName,
             customers.salesforceId AS customerSalesforceId,
             customers.city AS customerCity, customers.additionalInfo AS customerAdditionalInfo,
-            customers.pg1, customers.pg2, customers.pg3, customers.pg4, customers.pg5,
-            customers.pg6, customers.pg7, customers.pg8, customers.pg9, customers.pg10
+            ${customerDiscountSelect}
         FROM projects LEFT JOIN customers ON customers.id = projects.customerId
         WHERE projects.id = ?
     `).get(projectId);
@@ -98,7 +104,8 @@ const commercialDiscountGroupOrder = [
     "PG3",
     "PG7",
     "PG6",
-    "PG4"
+    "PG4",
+    "PG14"
 ];
 
 const excelIconColumnWidth =
@@ -400,16 +407,7 @@ router.get(
                     customers.name AS customerName,
                     customers.city AS customerCity,
                     customers.additionalInfo AS customerAdditionalInfo,
-                    customers.pg1,
-                    customers.pg2,
-                    customers.pg3,
-                    customers.pg4,
-                    customers.pg5,
-                    customers.pg6,
-                    customers.pg7,
-                    customers.pg8,
-                    customers.pg9,
-                    customers.pg10
+                    ${customerDiscountSelect}
 
                 FROM projects
 
@@ -536,9 +534,7 @@ router.get(
             SELECT projects.*, customers.customerNumber,
                 customers.name AS customerName, customers.city AS customerCity,
                 customers.additionalInfo AS customerAdditionalInfo,
-                customers.pg1, customers.pg2, customers.pg3, customers.pg4,
-                customers.pg5, customers.pg6, customers.pg7, customers.pg8,
-                customers.pg9, customers.pg10
+                ${customerDiscountSelect}
             FROM projects
             LEFT JOIN customers ON customers.id = projects.customerId
             WHERE projects.id = ?
@@ -1314,14 +1310,17 @@ export function buildProjectExportData(
             const discountPercent =
                 getDiscountPercent(
                     nodeArticle.discountGroup,
-                    project
+                    project,
+                    nodeArticle.specialDiscount
                 );
+            const specialPrice =
+                getSpecialPrice(nodeArticle.specialPrice);
 
             const discountedUnitPrice =
                 roundCurrency(
-                    listUnitPrice
-                    *
-                    (1 - (discountPercent / 100))
+                    specialPrice === null
+                        ? listUnitPrice * (1 - (discountPercent / 100))
+                        : specialPrice
                 );
 
             const listTotal =
@@ -1382,6 +1381,9 @@ export function buildProjectExportData(
                     nodeArticle.listPriceCurrency ?? "EUR",
                 discountGroup:
                     nodeArticle.discountGroup ?? "",
+                specialDiscount:
+                    nodeArticle.specialDiscount ?? null,
+                specialPrice,
                 discountPercent,
                 discountedUnitPrice,
                 listTotal,
@@ -1425,12 +1427,21 @@ export function buildProjectExportData(
                 discountedPrice:
                     sum.discountedPrice
                     +
-                    position.discountedTotal
+                    position.discountedTotal,
+                projectDiscountablePrice:
+                    sum.projectDiscountablePrice
+                    +
+                    (
+                        position.specialPrice === null
+                            ? position.discountedTotal
+                            : 0
+                    )
             }),
             {
                 listPrice: 0,
                 discount: 0,
                 discountedPrice: 0,
+                projectDiscountablePrice: 0,
                 optionalAlternativeTotal: 0
             }
         );
@@ -1442,7 +1453,7 @@ export function buildProjectExportData(
 
     totals.projectDiscount =
         roundCurrency(
-            totals.discountedPrice
+            totals.projectDiscountablePrice
             *
             (projectDiscountPercent / 100)
         );
@@ -1463,17 +1474,22 @@ export function buildProjectExportData(
                     position.isAlternative
                 )
                 .reduce(
-                    (sum, position) => sum + position.discountedTotal,
+                    (sum, position) =>
+                        sum
+                        +
+                        getPositionDiscountedTotal(
+                            position,
+                            project
+                        ),
                     0
                 )
-            *
-            (1 - (projectDiscountPercent / 100))
         );
 
     const nodeTotals =
         calculateExportNodeTotals(
             nodes,
-            positions
+            positions,
+            projectDiscountPercent
         );
 
     return {
@@ -1660,7 +1676,9 @@ function importProjectPayload(payload, options = {}) {
                         positionName,
                         sortOrder,
                         isOptional,
-                        isAlternative
+                        isAlternative,
+                        specialDiscount,
+                        specialPrice
                     )
 
                     VALUES (
@@ -1670,7 +1688,9 @@ function importProjectPayload(payload, options = {}) {
                         @positionName,
                         @sortOrder,
                         @isOptional,
-                        @isAlternative
+                        @isAlternative,
+                        @specialDiscount,
+                        @specialPrice
                     )
 
                 `);
@@ -1777,7 +1797,11 @@ function importProjectPayload(payload, options = {}) {
                         isOptional:
                             position.isOptional ? 1 : 0,
                         isAlternative:
-                            position.isAlternative ? 1 : 0
+                            position.isAlternative ? 1 : 0,
+                        specialDiscount:
+                            position.specialDiscount ?? null,
+                        specialPrice:
+                            position.specialPrice ?? null
                     });
 
                 });
@@ -2491,8 +2515,7 @@ export function buildGaebTenderXml(exportData, priceMode, gaebType) {
 
 function getTenderUnitPrice(position, priceMode, project) {
     if (priceMode === "list") return position.listUnitPrice;
-    const projectDiscount = normalizeDiscountPercent(project?.projectDiscount);
-    return roundCurrency(position.discountedUnitPrice * (1 - projectDiscount / 100));
+    return getPositionDiscountedUnitPrice(position, project);
 }
 
 function getTenderTotal(position, priceMode, project) {
@@ -2831,17 +2854,6 @@ function buildExcelPrintableStructureSheet(
             ? "discounted"
             : "list";
 
-    const projectDiscountFactor =
-        1
-        -
-        (
-            normalizeDiscountPercent(
-                project.projectDiscount
-            )
-            /
-            100
-        );
-
     const columns = [
         {
             header: "Struktur / Position",
@@ -3047,10 +3059,7 @@ function buildExcelPrintableStructureSheet(
                     : nodeTotal?.listTotal ?? 0;
 
             const displayedSubtotal =
-                !includeDiscounts
-                && priceMode === "discounted"
-                    ? subtotal * projectDiscountFactor
-                    : subtotal;
+                subtotal;
 
             const subtotalRow =
                 sheet.addRow(
@@ -3164,31 +3173,26 @@ function buildExcelPrintableStructureSheet(
                             includePrices
                                 ? [
                                     priceMode === "discounted"
-                                        ? roundCurrency(
-                                            position.discountedUnitPrice
-                                            *
-                                            projectDiscountFactor
+                                        ? getPositionDiscountedUnitPrice(
+                                            position,
+                                            project
                                         )
                                         : position.listUnitPrice,
                                     includeDiscounts
                                         ? position.discountPercent / 100
-                                        : roundCurrency(
-                                            (
-                                                priceMode === "discounted"
-                                                    ? position.discountedTotal
-                                                    : position.listTotal
+                                        : priceMode === "discounted"
+                                            ? getPositionDiscountedTotal(
+                                                position,
+                                                project
                                             )
-                                            *
-                                            (
-                                                priceMode === "discounted"
-                                                    ? projectDiscountFactor
-                                                    : 1
-                                            )
-                                        ),
+                                            : position.listTotal,
                                     ...(
                                         includeDiscounts
                                             ? [
-                                                position.discountedTotal
+                                                getPositionDiscountedTotal(
+                                                    position,
+                                                    project
+                                                )
                                             ]
                                             : []
                                     )
@@ -4050,7 +4054,11 @@ function buildExcelImportSheet(
                 isOptional:
                     Boolean(position.isOptional),
                 isAlternative:
-                    Boolean(position.isAlternative)
+                    Boolean(position.isAlternative),
+                specialDiscount:
+                    position.specialDiscount ?? null,
+                specialPrice:
+                    position.specialPrice ?? null
             }))
     };
 
@@ -4255,8 +4263,13 @@ function groupPositionsByNodeId(
 
 function calculateExportNodeTotals(
     nodes,
-    positions
+    positions,
+    projectDiscountPercent = 0
 ) {
+
+    const project = {
+        projectDiscount: projectDiscountPercent
+    };
 
     const positionsByNodeId =
         groupPositionsByNodeId(
@@ -4316,7 +4329,10 @@ function calculateExportNodeTotals(
                         discountedTotal:
                             total.discountedTotal
                             +
-                            position.discountedTotal
+                            getPositionDiscountedTotal(
+                                position,
+                                project
+                            )
                     }),
                     {
                         listTotal: 0,
@@ -5301,17 +5317,6 @@ function buildPrintableStructureSheet(
             ? "discounted"
             : "list";
 
-    const projectDiscountFactor =
-        1
-        -
-        (
-            normalizeDiscountPercent(
-                project.projectDiscount
-            )
-            /
-            100
-        );
-
     const headers = [
         "Struktur / Position",
         "Menge",
@@ -5456,31 +5461,26 @@ function buildPrintableStructureSheet(
                     includePrices
                         ? [
                             priceMode === "discounted"
-                                ? roundCurrency(
-                                    position.discountedUnitPrice
-                                    *
-                                    projectDiscountFactor
+                                ? getPositionDiscountedUnitPrice(
+                                    position,
+                                    project
                                 )
                                 : position.listUnitPrice,
                             includeDiscounts
                                 ? position.discountPercent / 100
-                                : roundCurrency(
-                                    (
-                                        priceMode === "discounted"
-                                            ? position.discountedTotal
-                                            : position.listTotal
+                                : priceMode === "discounted"
+                                    ? getPositionDiscountedTotal(
+                                        position,
+                                        project
                                     )
-                                    *
-                                    (
-                                        priceMode === "discounted"
-                                            ? projectDiscountFactor
-                                            : 1
-                                    )
-                                ),
+                                    : position.listTotal,
                             ...(
                                 includeDiscounts
                                     ? [
-                                        position.discountedTotal
+                                        getPositionDiscountedTotal(
+                                            position,
+                                            project
+                                        )
                                     ]
                                     : []
                             )
@@ -6114,7 +6114,11 @@ function buildImportSheet(
                 positionName:
                     position.positionName,
                 sortOrder:
-                    position.sortOrder ?? 0
+                    position.sortOrder ?? 0,
+                specialDiscount:
+                    position.specialDiscount ?? null,
+                specialPrice:
+                    position.specialPrice ?? null
             }))
     };
 
@@ -6195,10 +6199,82 @@ function getListPrice(
 
 }
 
+function getSpecialPrice(
+    value
+) {
+
+    if (value === null || value === undefined || String(value).trim() === "") {
+
+        return null;
+
+    }
+
+    const price =
+        Number(
+            String(value).trim().replace(",", ".")
+        );
+
+    return Number.isFinite(price) && price >= 0
+        ? price
+        : null;
+
+}
+
+function getPositionDiscountedUnitPrice(
+    position,
+    project = {}
+) {
+
+    const specialPrice =
+        getSpecialPrice(position?.specialPrice);
+
+    if (specialPrice !== null) {
+
+        return roundCurrency(specialPrice);
+
+    }
+
+    const projectDiscountFactor =
+        1 - (normalizeDiscountPercent(project?.projectDiscount) / 100);
+
+    return roundCurrency(
+        Number(position?.discountedUnitPrice || 0)
+        *
+        projectDiscountFactor
+    );
+
+}
+
+function getPositionDiscountedTotal(
+    position,
+    project = {}
+) {
+
+    return roundCurrency(
+        getPositionDiscountedUnitPrice(position, project)
+        *
+        (Number(position?.quantity) || 1)
+    );
+
+}
+
 function getDiscountPercent(
     discountGroup,
-    customer = {}
+    customer = {},
+    specialDiscount = null
 ) {
+
+    if (
+        specialDiscount !== null
+        && specialDiscount !== undefined
+        && String(specialDiscount).trim() !== ""
+    ) {
+
+        return normalizeDiscountPercent(
+            String(specialDiscount).replace(",", ".")
+        );
+
+    }
 
     const normalizedDiscountGroup =
         String(discountGroup ?? "")
@@ -6428,8 +6504,8 @@ function replaceProjectPayload(projectId, payload, options = {}) {
         const insertPosition = database.projects.prepare(`
             INSERT INTO projectNodeArticles (
                 projectNodeId, articleNumber, quantity, positionName,
-                sortOrder, isOptional, isAlternative
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                sortOrder, isOptional, isAlternative, specialDiscount, specialPrice
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         const oldToNewNodeId = new Map();
         for (const node of getNodesInImportOrder(payload.nodes)) {
@@ -6449,7 +6525,9 @@ function replaceProjectPayload(projectId, payload, options = {}) {
             insertPosition.run(
                 nodeId, String(position.articleNumber ?? "").trim(), Number(position.quantity) || 1,
                 position.positionName || null, Number(position.sortOrder) || 0,
-                position.isOptional ? 1 : 0, position.isAlternative ? 1 : 0
+                position.isOptional ? 1 : 0, position.isAlternative ? 1 : 0,
+                position.specialDiscount ?? null,
+                position.specialPrice ?? null
             );
         }
 
@@ -6485,17 +6563,27 @@ async function ensureSalesforceImportCustomer(project) {
     if (existing) return;
     const customer = await salesforce.getCustomerById(project.customerSalesforceId);
     if (!customer) return;
-    const discounts = Object.fromEntries(Array.from({ length: 8 }, (_, index) => [
-        `pg${index + 1}`, customer[`pg${index + 1}`] ?? null
-    ]));
-    database.customers.prepare(`
+    const discounts = Object.fromEntries(
+        customerDiscountGroupKeys.map(key => [key, customer[key] ?? null])
+    );
+    const result = database.customers.prepare(`
         INSERT INTO customers (customerNumber, name, street, postalCode, city,
             salesforceId, salesforceSyncedAt, salesforceLastModifiedAt,
-            pg1, pg2, pg3, pg4, pg5, pg6, pg7, pg8)
+            ${customerDiscountGroupKeys.join(", ")})
         VALUES (@customerNumber, @name, @street, @postalCode, @city,
             @salesforceId, @salesforceSyncedAt, @salesforceLastModifiedAt,
-            @pg1, @pg2, @pg3, @pg4, @pg5, @pg6, @pg7, @pg8)
+            ${customerDiscountGroupKeys.map(key => `@${key}`).join(", ")})
     `).run({ ...customer, ...discounts, salesforceSyncedAt: new Date().toISOString() });
+    const customerId = Number(result.lastInsertRowid);
+    const after = database.customers.prepare(
+        "SELECT * FROM customers WHERE id = ?"
+    ).get(customerId) ?? {};
+    logCustomerDiscountChange({
+        customerId,
+        source: "project-file-salesforce-import",
+        requested: discounts,
+        after
+    });
 }
 
 export function getExportArticleIconDataUri(article = {}) {

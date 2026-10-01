@@ -2,6 +2,7 @@ function calculateStructureUnitPrice({
     listPrice,
     customerDiscountPercent = 0,
     projectDiscountPercent = 0,
+    specialPrice = null,
     priceMode = "list"
 }) {
     const normalizedListPrice =
@@ -13,6 +14,20 @@ function calculateStructureUnitPrice({
 
     if (priceMode !== "discounted") {
         return safeListPrice;
+    }
+
+    const normalizedSpecialPrice =
+        specialPrice === null
+        || specialPrice === undefined
+        || String(specialPrice).trim() === ""
+            ? NaN
+            : Number(specialPrice);
+
+    if (
+        Number.isFinite(normalizedSpecialPrice)
+        && normalizedSpecialPrice >= 0
+    ) {
+        return normalizedSpecialPrice;
     }
 
     return safeListPrice

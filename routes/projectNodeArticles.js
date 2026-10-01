@@ -6,6 +6,65 @@ from "../database/index.js";
 const router =
     express.Router();
 
+function parseSpecialDiscount(
+    value,
+    fallback = null
+) {
+
+    if (value === undefined) {
+
+        return fallback;
+
+    }
+
+    if (value === null || String(value).trim() === "") {
+
+        return null;
+
+    }
+
+    const discount =
+        Number(
+            String(value).trim().replace(",", ".")
+        );
+
+    return Number.isFinite(discount)
+        && discount >= 0
+        && discount <= 100
+            ? discount
+            : NaN;
+
+}
+
+function parseSpecialPrice(
+    value,
+    fallback = null
+) {
+
+    if (value === undefined) {
+
+        return fallback;
+
+    }
+
+    if (value === null || String(value).trim() === "") {
+
+        return null;
+
+    }
+
+    const price =
+        Number(
+            String(value).trim().replace(",", ".")
+        );
+
+    return Number.isFinite(price)
+        && price >= 0
+            ? price
+            : NaN;
+
+}
+
 router.get(
     "/",
     (req, res) => {
@@ -53,6 +112,31 @@ router.post(
     "/",
     (req, res) => {
 
+        const specialDiscount =
+            parseSpecialDiscount(req.body.specialDiscount);
+        const specialPrice =
+            parseSpecialPrice(req.body.specialPrice);
+
+        if (Number.isNaN(specialDiscount)) {
+
+            res.status(400).json({
+                error: "Ungültiger Sonderrabatt"
+            });
+
+            return;
+
+        }
+
+        if (Number.isNaN(specialPrice)) {
+
+            res.status(400).json({
+                error: "Ungültiger Festpreis"
+            });
+
+            return;
+
+        }
+
         const nextSortOrder =
             database.projectNodeArticles.prepare(`
 
@@ -77,7 +161,9 @@ router.post(
                 positionName,
                 sortOrder,
                 isOptional,
-                isAlternative
+                isAlternative,
+                specialDiscount,
+                specialPrice
 
             )
 
@@ -89,7 +175,9 @@ router.post(
                 @positionName,
                 @sortOrder,
                 @isOptional,
-                @isAlternative
+                @isAlternative,
+                @specialDiscount,
+                @specialPrice
 
             )
 
@@ -111,7 +199,9 @@ router.post(
                 req.body.sortOrder ?? nextSortOrder,
 
             isOptional: req.body.isOptional ? 1 : 0,
-            isAlternative: req.body.isAlternative ? 1 : 0
+            isAlternative: req.body.isAlternative ? 1 : 0,
+            specialDiscount,
+            specialPrice
 
         });
 
@@ -222,6 +312,77 @@ router.patch(
                 ? current.quantity
                 : Number(req.body.quantity);
 
+        const nextArticleNumber =
+            req.body.articleNumber === undefined
+                ? current.articleNumber
+                : String(req.body.articleNumber ?? "").trim();
+
+        if (!nextArticleNumber) {
+
+            res.status(400).json({
+                error: "Artikelnummer fehlt"
+            });
+
+            return;
+
+        }
+
+        if (nextArticleNumber !== current.articleNumber) {
+
+            const replacementArticle =
+                database.articles.prepare(`
+
+                    SELECT articleNumber
+
+                    FROM articles
+
+                    WHERE articleNumber = ?
+
+                `).get(nextArticleNumber);
+
+            if (!replacementArticle) {
+
+                res.status(404).json({
+                    error: `Artikelnummer ${nextArticleNumber} wurde nicht gefunden.`
+                });
+
+                return;
+
+            }
+
+        }
+
+        const nextSpecialDiscount =
+            parseSpecialDiscount(
+                req.body.specialDiscount,
+                current.specialDiscount
+            );
+        const nextSpecialPrice =
+            parseSpecialPrice(
+                req.body.specialPrice,
+                current.specialPrice
+            );
+
+        if (Number.isNaN(nextSpecialDiscount)) {
+
+            res.status(400).json({
+                error: "Ungültiger Sonderrabatt"
+            });
+
+            return;
+
+        }
+
+        if (Number.isNaN(nextSpecialPrice)) {
+
+            res.status(400).json({
+                error: "Ungültiger Festpreis"
+            });
+
+            return;
+
+        }
+
         const nextProjectNodeId =
             req.body.projectNodeId === undefined
                 ? current.projectNodeId
@@ -266,11 +427,14 @@ router.patch(
 
             SET
                 projectNodeId = @projectNodeId,
+                articleNumber = @articleNumber,
                 quantity = @quantity,
                 positionName = @positionName,
                 sortOrder = @sortOrder,
                 isOptional = @isOptional,
-                isAlternative = @isAlternative
+                isAlternative = @isAlternative,
+                specialDiscount = @specialDiscount,
+                specialPrice = @specialPrice
 
             WHERE id = @id
 
@@ -280,6 +444,9 @@ router.patch(
 
             projectNodeId:
                 nextProjectNodeId,
+
+            articleNumber:
+                nextArticleNumber,
 
             quantity:
                 Number.isFinite(quantity)
@@ -306,7 +473,13 @@ router.patch(
             isAlternative:
                 req.body.isAlternative === undefined
                     ? current.isAlternative
-                    : req.body.isAlternative ? 1 : 0
+                    : req.body.isAlternative ? 1 : 0,
+
+            specialDiscount:
+                nextSpecialDiscount,
+
+            specialPrice:
+                nextSpecialPrice
 
         });
 

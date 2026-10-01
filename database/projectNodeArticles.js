@@ -79,6 +79,18 @@ if (!columns.includes("isAlternative")) {
 
 }
 
+if (!columns.includes("specialDiscount")) {
+
+    database.exec(`ALTER TABLE projectNodeArticles ADD COLUMN specialDiscount REAL DEFAULT NULL`);
+
+}
+
+if (!columns.includes("specialPrice")) {
+
+    database.exec(`ALTER TABLE projectNodeArticles ADD COLUMN specialPrice REAL DEFAULT NULL`);
+
+}
+
 export {
     database as projectNodeArticles
 };

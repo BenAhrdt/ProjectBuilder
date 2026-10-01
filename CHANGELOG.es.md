@@ -2,6 +2,29 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.38 - 01.10.2026
+
+### Nuevo
+
+- Ahora se pueden cambiar los números de artículo desde el menú de tres puntos de la estructura del proyecto.
+- Las posiciones admiten un descuento especial específico o un precio fijo por unidad.
+- PG14 es ahora un grupo de descuento válido; PG2, PG9 y PG10 ya no se utilizan.
+
+### Mejorado
+
+- El plano general muestra con más claridad las conexiones de los puntos de medida y los textos largos.
+- Los archivos del plano general en Salesforce utilizan el nombre del proyecto; el archivo técnico del proyecto conserva su nombre fijo.
+- «Mostrar siempre el descuento adicional» está activado por defecto en proyectos nuevos o aún no configurados y recuerda una desactivación intencionada.
+- Las sincronizaciones con Salesforce reintentan automáticamente los bloqueos temporales de registros.
+
+### Corregido
+
+- Los descuentos de clientes ya no se sobrescriben por un guardado automático retrasado al navegar.
+- Los números de cliente vacíos ya no provocan un error de restricción única durante el guardado automático.
+- Las Opportunities y ofertas de Salesforce creadas antes de una sincronización incompleta ahora también se muestran.
+
+## 1.5.37 - 28.09.2026
+
 ## 1.5.37 - 28.09.2026
 
 ### Mejorado

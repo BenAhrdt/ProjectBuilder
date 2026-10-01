@@ -537,7 +537,9 @@ router.post(
                     positionName,
                     sortOrder,
                     isOptional,
-                    isAlternative
+                    isAlternative,
+                    specialDiscount,
+                    specialPrice
 
                 )
 
@@ -549,7 +551,9 @@ router.post(
                     @positionName,
                     @sortOrder,
                     @isOptional,
-                    @isAlternative
+                    @isAlternative,
+                    @specialDiscount,
+                    @specialPrice
 
                 )
 
@@ -616,7 +620,9 @@ router.post(
                                 index,
 
                             isOptional: nodeArticle.isOptional ? 1 : 0,
-                            isAlternative: nodeArticle.isAlternative ? 1 : 0
+                            isAlternative: nodeArticle.isAlternative ? 1 : 0,
+                            specialDiscount: nodeArticle.specialDiscount ?? null,
+                            specialPrice: nodeArticle.specialPrice ?? null
 
                         });
 

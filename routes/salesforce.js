@@ -22,6 +22,11 @@ import {
 } from "./projects.js";
 import { buildProjectFilePayload } from "../utils/projectFile.js";
 import { normalizeExternalError } from "../utils/externalError.js";
+import {
+    customerDiscountGroupKeys,
+    normalizeDiscountGroup
+} from "../utils/discountGroups.js";
+import { logCustomerDiscountChange } from "../utils/customerDiscountHistory.js";
 import { buildOverviewDocuments } from "../public/js/views/projectOverview.js";
 
 const router = express.Router();
@@ -114,8 +119,8 @@ async function synchronizeProjectDocuments(opportunityId, project, nodes, nodeAr
                 }
             });
             return {
-                title: "ProjectBuilder - Übersichtsplan",
-                filename: `${baseName}-Übersichtsplan.pdf`,
+                title: `${baseName} - Übersichtsplan`,
+                filename: `${baseName} - Übersichtsplan.pdf`,
                 data: await buildOverviewPdf(documents, project)
             };
         },
@@ -155,15 +160,15 @@ async function synchronizeProjectDocuments(opportunityId, project, nodes, nodeAr
     };
 }
 
-function syncCustomer(customer, localId = null) {
+function syncCustomer(customer, localId = null, source = "salesforce-sync") {
     const now = new Date().toISOString();
     const discounts = Object.fromEntries(
-        Array.from({ length: 8 }, (_, index) => [`pg${index + 1}`, customer[`pg${index + 1}`] ?? null])
+        customerDiscountGroupKeys.map(key => [key, customer[key] ?? null])
     );
     const existing = localId
-        ? database.customers.prepare("SELECT id FROM customers WHERE id = ?").get(localId)
+        ? database.customers.prepare("SELECT * FROM customers WHERE id = ?").get(localId)
         : database.customers.prepare(`
-            SELECT id FROM customers
+            SELECT * FROM customers
             WHERE salesforceId = @salesforceId
                OR (COALESCE(@customerNumber, '') <> '' AND customerNumber = @customerNumber)
             ORDER BY salesforceId = @salesforceId DESC
@@ -182,12 +187,21 @@ function syncCustomer(customer, localId = null) {
                 salesforceId = @salesforceId,
                 salesforceSyncedAt = @salesforceSyncedAt,
                 salesforceLastModifiedAt = @salesforceLastModifiedAt,
-                pg1 = COALESCE(@pg1, pg1), pg2 = COALESCE(@pg2, pg2),
-                pg3 = COALESCE(@pg3, pg3), pg4 = COALESCE(@pg4, pg4),
-                pg5 = COALESCE(@pg5, pg5), pg6 = COALESCE(@pg6, pg6),
-                pg7 = COALESCE(@pg7, pg7), pg8 = COALESCE(@pg8, pg8)
+                ${customerDiscountGroupKeys
+                    .map(key => `${key} = COALESCE(@${key}, ${key})`)
+                    .join(",\n                ")}
             WHERE id = @id
         `).run({ ...customer, ...discounts, salesforceSyncedAt: now, id: existing.id });
+        const after = database.customers.prepare(
+            "SELECT * FROM customers WHERE id = ?"
+        ).get(existing.id) ?? {};
+        logCustomerDiscountChange({
+            customerId: existing.id,
+            source,
+            requested: discounts,
+            before: existing,
+            after
+        });
         return { id: existing.id, created: false };
     }
 
@@ -195,17 +209,35 @@ function syncCustomer(customer, localId = null) {
         INSERT INTO customers (
             customerNumber, name, accountOwner, street, postalCode, city, salesforceId,
             salesforceSyncedAt, salesforceLastModifiedAt,
-            pg1, pg2, pg3, pg4, pg5, pg6, pg7, pg8
+            ${customerDiscountGroupKeys.join(", ")}
         ) VALUES (
             @customerNumber, @name, @accountOwner, @street, @postalCode, @city, @salesforceId,
             @salesforceSyncedAt, @salesforceLastModifiedAt,
-            @pg1, @pg2, @pg3, @pg4, @pg5, @pg6, @pg7, @pg8
+            ${customerDiscountGroupKeys.map(key => `@${key}`).join(", ")}
         )
     `).run({ ...customer, ...discounts, salesforceSyncedAt: now });
-    return { id: Number(result.lastInsertRowid), created: true };
+    const customerId = Number(result.lastInsertRowid);
+    const after = database.customers.prepare(
+        "SELECT * FROM customers WHERE id = ?"
+    ).get(customerId) ?? {};
+    logCustomerDiscountChange({
+        customerId,
+        source,
+        requested: discounts,
+        after
+    });
+    return { id: customerId, created: true };
 }
 
 function handleError(res, error) {
+    if (salesforce.isSalesforceRecordLockError(error)) {
+        res.status(409).json({
+            success: false,
+            code: "SALESFORCE_RECORD_LOCKED",
+            error: "Salesforce sperrt den Datensatz gerade durch einen parallelen Vorgang. Bitte die Synchronisation gleich erneut starten."
+        });
+        return;
+    }
     let message = normalizeExternalError(error);
     if (message.includes("customers.customerNumber")) {
         message = "Diese Kundennummer ist bereits einem anderen lokalen Kunden zugeordnet.";
@@ -219,8 +251,7 @@ async function getProjectAccount(projectId) {
     const project = database.projects.prepare(`
         SELECT projects.*, customers.name AS customerName,
             customers.customerNumber, customers.salesforceId AS customerSalesforceId,
-            customers.pg1, customers.pg2, customers.pg3, customers.pg4, customers.pg5,
-            customers.pg6, customers.pg7, customers.pg8, customers.pg9, customers.pg10
+            ${customerDiscountGroupKeys.map(key => `customers.${key}`).join(", ")}
         FROM projects
         LEFT JOIN customers ON customers.id = projects.customerId
         WHERE projects.id = ?
@@ -290,7 +321,9 @@ router.get("/projects/:projectId/quote-options", async (req, res) => {
                 documents: parseSavedDocuments(result.project.salesforceDocuments),
                 uploadProjectFile: result.project.salesforceUploadProjectFile !== 0,
                 showDiscount: result.project.salesforceShowDiscount !== 0,
-                showAdditionalDiscount: result.project.salesforceShowAdditionalDiscount === 1,
+                showAdditionalDiscount: result.project.salesforceShowAdditionalDiscountConfigured === 1
+                    ? result.project.salesforceShowAdditionalDiscount === 1
+                    : true,
                 exportQuote: result.project.salesforceExportQuote == null
                     ? null
                     : result.project.salesforceExportQuote === 1
@@ -379,13 +412,10 @@ router.get("/projects/:projectId/links", async (req, res) => {
         `).get(req.params.projectId);
         const [opportunity, quote] = await Promise.all([
             salesforce.getOpportunity(
-                project?.salesforceSyncedAt ? project.salesforceOpportunityId : null
+                project?.salesforceOpportunityId ?? null
             ),
             salesforce.getQuote(
-                project?.salesforceSyncedAt
-                && project.salesforceSyncScope === "opportunity_quote"
-                    ? project.salesforceQuoteId
-                    : null
+                project?.salesforceQuoteId ?? null
             )
         ]);
         const status = opportunity || quote ? await salesforce.getStatus() : null;
@@ -430,7 +460,9 @@ router.get("/customers", async (req, res) => {
 router.post("/customers/import", async (req, res) => {
     try {
         const customers = await salesforce.getCustomersByIds(req.body.salesforceIds ?? []);
-        const transaction = database.customers.transaction(items => items.map(item => syncCustomer(item)));
+        const transaction = database.customers.transaction(
+            items => items.map(item => syncCustomer(item, null, "salesforce-import"))
+        );
         const results = transaction(customers);
         res.json({
             success: true,
@@ -448,7 +480,7 @@ router.put("/customers/:localId", async (req, res) => {
         if (!salesforceId) return res.status(400).json({ success: false, error: "Kunde ist nicht mit Salesforce verknüpft" });
         const customer = await salesforce.getCustomerById(salesforceId);
         if (!customer) return res.status(404).json({ success: false, error: "Salesforce-Kunde nicht gefunden" });
-        syncCustomer(customer, local.id);
+        syncCustomer(customer, local.id, "salesforce-link");
         res.json({ success: true, customerId: local.id });
     } catch (error) { handleError(res, error); }
 });
@@ -461,7 +493,13 @@ router.post("/customers/refresh", async (_req, res) => {
         const remote = await salesforce.getCustomersByIds(linked.map(item => item.salesforceId));
         const localBySalesforceId = new Map(linked.map(item => [item.salesforceId, item.id]));
         const transaction = database.customers.transaction(items => {
-            for (const item of items) syncCustomer(item, localBySalesforceId.get(item.salesforceId));
+            for (const item of items) {
+                syncCustomer(
+                    item,
+                    localBySalesforceId.get(item.salesforceId),
+                    "salesforce-refresh"
+                );
+            }
         });
         transaction(remote);
         res.json({ success: true, updated: remote.length });
@@ -560,7 +598,7 @@ router.post("/articles/import", async (req, res) => {
             listPriceCurrency: entry.CurrencyIsoCode,
             discountGroup: (() => {
                 const value = String(pricingGroups.get(String(entry.Product2.Id)) ?? "").trim();
-                return /^0?[1-8]$/.test(value) ? `PG${Number(value)}` : "";
+                return normalizeDiscountGroup(value);
             })(),
             description: entry.Product2.Description ?? "",
             salesforceProductId: entry.Product2.Id,
@@ -893,10 +931,18 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
         }
 
         // Update both sides while detached, then synchronize the finished quote below.
-        await Promise.all([
-            salesforce.replaceLineItems("OpportunityLineItem", "OpportunityId", opportunity.Id, opportunityLineItems),
-            salesforce.replaceLineItems("QuoteLineItem", "QuoteId", quote.Id, quoteLineItems)
-        ]);
+        await salesforce.replaceLineItems(
+            "OpportunityLineItem",
+            "OpportunityId",
+            opportunity.Id,
+            opportunityLineItems
+        );
+        await salesforce.replaceLineItems(
+            "QuoteLineItem",
+            "QuoteId",
+            quote.Id,
+            quoteLineItems
+        );
 
         // Linking the quote alone does not make it the opportunity's synchronized quote.
         // Salesforce requires this relationship before the quote can enter approval.
@@ -921,7 +967,8 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
             UPDATE projects SET salesforceOpportunityId = ?, salesforceQuoteId = ?, salesforceSyncedAt = ?,
                 salesforceContactId = ?, salesforceDeliveryTime = ?, salesforceArticleMode = ?, salesforceSyncScope = ?,
                 salesforceDocuments = ?, salesforceTaxCode = ?, salesforceShowDiscount = ?,
-                salesforceShowAdditionalDiscount = ?, salesforceExportQuote = ?,
+                salesforceShowAdditionalDiscount = ?, salesforceShowAdditionalDiscountConfigured = 1,
+                salesforceExportQuote = ?,
                 salesforceUploadProjectFile = ?
             WHERE id = ?
         `).run(opportunity.Id, quote.Id, new Date().toISOString(), req.body.contactId ?? null,

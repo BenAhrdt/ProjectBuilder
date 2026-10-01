@@ -34,3 +34,19 @@ test(
         );
     }
 );
+
+test(
+    "uses a special price as the resulting discounted unit price",
+    () => {
+        assert.equal(
+            calculateStructureUnitPrice({
+                listPrice: 1374.5,
+                customerDiscountPercent: 27.3,
+                projectDiscountPercent: 5,
+                specialPrice: 999,
+                priceMode: "discounted"
+            }),
+            999
+        );
+    }
+);

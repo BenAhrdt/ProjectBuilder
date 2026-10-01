@@ -2,6 +2,29 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.38 - 2026-10-01
+
+### Added
+
+- Article numbers can be exchanged from the project structure's three-dot menu.
+- Positions support a position-specific special discount or fixed unit price.
+- PG14 is now supported as a valid discount group; PG2, PG9, and PG10 are no longer used.
+
+### Improved
+
+- The overview plan presents measurement-point connections and long texts more clearly.
+- Salesforce overview-plan files use the project name as their title; the technical project file keeps its fixed name.
+- “Always show additional discount” is enabled by default for new or not-yet-configured projects and remembers an intentional opt-out.
+- Salesforce synchronizations automatically retry temporary record locks.
+
+### Fixed
+
+- Customer discounts are no longer overwritten by a delayed autosave during navigation.
+- Empty customer numbers no longer cause a unique-constraint error during autosave.
+- Salesforce Opportunities and quotes that were created before an incomplete sync are now still shown.
+
+## 1.5.37 - 2026-09-28
+
 ## 1.5.37 - 2026-09-28
 
 ### Improved

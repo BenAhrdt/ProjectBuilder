@@ -2419,6 +2419,47 @@ body.project-overview-open {
 
 }
 
+.project-properties-modal .project-special-discount-field {
+
+    grid-column: 1 / -1;
+
+}
+
+.project-properties-modal .project-special-price-field {
+
+    grid-column: 1 / -1;
+
+}
+
+.project-special-discount-input-wrapper {
+
+    flex-wrap: wrap;
+
+}
+
+.project-special-discount-preview {
+
+    color: #526173 !important;
+    font-weight: 700;
+    white-space: nowrap;
+
+}
+
+.project-special-price-discount-preview {
+
+    color: #526173 !important;
+    font-weight: 700;
+    white-space: nowrap;
+
+}
+
+.node-article-price-badge {
+
+    background: #eaf0ff;
+    color: #3154a5;
+
+}
+
 .project-properties-modal input,
 .project-properties-modal select {
 
@@ -2481,6 +2522,26 @@ body.project-overview-open {
     font-size: 11px;
 
     font-weight: 700;
+
+}
+
+.node-article-discount-badge {
+
+    background: #e4f2e9;
+
+    color: #27613b;
+
+}
+
+.project-properties-error {
+
+    min-height: 18px;
+
+    margin: 8px 0 0;
+
+    color: #a12622;
+
+    font-size: 12px;
 
 }
 

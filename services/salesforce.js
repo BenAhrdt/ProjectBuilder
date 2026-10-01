@@ -25,6 +25,28 @@ function salesforceErrorMessage(errors, fallback) {
     return messages.join(", ") || fallback;
 }
 
+export function isSalesforceRecordLockError(error) {
+    const message = String(error?.message ?? error ?? "").toLowerCase();
+    return message.includes("unable to obtain exclusive access")
+        || message.includes("unable_to_lock_row")
+        || message.includes("unable to lock row")
+        || message.includes("exclusive access to this record");
+}
+
+async function withSalesforceRecordLockRetry(operation) {
+    const delays = [750, 1500, 3000, 5000];
+    for (let attempt = 0; ; attempt += 1) {
+        try {
+            return await operation();
+        } catch (error) {
+            if (!isSalesforceRecordLockError(error) || attempt >= delays.length) {
+                throw error;
+            }
+            await new Promise(resolve => setTimeout(resolve, delays[attempt]));
+        }
+    }
+}
+
 function getAlias() {
     const alias = process.env.SALESFORCE_CLI_ALIAS ?? "janitza-readonly";
     if (!/^[a-zA-Z0-9_.@-]+$/.test(alias)) throw new Error("Ungültiger Salesforce-Alias");
@@ -148,25 +170,29 @@ async function queryAll(soql) {
 }
 
 async function createRecord(objectName, fields) {
-    if (getTokenConnection()) {
-        return tokenRequest(`/sobjects/${objectName}`, { method: "POST", body: fields });
-    }
-    const connection = await getCoreConnection();
-    if (!connection) throw new Error("Keine Salesforce-Anmeldung vorhanden.");
-    const result = await connection.sobject(objectName).create(fields);
-    if (!result.success) throw new Error(salesforceErrorMessage(result.errors, `${objectName} konnte nicht angelegt werden.`));
-    return result;
+    return withSalesforceRecordLockRetry(async () => {
+        if (getTokenConnection()) {
+            return tokenRequest(`/sobjects/${objectName}`, { method: "POST", body: fields });
+        }
+        const connection = await getCoreConnection();
+        if (!connection) throw new Error("Keine Salesforce-Anmeldung vorhanden.");
+        const result = await connection.sobject(objectName).create(fields);
+        if (!result.success) throw new Error(salesforceErrorMessage(result.errors, `${objectName} konnte nicht angelegt werden.`));
+        return result;
+    });
 }
 
 async function updateRecord(objectName, id, fields) {
-    if (getTokenConnection()) {
-        await tokenRequest(`/sobjects/${objectName}/${id}`, { method: "PATCH", body: fields });
-        return;
-    }
-    const connection = await getCoreConnection();
-    if (!connection) throw new Error("Keine Salesforce-Anmeldung vorhanden.");
-    const result = await connection.sobject(objectName).update({ Id: id, ...fields });
-    if (!result.success) throw new Error(salesforceErrorMessage(result.errors, `${objectName} konnte nicht aktualisiert werden.`));
+    return withSalesforceRecordLockRetry(async () => {
+        if (getTokenConnection()) {
+            await tokenRequest(`/sobjects/${objectName}/${id}`, { method: "PATCH", body: fields });
+            return;
+        }
+        const connection = await getCoreConnection();
+        if (!connection) throw new Error("Keine Salesforce-Anmeldung vorhanden.");
+        const result = await connection.sobject(objectName).update({ Id: id, ...fields });
+        if (!result.success) throw new Error(salesforceErrorMessage(result.errors, `${objectName} konnte nicht aktualisiert werden.`));
+    });
 }
 
 async function createRecords(objectName, records) {
@@ -175,19 +201,20 @@ async function createRecords(objectName, records) {
     for (let offset = 0; offset < records.length; offset += 200) {
         const chunk = records.slice(offset, offset + 200);
         let chunkResults;
-        if (getTokenConnection()) {
-            chunkResults = await tokenRequest("/composite/sobjects", {
-                method: "POST",
-                body: {
-                    allOrNone: true,
-                    records: chunk.map(fields => ({ attributes: { type: objectName }, ...fields }))
-                }
-            });
-        } else {
+        chunkResults = await withSalesforceRecordLockRetry(async () => {
+            if (getTokenConnection()) {
+                return tokenRequest("/composite/sobjects", {
+                    method: "POST",
+                    body: {
+                        allOrNone: true,
+                        records: chunk.map(fields => ({ attributes: { type: objectName }, ...fields }))
+                    }
+                });
+            }
             const connection = await getCoreConnection();
             if (!connection) throw new Error("Keine Salesforce-Anmeldung vorhanden.");
-            chunkResults = await connection.sobject(objectName).create(chunk, { allOrNone: true });
-        }
+            return connection.sobject(objectName).create(chunk, { allOrNone: true });
+        });
         const list = Array.isArray(chunkResults) ? chunkResults : [chunkResults];
         const failed = list.find(result => !result.success);
         if (failed) throw new Error(salesforceErrorMessage(failed.errors, `${objectName} konnte nicht angelegt werden.`));
@@ -199,18 +226,20 @@ async function createRecords(objectName, records) {
 async function deleteRecords(objectName, ids) {
     for (let offset = 0; offset < ids.length; offset += 200) {
         const chunk = ids.slice(offset, offset + 200);
-        if (getTokenConnection()) {
-            await tokenRequest(`/composite/sobjects?ids=${encodeURIComponent(chunk.join(","))}&allOrNone=true`, {
-                method: "DELETE"
-            });
-        } else {
+        await withSalesforceRecordLockRetry(async () => {
+            if (getTokenConnection()) {
+                await tokenRequest(`/composite/sobjects?ids=${encodeURIComponent(chunk.join(","))}&allOrNone=true`, {
+                    method: "DELETE"
+                });
+                return;
+            }
             const connection = await getCoreConnection();
             if (!connection) throw new Error("Keine Salesforce-Anmeldung vorhanden.");
             const chunkResults = await connection.sobject(objectName).destroy(chunk);
             const list = Array.isArray(chunkResults) ? chunkResults : [chunkResults];
             const failed = list.find(result => !result.success);
             if (failed) throw new Error(salesforceErrorMessage(failed.errors, `${objectName} konnte nicht gelöscht werden.`));
-        }
+        });
     }
 }
 
@@ -879,16 +908,18 @@ export async function finalizeSynchronizedLineDiscounts(opportunityId, quoteId, 
         || quoteLines.records.length !== quoteItems.length) {
         throw new Error("Die synchronisierten Salesforce-Angebotspositionen sind unvollständig.");
     }
-    await Promise.all(opportunityLines.records.map((record, index) =>
-        updateRecord("OpportunityLineItem", record.Id, {
+    for (const [index, record] of opportunityLines.records.entries()) {
+        await updateRecord("OpportunityLineItem", record.Id, {
             BasicDiscount__c: opportunityItems[index].BasicDiscount__c
-        })
-    ));
-    await Promise.all(quoteLines.records.map((record, index) => updateRecord("QuoteLineItem", record.Id, {
-        SortOrder: quoteItems[index].SortOrder,
-        Position__c: quoteItems[index].Position__c,
-        Alternative__c: quoteItems[index].Alternative__c,
-        Option__c: quoteItems[index].Option__c,
-        Manuell_Updated__c: false
-    })));
+        });
+    }
+    for (const [index, record] of quoteLines.records.entries()) {
+        await updateRecord("QuoteLineItem", record.Id, {
+            SortOrder: quoteItems[index].SortOrder,
+            Position__c: quoteItems[index].Position__c,
+            Alternative__c: quoteItems[index].Alternative__c,
+            Option__c: quoteItems[index].Option__c,
+            Manuell_Updated__c: false
+        });
+    }
 }

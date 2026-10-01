@@ -48,6 +48,7 @@ const routes = {
         active: null,
     },
 };
+let renderSequence = 0;
 
 function navigate(path) {
 
@@ -55,11 +56,15 @@ function navigate(path) {
     navigationHistory.push(path);
 
     // passende Route rendern
-    renderRoute(path);
+    return renderRoute(path);
 
 }
 
-function renderRoute(path) {
+async function renderRoute(path) {
+    const sequence = ++renderSequence;
+
+    await customer.flushPendingSave();
+    if (sequence !== renderSequence) return;
 
     // Kunde
     if (
@@ -75,7 +80,7 @@ function renderRoute(path) {
             "customers"
         );
 
-        customer.renderView(
+        await customer.renderView(
             customerId
         );
 
@@ -95,7 +100,7 @@ function renderRoute(path) {
             "projects"
         );
 
-        project.renderView(
+        await project.renderView(
             projectId
         );
 
@@ -108,7 +113,7 @@ function renderRoute(path) {
     if(route) {
 
         navbar.setItemsActive(route.active);
-        route.render();
+        await route.render();
 
     } else {
 

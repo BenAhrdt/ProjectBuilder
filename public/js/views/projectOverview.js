@@ -771,10 +771,20 @@ function buildOverviewTree({
                     customerDiscountPercent:
                         getArticleDiscountPercent(
                             article,
-                            customer
+                            customer,
+                            nodeArticle
                         ),
                     projectDiscountPercent:
                         project?.projectDiscount,
+                    specialPrice:
+                        nodeArticle.specialPrice === null
+                        || nodeArticle.specialPrice === undefined
+                        || String(nodeArticle.specialPrice).trim() === ""
+                            ? null
+                            : Number(
+                                String(nodeArticle.specialPrice)
+                                    .replace(",", ".")
+                            ),
                     priceMode:
                         "discounted"
                 })
@@ -1483,6 +1493,8 @@ function layoutVerticalTree(
 function layoutFieldMeters(
     root
 ) {
+    root.layoutMode = "field-meters";
+
     const columnCount =
         Math.min(
             root.children.length,
@@ -1547,6 +1559,15 @@ function layoutFieldMeters(
             index
             %
             detailPageLayout.maxMetersPerRow;
+        const rowColumnCount =
+            Math.min(
+                root.children.length
+                -
+                row * detailPageLayout.maxMetersPerRow,
+                detailPageLayout.maxMetersPerRow
+            );
+        const rowOffset =
+            (columnCount - rowColumnCount) / 2;
 
         if (
             column === 0
@@ -1560,10 +1581,12 @@ function layoutFieldMeters(
         }
 
         child.depth = row + 1;
+        child.fieldMeterRow = row;
+        child.fieldMeterColumn = column;
         child.x =
             diagramLayout.margin
             +
-            column
+            (column + rowOffset)
             *
             (
                 diagramLayout.cardWidth
@@ -1704,6 +1727,10 @@ function renderConnector(
     orientation
 ) {
     if (orientation === "vertical") {
+        if (parent.layoutMode === "field-meters") {
+            return renderFieldMeterConnector(parent, child);
+        }
+
         const startX =
             parent.x
             +
@@ -1764,6 +1791,84 @@ function renderConnector(
     `;
 }
 
+function renderFieldMeterConnector(
+    parent,
+    child
+) {
+    const startX =
+        parent.x
+        +
+        diagramLayout.cardWidth / 2;
+    const startY =
+        parent.y
+        +
+        parent.height;
+    const endX =
+        child.x
+        +
+        diagramLayout.cardWidth / 2;
+    const endY =
+        child.y;
+    const firstBusY =
+        startY
+        +
+        diagramLayout.horizontalGap / 2;
+    const row =
+        Number(child.fieldMeterRow) || 0;
+    const rowBusY =
+        child.y
+        -
+        12;
+
+    if (row === 0) {
+
+        return `
+            <path
+                d="M ${startX} ${startY} V ${rowBusY} H ${endX} V ${endY}"
+                fill="none"
+                stroke="#8da2bd"
+                stroke-width="2"
+                stroke-linejoin="round"
+            />
+            <circle cx="${endX}" cy="${endY}" r="4" fill="#4c8bf5" />
+        `;
+
+    }
+
+    const firstRowCount =
+        Math.min(
+            parent.children.length,
+            detailPageLayout.maxMetersPerRow
+        );
+    const rowRouteX =
+        firstRowCount % 2 === 0
+            ? startX
+            : diagramLayout.margin
+                + Math.floor(firstRowCount / 2)
+                * (
+                    diagramLayout.cardWidth
+                    + diagramLayout.verticalGap
+                )
+                + diagramLayout.cardWidth
+                + diagramLayout.verticalGap / 2;
+
+    return `
+        <path
+            d="M ${startX} ${startY}
+               V ${firstBusY}
+               H ${rowRouteX}
+               V ${rowBusY}
+               H ${endX}
+               V ${endY}"
+            fill="none"
+            stroke="#8da2bd"
+            stroke-width="2"
+            stroke-linejoin="round"
+        />
+        <circle cx="${endX}" cy="${endY}" r="4" fill="#4c8bf5" />
+    `;
+}
+
 function renderDiagramCard(
     node,
     options
@@ -1774,11 +1879,41 @@ function renderDiagramCard(
         nodeColors.empty;
     const cardWidth =
         diagramLayout.cardWidth;
+    const typeLabel =
+        fitText(
+            node.typeLabel.toUpperCase(),
+            32,
+            cardWidth - 28,
+            11,
+            700
+        );
     const titleLines =
         wrapText(
             node.name,
             28,
             2
+        );
+    const projectTitle =
+        fitText(
+            node.name,
+            30,
+            cardWidth - 32,
+            17,
+            700
+        );
+    const projectMeta =
+        fitText(
+            node.meta,
+            38,
+            cardWidth - 32,
+            12
+        );
+    const metaText =
+        fitText(
+            node.meta,
+            40,
+            cardWidth - 28,
+            10.5
         );
 
     if (node.type === "project") {
@@ -1801,7 +1936,8 @@ function renderDiagramCard(
                     font-family="Arial, sans-serif"
                     font-size="12"
                     font-weight="700"
-                >${escapeXml(node.typeLabel)}</text>
+                ${typeLabel.attributes}
+                >${escapeXml(typeLabel.text)}</text>
                 <text
                     x="${node.x + 16}"
                     y="${node.y + 48}"
@@ -1809,7 +1945,8 @@ function renderDiagramCard(
                     font-family="Arial, sans-serif"
                     font-size="17"
                     font-weight="700"
-                >${escapeXml(truncateText(node.name, 30))}</text>
+                    ${projectTitle.attributes}
+                >${escapeXml(projectTitle.text)}</text>
                 ${node.meta ? `
                     <text
                         x="${node.x + 16}"
@@ -1817,7 +1954,8 @@ function renderDiagramCard(
                         fill="#dbe7f5"
                         font-family="Arial, sans-serif"
                         font-size="12"
-                    >${escapeXml(truncateText(node.meta, 38))}</text>
+                        ${projectMeta.attributes}
+                    >${escapeXml(projectMeta.text)}</text>
                 ` : ""}
                 ${renderDiagramPrice(
                     node,
@@ -1860,7 +1998,8 @@ function renderDiagramCard(
                 font-size="11"
                 font-weight="700"
                 letter-spacing="0.5"
-            >${escapeXml(node.typeLabel.toUpperCase())}</text>
+                ${typeLabel.attributes}
+            >${escapeXml(typeLabel.text)}</text>
             <text
                 x="${node.x + 14}"
                 y="${node.y + 45}"
@@ -1871,7 +2010,10 @@ function renderDiagramCard(
             >${renderTextLines(
                 titleLines,
                 node.x + 14,
-                18
+                18,
+                cardWidth - 28,
+                15,
+                700
             )}</text>
             ${node.meta ? `
                 <text
@@ -1880,7 +2022,8 @@ function renderDiagramCard(
                     fill="#65758a"
                     font-family="Arial, sans-serif"
                     font-size="10.5"
-                >${escapeXml(truncateText(node.meta, 40))}</text>
+                    ${metaText.attributes}
+                >${escapeXml(metaText.text)}</text>
             ` : ""}
             ${renderDiagramPrice(
                 node,
@@ -1919,6 +2062,14 @@ function renderDiagramPrice(
         isDiscounted
             ? node.discountedTotal
             : node.listTotal;
+    const priceText =
+        fitText(
+            `${options.priceLabel}: ${formatDiagramCurrency(value)}`,
+            40,
+            diagramLayout.cardWidth - 28,
+            11.5,
+            700
+        );
 
     return `
         <text
@@ -1928,7 +2079,8 @@ function renderDiagramPrice(
             font-family="Arial, sans-serif"
             font-size="11.5"
             font-weight="700"
-        >${escapeXml(options.priceLabel)}: ${escapeXml(formatDiagramCurrency(value))}</text>
+            ${priceText.attributes}
+        >${escapeXml(priceText.text)}</text>
     `;
 }
 
@@ -1949,6 +2101,21 @@ function renderDiagramArticle(
         markers.length > 0
             ? "#9a6700"
             : "#26384f";
+    const displayText =
+        fitText(
+            displayName,
+            29,
+            diagramLayout.cardWidth - 56,
+            11.5,
+            700
+        );
+    const articleNumberText =
+        fitText(
+            `${article.quantity} × ${article.articleNumber}`,
+            32,
+            diagramLayout.cardWidth - 56,
+            10.5
+        );
     const top =
         node.y
         +
@@ -1991,15 +2158,86 @@ function renderDiagramArticle(
             font-family="Arial, sans-serif"
             font-size="11.5"
             font-weight="700"
-        >${escapeXml(truncateText(displayName, 29))}</text>
+            ${displayText.attributes}
+        >${escapeXml(displayText.text)}</text>
         <text
             x="${node.x + 44}"
             y="${top + 27}"
             fill="#69788b"
             font-family="Arial, sans-serif"
             font-size="10.5"
-        >${escapeXml(`${article.quantity} × ${article.articleNumber}`)}</text>
+            ${articleNumberText.attributes}
+        >${escapeXml(articleNumberText.text)}</text>
     `;
+}
+
+function fitText(
+    value,
+    maximumCharacters,
+    maximumWidth,
+    fontSize,
+    fontWeight = 400
+) {
+    const text =
+        truncateText(
+            value,
+            maximumCharacters
+        );
+
+    return {
+        text,
+        attributes:
+            getTextFitAttributes(
+                text,
+                maximumWidth,
+                fontSize,
+                fontWeight
+            )
+    };
+}
+
+function getTextFitAttributes(
+    value,
+    maximumWidth,
+    fontSize,
+    fontWeight = 400
+) {
+    const text =
+        String(value ?? "");
+
+    if (!text || !Number.isFinite(maximumWidth)) {
+        return "";
+    }
+
+    const weightFactor =
+        Number(fontWeight) >= 700
+            ? 0.6
+            : 0.52;
+    const estimatedWidth =
+        Array.from(text).reduce(
+            (width, character) => {
+                if (character === " ") {
+                    return width + fontSize * 0.28;
+                }
+
+                if ("il.,:;!'|".includes(character)) {
+                    return width + fontSize * 0.28;
+                }
+
+                if ("MW@#%&".includes(character)) {
+                    return width + fontSize * 0.9;
+                }
+
+                return width + fontSize * weightFactor;
+            },
+            0
+        )
+        *
+        1.08;
+
+    return estimatedWidth > maximumWidth
+        ? `textLength="${Math.round(maximumWidth)}" lengthAdjust="spacingAndGlyphs"`
+        : "";
 }
 
 function wrapText(
@@ -2064,12 +2302,21 @@ function wrapText(
 function renderTextLines(
     lines,
     x,
-    lineHeight
+    lineHeight,
+    maximumWidth = null,
+    fontSize = 15,
+    fontWeight = 700
 ) {
     return lines.map((line, index) => `
         <tspan
             x="${x}"
             dy="${index === 0 ? 0 : lineHeight}"
+            ${getTextFitAttributes(
+                line,
+                maximumWidth,
+                fontSize,
+                fontWeight
+            )}
         >${escapeXml(line)}</tspan>
     `).join("");
 }

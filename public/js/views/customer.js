@@ -18,6 +18,9 @@ const view =
         "view"
     );
 let saveTimeout;
+let pendingCustomerSave = null;
+let activeCustomerSavePromise = null;
+let customerRenderRequestId = 0;
 let customerViewState = createCustomerViewState();
 
 function createCustomerViewState(customerId = null) {
@@ -40,11 +43,13 @@ function escapeHtml(value) {
 async function renderView(
     customerId
 ) {
+    const renderRequestId = ++customerRenderRequestId;
     if (String(customerViewState.customerId) !== String(customerId)) {
         customerViewState = createCustomerViewState(customerId);
     }
     const customerResponse = await fetch(`/api/customers/${customerId}`);
     const customer = await customerResponse.json();
+    if (renderRequestId !== customerRenderRequestId) return;
 
     view.innerHTML = `
 
@@ -219,7 +224,7 @@ async function renderView(
         <div class="view-right"></div>
 
     `;
-    generateHandler(customerId);
+    generateHandler(customerId, customer);
     registerCustomerDelete(customerId, customer);
     registerSalesforceActions(customerId, customer);
     registerAdditionalInfoAutoResize();
@@ -892,12 +897,7 @@ function renderDiscounts(
 
     let html = "";
 
-    for (
-        let i = 1;
-        i <= 10;
-        i++
-    ) {
-        if(i === 2 || i > 8) continue;
+    for (const i of [1, 3, 4, 5, 6, 7, 8, 14]) {
         html += `
             <div class="discount-row">
 
@@ -927,7 +927,7 @@ function renderDiscounts(
 
 }
 
-function generateHandler(customerId) {
+function generateHandler(customerId, customer) {
 
     const inputs =
         document.querySelectorAll(
@@ -970,14 +970,41 @@ function generateHandler(customerId) {
                 );
 
                 const customerFormData =
-                    getCustomerFormData();
+                    getCustomerFormData(customer);
+
+                pendingCustomerSave = {
+                    customerId,
+                    customerFormData
+                };
 
                 saveTimeout =
                     setTimeout(
-                        () => saveCustomer(
-                            customerId,
-                            customerFormData
-                        ),
+                        () => {
+                            const pendingSave = pendingCustomerSave;
+                            pendingCustomerSave = null;
+                            saveTimeout = null;
+                            if (!pendingSave) return;
+
+                            const savePromise =
+                                saveCustomer(
+                                    pendingSave.customerId,
+                                    pendingSave.customerFormData
+                                );
+                            activeCustomerSavePromise = savePromise;
+                            savePromise.then(
+                                () => {
+                                    if (activeCustomerSavePromise === savePromise) {
+                                        activeCustomerSavePromise = null;
+                                    }
+                                },
+                                error => {
+                                    console.error("Kunden-Autosave fehlgeschlagen:", error);
+                                    if (activeCustomerSavePromise === savePromise) {
+                                        activeCustomerSavePromise = null;
+                                    }
+                                }
+                            );
+                        },
                         500
                     );
 
@@ -1028,6 +1055,8 @@ function registerCustomerDelete(
             clearTimeout(
                 saveTimeout
             );
+            saveTimeout = null;
+            pendingCustomerSave = null;
 
             const response =
                 await fetch(
@@ -1078,7 +1107,9 @@ async function saveCustomer(
 
             headers: {
                 "Content-Type":
-                    "application/json"
+                    "application/json",
+                "X-ProjectBuilder-Source":
+                    "customer-form-autosave"
             },
 
             body: JSON.stringify(
@@ -1091,7 +1122,42 @@ async function saveCustomer(
 
 }
 
-function getCustomerFormData() {
+async function flushPendingSave() {
+    clearTimeout(saveTimeout);
+    saveTimeout = null;
+
+    const activeSave = activeCustomerSavePromise;
+    if (activeSave) {
+        await activeSave.catch(() => {});
+    }
+
+    const pendingSave = pendingCustomerSave;
+    pendingCustomerSave = null;
+    if (pendingSave) {
+        await saveCustomer(
+            pendingSave.customerId,
+            pendingSave.customerFormData
+        ).catch(() => {});
+    }
+}
+
+function getDiscountInputValue(
+    discountGroup,
+    customer = {}
+) {
+
+    const input =
+        document.getElementById(
+            `discount-pg${discountGroup}`
+        );
+
+    return input
+        ? input.value
+        : customer?.[`pg${discountGroup}`] ?? "";
+
+}
+
+function getCustomerFormData(customer = {}) {
 
     return {
 
@@ -1120,59 +1186,34 @@ function getCustomerFormData() {
                     ).value,
 
                 pg1:
-                    document.getElementById(
-                        "discount-pg1"
-                    )?.value ?? "",
-
-                pg2:
-                    document.getElementById(
-                        "discount-pg2"
-                    )?.value ?? "",
+                    getDiscountInputValue(1, customer),
 
                 pg3:
-                    document.getElementById(
-                        "discount-pg3"
-                    )?.value ?? "",
+                    getDiscountInputValue(3, customer),
 
                 pg4:
-                    document.getElementById(
-                        "discount-pg4"
-                    )?.value ?? "",
+                    getDiscountInputValue(4, customer),
 
                 pg5:
-                    document.getElementById(
-                        "discount-pg5"
-                    )?.value ?? "",
+                    getDiscountInputValue(5, customer),
 
                 pg6:
-                    document.getElementById(
-                        "discount-pg6"
-                    )?.value ?? "",
+                    getDiscountInputValue(6, customer),
 
                 pg7:
-                    document.getElementById(
-                        "discount-pg7"
-                    )?.value ?? "",
+                    getDiscountInputValue(7, customer),
 
                 pg8:
-                    document.getElementById(
-                        "discount-pg8"
-                    )?.value ?? "",
+                    getDiscountInputValue(8, customer),
 
-                pg9:
-                    document.getElementById(
-                        "discount-pg9"
-                    )?.value ?? "",
-
-                pg10:
-                    document.getElementById(
-                        "discount-pg10"
-                    )?.value ?? ""
+                pg14:
+                    getDiscountInputValue(14, customer)
 
     };
 
 }
 
 export {
-    renderView
+    renderView,
+    flushPendingSave
 };

@@ -27,7 +27,7 @@ let currentArticles = [];
 let currentNodeArticles = [];
 let currentProject = null;
 let currentProjectCustomer = null;
-let currentStructurePriceMode = "list";
+let currentStructurePriceMode = "discounted";
 let draggedArticleNumber = null;
 const pendingNodeArticleOrderRequests =
     new Set();
@@ -1499,11 +1499,13 @@ function saveFavoriteArticleNumbers(
 function getProjectStructurePriceMode(
     projectId
 ) {
-    return settings.getItem(
+    const storedPriceMode = settings.getItem(
         `${projectStructurePriceModeStorageKey}.${projectId}`
-    ) === "discounted"
-        ? "discounted"
-        : "list";
+    );
+
+    return storedPriceMode === "list"
+        ? "list"
+        : "discounted";
 }
 
 function saveProjectStructurePriceMode(
@@ -1986,7 +1988,16 @@ function renderNodeArticle(
 
     const unitPrice =
         getStructureArticleUnitPrice(
-            fullArticle
+            fullArticle,
+            nodeArticle
+        );
+    const specialDiscount =
+        getSpecialDiscountPercent(
+            nodeArticle.specialDiscount
+        );
+    const specialPrice =
+        getSpecialPrice(
+            nodeArticle.specialPrice
         );
 
     const total =
@@ -2043,6 +2054,8 @@ function renderNodeArticle(
 
                     ${nodeArticle.isOptional ? `<span class="node-article-property-badge">${i18n.t("project.optional")}</span>` : ""}
                     ${nodeArticle.isAlternative ? `<span class="node-article-property-badge">${i18n.t("project.alternative")}</span>` : ""}
+                    ${specialDiscount !== null ? `<span class="node-article-property-badge node-article-discount-badge">${formatQuantity(specialDiscount)} %</span>` : ""}
+                    ${specialPrice !== null ? `<span class="node-article-property-badge node-article-price-badge">${formatArticleInfoPrice(specialPrice, fullArticle?.listPriceCurrency || "EUR")}</span>` : ""}
 
                     <span class="node-article-price">
 
@@ -2083,6 +2096,13 @@ function renderNodeArticle(
                         data-action="properties"
                     >
                         ${i18n.t("project.properties")}
+                    </button>
+
+                    <button
+                        type="button"
+                        data-action="replace-article-number"
+                    >
+                        ${i18n.t("project.replaceArticleNumber")}
                     </button>
 
                     <button
@@ -2345,7 +2365,8 @@ function calculateProjectTotals(
                     const discountPercent =
                         getArticleDiscountPercent(
                             article,
-                            customer
+                            customer,
+                            nodeArticle
                         );
 
                     const listTotal =
@@ -2572,8 +2593,20 @@ function updateProjectPriceSummary() {
 
 function getArticleDiscountPercent(
     article = {},
-    customer = {}
+    customer = {},
+    nodeArticle = null
 ) {
+
+    const specialDiscount =
+        getSpecialDiscountPercent(
+            nodeArticle?.specialDiscount
+        );
+
+    if (specialDiscount !== null) {
+
+        return specialDiscount;
+
+    }
 
     const discountGroup =
         String(article?.discountGroup ?? "")
@@ -2595,6 +2628,48 @@ function getArticleDiscountPercent(
             100
         )
         : 0;
+
+}
+
+function getSpecialDiscountPercent(
+    value
+) {
+
+    if (value === null || value === undefined || String(value).trim() === "") {
+
+        return null;
+
+    }
+
+    const discount =
+        Number(
+            String(value).trim().replace(",", ".")
+        );
+
+    return Number.isFinite(discount)
+        ? normalizeDiscountPercent(discount)
+        : null;
+
+}
+
+function getSpecialPrice(
+    value
+) {
+
+    if (value === null || value === undefined || String(value).trim() === "") {
+
+        return null;
+
+    }
+
+    const price =
+        Number(
+            String(value).trim().replace(",", ".")
+        );
+
+    return Number.isFinite(price) && price >= 0
+        ? price
+        : null;
 
 }
 
@@ -2625,14 +2700,15 @@ function getNodeArticleTotal(
 
     }
 
-    return getStructureArticleUnitPrice(article)
+    return getStructureArticleUnitPrice(article, nodeArticle)
         *
         (Number(nodeArticle.quantity) || 1);
 
 }
 
 function getStructureArticleUnitPrice(
-    article
+    article,
+    nodeArticle = null
 ) {
     const listPrice =
         getArticleUnitPrice(article);
@@ -2642,10 +2718,13 @@ function getStructureArticleUnitPrice(
         customerDiscountPercent:
             getArticleDiscountPercent(
                 article,
-                currentProjectCustomer
+                currentProjectCustomer,
+                nodeArticle
             ),
         projectDiscountPercent:
             currentProject?.projectDiscount,
+        specialPrice:
+            getSpecialPrice(nodeArticle?.specialPrice),
         priceMode:
             currentStructurePriceMode
     });
@@ -3169,10 +3248,53 @@ function openArticlePropertiesModal(
                         >
                         <span>${i18n.t("project.alternative")}</span>
                     </label>
+                    <label class="project-special-discount-field">
+                        ${i18n.t("project.specialDiscount")}
+                        <div class="project-discount-input-wrapper project-special-discount-input-wrapper">
+                            <input
+                                type="number"
+                                name="specialDiscount"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                                value="${escapeAttribute(nodeArticle.specialDiscount ?? "") }"
+                            >
+                            <span>%</span>
+                            <span
+                                class="project-special-discount-preview"
+                                aria-live="polite"
+                            ></span>
+                        </div>
+                    </label>
+                    <label class="project-special-price-field">
+                        ${i18n.t("project.specialPrice")}
+                        <div class="project-discount-input-wrapper project-special-price-input-wrapper">
+                            <input
+                                type="number"
+                                name="specialPrice"
+                                min="0"
+                                step="0.01"
+                                inputmode="decimal"
+                                value="${escapeAttribute(nodeArticle.specialPrice ?? "") }"
+                            >
+                            <span>€</span>
+                            <span
+                                class="project-special-price-discount-preview"
+                                aria-live="polite"
+                            ></span>
+                        </div>
+                    </label>
                 </fieldset>
                 <p class="project-properties-hint">
                     ${i18n.t("project.optionalAlternativeHint")}
                 </p>
+                <p class="project-properties-hint">
+                    ${i18n.t("project.specialDiscountHint")}
+                </p>
+                <p class="project-properties-hint">
+                    ${i18n.t("project.specialPriceHint")}
+                </p>
+                <p class="project-properties-error" role="alert"></p>
                 <div class="project-modal-actions">
                     <button type="button" data-action="cancel">${i18n.t("project.cancel")}</button>
                     <button type="submit">${i18n.t("project.save")}</button>
@@ -3193,13 +3315,152 @@ function openArticlePropertiesModal(
         modal.querySelector("form").addEventListener("submit", event => {
             event.preventDefault();
             const formData = new FormData(event.currentTarget);
+            const rawSpecialDiscount =
+                String(formData.get("specialDiscount") ?? "").trim();
+            const parsedSpecialDiscount =
+                rawSpecialDiscount === ""
+                    ? null
+                    : Number(rawSpecialDiscount.replace(",", "."));
+            const rawSpecialPrice =
+                String(formData.get("specialPrice") ?? "").trim();
+            const parsedSpecialPrice =
+                rawSpecialPrice === ""
+                    ? null
+                    : Number(rawSpecialPrice.replace(",", "."));
+
+            if (
+                rawSpecialDiscount !== ""
+                && (
+                    !Number.isFinite(parsedSpecialDiscount)
+                    || parsedSpecialDiscount < 0
+                    || parsedSpecialDiscount > 100
+                )
+            ) {
+
+                modal.querySelector(".project-properties-error").textContent =
+                    i18n.t("project.specialDiscountValidation");
+
+                return;
+
+            }
+
+            if (
+                rawSpecialPrice !== ""
+                && (
+                    !Number.isFinite(parsedSpecialPrice)
+                    || parsedSpecialPrice < 0
+                )
+            ) {
+
+                modal.querySelector(".project-properties-error").textContent =
+                    i18n.t("project.specialPriceValidation");
+
+                return;
+
+            }
+
             close({
                 isOptional: formData.has("isOptional"),
-                isAlternative: formData.has("isAlternative")
+                isAlternative: formData.has("isAlternative"),
+                specialDiscount: parsedSpecialDiscount,
+                specialPrice: parsedSpecialPrice
             });
         });
 
         document.body.appendChild(modal);
+
+        const specialDiscountInput =
+            modal.querySelector("[name=\"specialDiscount\"]");
+        const specialPriceInput =
+            modal.querySelector("[name=\"specialPrice\"]");
+        const specialDiscountPreview =
+            modal.querySelector(".project-special-discount-preview");
+        const specialPriceDiscountPreview =
+            modal.querySelector(".project-special-price-discount-preview");
+        const article =
+            getCurrentArticleByNumber(nodeArticle.articleNumber);
+
+        const updateSpecialDiscountPreview = () => {
+            const rawValue = String(specialDiscountInput.value ?? "").trim();
+            const parsedValue =
+                rawValue === ""
+                    ? null
+                    : Number(rawValue.replace(",", "."));
+            const rawPrice = String(specialPriceInput.value ?? "").trim();
+            const parsedPrice =
+                rawPrice === ""
+                    ? null
+                    : Number(rawPrice.replace(",", "."));
+            const listPrice = Number(article?.listPrice);
+
+            if (
+                !article
+                || !Number.isFinite(listPrice)
+                || (
+                    parsedValue !== null
+                    && (
+                        !Number.isFinite(parsedValue)
+                        || parsedValue < 0
+                        || parsedValue > 100
+                    )
+                )
+                || (
+                    parsedPrice !== null
+                    && (
+                        !Number.isFinite(parsedPrice)
+                        || parsedPrice < 0
+                    )
+                )
+            ) {
+                specialDiscountPreview.textContent = "";
+                specialPriceDiscountPreview.textContent = "";
+                return;
+            }
+
+            const customerDiscount =
+                parsedValue === null
+                    ? getArticleDiscountPercent(
+                        article,
+                        currentProjectCustomer
+                    )
+                    : parsedValue;
+            const resultingPrice = calculateStructureUnitPrice({
+                listPrice,
+                customerDiscountPercent: customerDiscount,
+                projectDiscountPercent: currentProject?.projectDiscount,
+                specialPrice: parsedPrice,
+                priceMode: "discounted"
+            });
+            const formattedPrice = formatArticleInfoPrice(
+                resultingPrice,
+                article.listPriceCurrency || "EUR"
+            );
+
+            specialDiscountPreview.textContent = formattedPrice
+                ? `${i18n.t("project.resultingPrice")}: ${formattedPrice}`
+                : "";
+            const resultingDiscount =
+                listPrice > 0
+                && Number.isFinite(Number(resultingPrice))
+                    ? (1 - (Number(resultingPrice) / listPrice)) * 100
+                    : null;
+
+            specialPriceDiscountPreview.textContent =
+                resultingDiscount === null
+                    ? ""
+                    : `${i18n.t("project.resultingDiscount")}: ${formatQuantity(resultingDiscount)} %`;
+        };
+
+        specialDiscountInput.addEventListener(
+            "input",
+            updateSpecialDiscountPreview
+        );
+        specialPriceInput.addEventListener(
+            "input",
+            updateSpecialDiscountPreview
+        );
+        updateSpecialDiscountPreview();
+        specialDiscountInput.focus();
 
     });
 
@@ -3927,7 +4188,10 @@ function updateProjectStructurePrices() {
                 1;
             const unitPrice =
                 getStructureArticleUnitPrice(
-                    article
+                    article,
+                    currentNodeArticles.find(item =>
+                        String(item.id) === String(articleElement.dataset.id)
+                    )
                 );
             const priceElement =
                 articleElement.querySelector(
@@ -6416,6 +6680,100 @@ function registerNodeArticleMenus(
 
                     }
 
+                    if (action === "replace-article-number") {
+
+                        await waitForPendingNodeArticleQuantities();
+
+                        const currentPosition =
+                            currentNodeArticles.find(item =>
+                                String(item.id) === String(positionId)
+                            ) ?? {};
+
+                        const replacementArticleNumber =
+                            await openProjectModal({
+                                title: i18n.t("project.replaceArticleNumber"),
+                                label: i18n.t("project.newArticleNumber"),
+                                value: currentPosition.articleNumber ?? ""
+                            });
+
+                        if (replacementArticleNumber === null) {
+
+                            return;
+
+                        }
+
+                        const normalizedArticleNumber =
+                            replacementArticleNumber.trim();
+
+                        if (!normalizedArticleNumber) {
+
+                            await showAlert(
+                                i18n.t("project.articleNumberRequired"),
+                                {
+                                    title: i18n.t("project.replaceArticleNumber")
+                                }
+                            );
+
+                            return;
+
+                        }
+
+                        if (
+                            normalizedArticleNumber
+                            ===
+                            String(currentPosition.articleNumber)
+                        ) {
+
+                            return;
+
+                        }
+
+                        if (!getCurrentArticleByNumber(normalizedArticleNumber)) {
+
+                            await showAlert(
+                                i18n.t("project.articleNumberNotFound")
+                                    .replace("{number}", normalizedArticleNumber),
+                                {
+                                    title: i18n.t("project.replaceArticleNumber")
+                                }
+                            );
+
+                            return;
+
+                        }
+
+                        try {
+
+                            const updatedNodeArticle =
+                                await updateNodeArticlePosition(
+                                    positionId,
+                                    {
+                                        articleNumber:
+                                            normalizedArticleNumber
+                                    }
+                                );
+
+                            updateNodeArticleElement(
+                                article,
+                                updatedNodeArticle,
+                                projectId
+                            );
+
+                        } catch (error) {
+
+                            await showAlert(
+                                error.message,
+                                {
+                                    title: i18n.t("project.replaceArticleNumber")
+                                }
+                            );
+
+                        }
+
+                        return;
+
+                    }
+
                     if (action === "position-name") {
 
                         const currentName =
@@ -6816,13 +7174,19 @@ function showArticleInfoCard(articleElement) {
 
     const quantity = Number(nodeArticle?.quantity) || 1;
     const listPrice = Number(article.listPrice);
+    const specialDiscount = getSpecialDiscountPercent(
+        nodeArticle?.specialDiscount
+    );
+    const specialPrice = getSpecialPrice(nodeArticle?.specialPrice);
     const discount = getArticleDiscountPercent(
         article,
-        currentProjectCustomer
+        currentProjectCustomer,
+        nodeArticle
     );
-    const discountedUnitPrice = Number.isFinite(listPrice)
-        ? listPrice * (1 - discount / 100)
-        : null;
+    const discountedUnitPrice = getStructureArticleUnitPrice(
+        article,
+        nodeArticle
+    );
     const currency = article.listPriceCurrency || "EUR";
     const origin = [article.originCountry, article.originRegion]
         .filter(Boolean)
@@ -6832,6 +7196,12 @@ function showArticleInfoCard(articleElement) {
         [i18n.t("project.quantity"), formatQuantity(quantity)],
         [i18n.t("articles.price"), formatArticleInfoPrice(listPrice, currency)],
         [i18n.t("articles.discountGroup"), article.discountGroup],
+        ...(specialDiscount !== null
+            ? [[i18n.t("project.specialDiscount"), `${formatQuantity(specialDiscount)} %`]]
+            : []),
+        ...(specialPrice !== null
+            ? [[i18n.t("project.specialPrice"), formatArticleInfoPrice(specialPrice, currency)]]
+            : []),
         [i18n.t("project.discount"), discount ? `${formatQuantity(discount)} %` : ""],
         [i18n.t("project.discountedPrice"), formatArticleInfoPrice(discountedUnitPrice, currency)],
         [i18n.t("project.totalPrice"), formatArticleInfoPrice(
@@ -7734,16 +8104,19 @@ async function updateNodeArticlePosition(
 
         );
 
+    const result = await response.json().catch(() => ({}));
+
     if (!response.ok) {
 
         throw new Error(
+            result.error
+            ||
             "Artikelposition konnte nicht gespeichert werden."
         );
 
     }
 
-    const updatedNodeArticle =
-        await response.json();
+    const updatedNodeArticle = result;
 
     upsertCurrentNodeArticle(
         updatedNodeArticle
@@ -7835,7 +8208,11 @@ async function duplicateNodeArticle(
                         sourceNodeArticle.quantity ?? 1,
 
                     positionName:
-                        sourceNodeArticle.positionName ?? null
+                        sourceNodeArticle.positionName ?? null,
+                    specialDiscount:
+                        sourceNodeArticle.specialDiscount ?? null,
+                    specialPrice:
+                        sourceNodeArticle.specialPrice ?? null
 
                 })
 

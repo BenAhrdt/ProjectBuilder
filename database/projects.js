@@ -55,12 +55,26 @@ for (const [name, definition] of [
     ["salesforceTaxCode", "TEXT"],
     ["salesforceShowDiscount", "INTEGER DEFAULT 1"],
     ["salesforceShowAdditionalDiscount", "INTEGER DEFAULT 0"],
+    ["salesforceShowAdditionalDiscountConfigured", "INTEGER DEFAULT 0"],
     ["salesforceExportQuote", "INTEGER"],
     ["salesforceUploadProjectFile", "INTEGER DEFAULT 1"]
 ]) {
     if (!columns.includes(name)) {
         projects.exec(`ALTER TABLE projects ADD COLUMN ${name} ${definition}`);
     }
+}
+
+if (!columns.includes("salesforceShowAdditionalDiscountConfigured")) {
+    projects.exec(`
+        UPDATE projects
+        SET salesforceShowAdditionalDiscountConfigured =
+            CASE
+                WHEN salesforceShowAdditionalDiscount = 1
+                    OR salesforceSyncedAt IS NOT NULL
+                THEN 1
+                ELSE 0
+            END
+    `);
 }
 
 projects.exec(`

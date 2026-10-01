@@ -16,6 +16,7 @@ import {
     inferSalesArticleCategory,
     SALES_ARTICLE_CATEGORIES
 } from "../utils/salesArticleCategory.js";
+import { normalizeDiscountGroup } from "../utils/discountGroups.js";
 
 const router = express.Router();
 
@@ -690,11 +691,12 @@ router.patch("/:articleNumber/price", (req, res) => {
 router.patch("/:articleNumber/discount-group", (req, res) => {
     const articleNumber = req.params.articleNumber;
     const rawDiscountGroup = String(req.body.discountGroup ?? "").trim().toUpperCase();
-    const discountGroup = rawDiscountGroup
-        ? `PG${rawDiscountGroup.replace(/^PG/, "")}`
-        : "";
+    const discountGroup =
+        rawDiscountGroup
+            ? normalizeDiscountGroup(rawDiscountGroup)
+            : "";
 
-    if (discountGroup && !/^PG[1-8]$/.test(discountGroup)) {
+    if (rawDiscountGroup && !discountGroup) {
         return res.status(400).json({ ok: false, error: "Ungültige Rabattgruppe" });
     }
 

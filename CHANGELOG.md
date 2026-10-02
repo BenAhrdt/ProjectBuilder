@@ -2,6 +2,15 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.42 - 02.10.2026
+
+### Behoben
+
+- Favoriten können wieder direkt zwischen den Karten bzw. unterhalb einer
+  Kartenreihe per Drag-and-Drop sortiert werden. Die Favoritenliste akzeptiert
+  den Drop jetzt auch in Zwischenräumen und zeigt nicht mehr das ungültige
+  Drop-Symbol.
+
 ## 1.5.41 - 02.10.2026
 
 ### Behoben

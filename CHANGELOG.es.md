@@ -2,6 +2,14 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.42 - 02.10.2026
+
+### Corregido
+
+- Los favoritos se pueden volver a ordenar directamente entre las tarjetas y
+  debajo de una fila mediante arrastrar y soltar. Los espacios de la cuadrícula
+  ahora aceptan el destino sin mostrar el cursor de destino no válido.
+
 ## 1.5.41 - 02.10.2026
 
 ### Corregido

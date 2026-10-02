@@ -5695,6 +5695,98 @@ function registerFavoriteArticleRemoveButtons(
 
 function registerFavoriteArticleDragAndDrop() {
 
+    const favoriteList =
+        document.querySelector(
+            ".project-article-favorites-list"
+        );
+
+    if (
+        favoriteList
+        &&
+        favoriteList.dataset.favoriteListDragRegistered
+        !==
+        "true"
+    ) {
+
+        favoriteList.dataset.favoriteListDragRegistered =
+            "true";
+
+        favoriteList.addEventListener(
+            "dragover",
+            event => {
+
+                const draggedFavorite =
+                    document.querySelector(
+                        ".project-article-favorite.dragging"
+                    );
+
+                if (!draggedFavorite) {
+
+                    return;
+
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+                event.dataTransfer.dropEffect =
+                    "move";
+
+                if (
+                    event.target.closest?.(
+                        ".project-article-favorite"
+                    )
+                    ===
+                    draggedFavorite
+                ) {
+
+                    return;
+
+                }
+
+                const referenceElement =
+                    getFavoriteDropReference(
+                        favoriteList,
+                        event,
+                        draggedFavorite
+                    );
+
+                insertElementBeforeIfChanged(
+                    favoriteList,
+                    draggedFavorite,
+                    referenceElement
+                );
+
+            },
+            true
+        );
+
+        favoriteList.addEventListener(
+            "drop",
+            event => {
+
+                const draggedFavorite =
+                    document.querySelector(
+                        ".project-article-favorite.dragging"
+                    );
+
+                if (!draggedFavorite) {
+
+                    return;
+
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+                draggedFavorite.dataset.favoriteListDrop =
+                    "true";
+                saveFavoriteOrderFromDom();
+
+            },
+            true
+        );
+
+    }
+
     document
         .querySelectorAll(
             ".project-article-favorite"
@@ -6297,6 +6389,111 @@ function shouldInsertFavoriteAfter(
         favoriteItems.indexOf(favorite);
 
     return draggedIndex > favoriteIndex;
+
+}
+
+function getFavoriteDropReference(
+    favoriteList,
+    event,
+    draggedFavorite
+) {
+
+    const items = Array.from(
+        favoriteList.querySelectorAll(
+            ".project-article-favorite"
+        )
+    )
+        .filter(item => item !== draggedFavorite)
+        .map(item => ({
+            item,
+            rect: item.getBoundingClientRect()
+        }))
+        .sort((left, right) => {
+
+            const topDifference =
+                left.rect.top
+                -
+                right.rect.top;
+
+            if (Math.abs(topDifference) > 4) {
+
+                return topDifference;
+
+            }
+
+            return left.rect.left - right.rect.left;
+
+        });
+
+    if (items.length === 0) {
+
+        return null;
+
+    }
+
+    const rows = [];
+
+    items.forEach(entry => {
+
+        const currentRow =
+            rows[rows.length - 1];
+
+        if (
+            !currentRow
+            ||
+            Math.abs(entry.rect.top - currentRow.top) > 4
+        ) {
+
+            rows.push({
+                top: entry.rect.top,
+                bottom: entry.rect.bottom,
+                items: [entry]
+            });
+
+            return;
+
+        }
+
+        currentRow.bottom = Math.max(
+            currentRow.bottom,
+            entry.rect.bottom
+        );
+        currentRow.items.push(entry);
+
+    });
+
+    for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+
+        const row = rows[rowIndex];
+
+        if (event.clientY < row.top) {
+
+            return row.items[0].item;
+
+        }
+
+        if (event.clientY <= row.bottom) {
+
+            const itemBeforePointer =
+                row.items.find(entry =>
+                    event.clientX
+                    <
+                    entry.rect.left
+                    +
+                    entry.rect.width / 2
+                );
+
+            if (itemBeforePointer) {
+
+                return itemBeforePointer.item;
+
+            }
+
+        }
+
+    }
+
+    return null;
 
 }
 

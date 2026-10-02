@@ -2,6 +2,14 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.42 - 2026-10-02
+
+### Fixed
+
+- Favorites can be reordered directly between cards and below a card row by
+  drag and drop. Gaps in the favorites grid now accept the drop without the
+  invalid-drop cursor.
+
 ## 1.5.41 - 2026-10-02
 
 ### Fixed

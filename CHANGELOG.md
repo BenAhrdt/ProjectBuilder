@@ -2,6 +2,13 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.40 - 02.10.2026
+
+### Behoben
+
+- Favoriten lassen sich wieder zuverlässig vertikal per Drag-and-Drop sortieren,
+  auch wenn sie in mehreren Grid-Spalten dargestellt werden.
+
 ## 1.5.39 - 02.10.2026
 
 ### Verbessert

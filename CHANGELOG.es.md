@@ -2,6 +2,13 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.40 - 02.10.2026
+
+### Corregido
+
+- Los favoritos se pueden volver a ordenar verticalmente mediante arrastrar y
+  soltar, también cuando se muestran en varias columnas de la cuadrícula.
+
 ## 1.5.39 - 02.10.2026
 
 ### Mejorado

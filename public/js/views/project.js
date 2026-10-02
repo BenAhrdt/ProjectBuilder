@@ -5835,15 +5835,12 @@ function registerFavoriteArticleDragAndDrop() {
 
                     event.preventDefault();
 
-                    const favoriteRect =
-                        favorite.getBoundingClientRect();
-
                     const insertAfter =
-                        event.clientX
-                        >
-                        favoriteRect.left
-                        +
-                        favoriteRect.width / 2;
+                        shouldInsertFavoriteAfter(
+                            draggedFavorite,
+                            favorite,
+                            event
+                        );
 
                     insertElementBeforeIfChanged(
                         favorite.parentElement,
@@ -6026,6 +6023,93 @@ function getFavoriteOrderFromDom() {
     ).map(favorite =>
         favorite.dataset.articleNumber
     );
+
+}
+
+function shouldInsertFavoriteAfter(
+    draggedFavorite,
+    favorite,
+    event
+) {
+
+    const favoriteRect =
+        favorite.getBoundingClientRect();
+    const favoriteCenterX =
+        favoriteRect.left
+        +
+        favoriteRect.width / 2;
+    const favoriteCenterY =
+        favoriteRect.top
+        +
+        favoriteRect.height / 2;
+    const list = favorite.parentElement;
+    const listStyles = list
+        ? window.getComputedStyle(list)
+        : null;
+    const gridColumns = listStyles?.gridTemplateColumns
+        ? listStyles.gridTemplateColumns
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean)
+        : [];
+    const isSingleColumn =
+        listStyles?.flexDirection === "column"
+        ||
+        (
+            listStyles?.display === "grid"
+            &&
+            gridColumns.length <= 1
+        );
+
+    if (isSingleColumn) {
+
+        return event.clientY > favoriteCenterY;
+
+    }
+
+    const distanceFromCenterX =
+        Math.abs(event.clientX - favoriteCenterX)
+        /
+        Math.max(favoriteRect.width, 1);
+    const distanceFromCenterY =
+        Math.abs(event.clientY - favoriteCenterY)
+        /
+        Math.max(favoriteRect.height, 1);
+
+    if (
+        distanceFromCenterY
+        >
+        distanceFromCenterX
+    ) {
+
+        return event.clientY > favoriteCenterY;
+
+    }
+
+    if (
+        distanceFromCenterX
+        >
+        distanceFromCenterY
+    ) {
+
+        return event.clientX > favoriteCenterX;
+
+    }
+
+    const favoriteItems =
+        list
+            ? Array.from(
+                list.querySelectorAll(
+                    ".project-article-favorite"
+                )
+            )
+            : [];
+    const draggedIndex =
+        favoriteItems.indexOf(draggedFavorite);
+    const favoriteIndex =
+        favoriteItems.indexOf(favorite);
+
+    return draggedIndex > favoriteIndex;
 
 }
 

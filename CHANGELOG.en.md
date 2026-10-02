@@ -2,6 +2,13 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.40 - 2026-10-02
+
+### Fixed
+
+- Favorites can once again be reordered vertically by drag and drop, including
+  when they are displayed across multiple grid columns.
+
 ## 1.5.39 - 2026-10-02
 
 ### Improved

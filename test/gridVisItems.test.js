@@ -18,6 +18,10 @@ test("sonstige Messgeräte und Module benötigen ein Item", () => {
     assert.equal(inferGridVisItems({ manufacturerType: "Erweiterungsmodul DI14" }), 1);
 });
 
+test("96-RCM-E benötigt kein GridVis-Item", () => {
+    assert.equal(inferGridVisItems({ manufacturerType: "Modul 96-RCM-E" }), 0);
+});
+
 test("Kommunikationsmodule benötigen kein Item", () => {
     assert.equal(inferGridVisItems({ manufacturerType: "Kommunikationsmodul" }), 0);
     assert.equal(inferGridVisItems({ manufacturerType: "Communication Module" }), 0);

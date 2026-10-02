@@ -37,6 +37,41 @@ function calculateStructureUnitPrice({
         (1 - normalizePercent(projectDiscountPercent) / 100);
 }
 
+function calculateProjectPositionPricing({
+    listPrice,
+    quantity = 1,
+    customerDiscountPercent = 0,
+    projectDiscountPercent = 0,
+    specialPrice = null
+}) {
+    const discountedUnitPrice = calculateStructureUnitPrice({
+        listPrice,
+        customerDiscountPercent,
+        projectDiscountPercent: 0,
+        specialPrice,
+        priceMode: "discounted"
+    });
+    const normalizedQuantity = Number(quantity) || 1;
+    const listTotal = Number(listPrice || 0) * normalizedQuantity;
+    const discountedTotal = discountedUnitPrice * normalizedQuantity;
+    const projectDiscountableTotal = specialPrice === null
+        ? discountedTotal
+        : 0;
+    const projectDiscount =
+        projectDiscountableTotal
+        *
+        (normalizePercent(projectDiscountPercent) / 100);
+
+    return {
+        listTotal,
+        discountedTotal,
+        discountTotal: listTotal - discountedTotal,
+        projectDiscountableTotal,
+        projectDiscount,
+        projectDiscountedTotal: discountedTotal - projectDiscount
+    };
+}
+
 function normalizePercent(
     value
 ) {
@@ -52,5 +87,6 @@ function normalizePercent(
 }
 
 export {
+    calculateProjectPositionPricing,
     calculateStructureUnitPrice
 };

@@ -8,7 +8,8 @@ const ZERO_ITEM_PATTERNS = [
 
 const ZERO_ITEM_NAME_PATTERNS = [
     /\bCT[-\s]*AC[-\s]*RCM[-\s]*\d/i,
-    /\b800[-\s]*CON\b/i
+    /\b800[-\s]*CON\b/i,
+    /\b96[-\s]*RCM[-\s]*E\b/i
 ];
 
 const METER_PATTERNS = [

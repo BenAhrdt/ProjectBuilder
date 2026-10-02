@@ -801,6 +801,8 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
                 Quantity: Number(position.quantity),
                 listPrice: Number(entry.UnitPrice),
                 baseDiscount,
+                specialDiscount: position.specialDiscount,
+                specialPrice: position.specialPrice,
                 isOptional: position.isOptional,
                 isAlternative: position.isAlternative
             };

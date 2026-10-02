@@ -1392,6 +1392,34 @@ body.gridvis-nav-open #below::before {
     background: #c8d3de;
 }
 
+#project-panel-structure .project-structure-header-actions {
+    gap: 5px;
+}
+
+#project-panel-structure .project-article-swap-toggle {
+    padding: 5px 8px;
+    border-color: #9fb8d2;
+    border-radius: 2px;
+    background: #c8d3de;
+    color: var(--gridvis-blue-dark);
+    font-size: 11px;
+}
+
+#project-panel-structure .project-article-swap-toggle:hover {
+    background: #e9eef3;
+}
+
+#project-panel-structure .project-article-swap-toggle.active {
+    border-color: #7f301f;
+    background: #9b3b24;
+    color: #fff;
+}
+
+#project-panel-structure .project-articles-card.project-articles-drop-over {
+    outline: 2px dashed #b23b2f;
+    outline-offset: -3px;
+}
+
 #project-panel-structure .project-structure-price-toggle button {
     padding: 5px 8px;
     border-left-color: #aebdcb;

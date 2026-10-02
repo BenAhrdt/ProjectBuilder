@@ -2,6 +2,25 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.39 - 2026-10-02
+
+### Improved
+
+- Articles can be inserted at a precise position by drag and drop or replaced
+  directly when article swap mode is enabled.
+- Articles can be dragged from the project structure to the article area to
+  remove them without opening the three-dot menu.
+- Article information cards are also available for favorites and search results
+  and are positioned relative to the mouse pointer.
+
+### Fixed
+
+- Special prices are included in the project summary discount and are not
+  charged an additional project discount.
+- Special prices and position-specific discounts are transferred as concrete
+  Salesforce line prices during synchronization.
+- Salesforce positions with different special conditions are no longer merged.
+
 ## 1.5.38 - 2026-10-01
 
 ### Added

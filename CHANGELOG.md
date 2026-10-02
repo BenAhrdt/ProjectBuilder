@@ -2,6 +2,26 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.39 - 02.10.2026
+
+### Verbessert
+
+- Artikel koennen per Drag-and-Drop gezielt an einer Position eingefuegt oder
+  im aktivierten Tauschmodus direkt ersetzt werden.
+- Artikel koennen aus der Projektstruktur in den Artikelbereich gezogen werden,
+  um sie ohne das Drei-Punkt-Menue zu entfernen.
+- Artikel-Infokarten sind auch in Favoriten und Artikelsuchergebnissen verfuegbar
+  und werden passend zur Mausposition angeordnet.
+
+### Behoben
+
+- Sonderpreise werden in der Projektzusammenfassung als Rabatt beruecksichtigt
+  und nicht nochmals mit dem Projektrabatt belastet.
+- Sonderpreise und positionsbezogene Sonderrabatte werden beim Salesforce-Sync
+  als konkrete Positionspreise uebertragen.
+- Salesforce-Positionen mit unterschiedlichen Sonderkonditionen werden nicht
+  mehr zu einer gemeinsamen Position zusammengefasst.
+
 ## 1.5.38 - 01.10.2026
 
 ### Neu

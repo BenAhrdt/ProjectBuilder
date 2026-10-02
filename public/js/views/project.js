@@ -8,6 +8,7 @@ import {
     openProjectOverview
 } from "./projectOverview.js";
 import {
+    calculateProjectPositionPricing,
     calculateStructureUnitPrice
 } from "./projectPricing.js";
 import {
@@ -28,6 +29,7 @@ let currentNodeArticles = [];
 let currentProject = null;
 let currentProjectCustomer = null;
 let currentStructurePriceMode = "discounted";
+let articleSwapMode = false;
 let draggedArticleNumber = null;
 const pendingNodeArticleOrderRequests =
     new Set();
@@ -414,6 +416,8 @@ async function renderView(
     currentProject =
         project;
 
+    articleSwapMode = false;
+
     const [
         articleResponse,
         customerResponse,
@@ -648,27 +652,39 @@ async function renderView(
                             ${i18n.t("project.projectStructure")}
                         </h2>
 
-                        <div
-                            class="project-structure-price-toggle"
-                            role="group"
-                            aria-label="${i18n.t("project.structurePriceDisplay")}"
-                        >
+                        <div class="project-structure-header-actions">
                             <button
+                                id="project-article-swap-toggle"
+                                class="project-article-swap-toggle ${articleSwapMode ? "active" : ""}"
                                 type="button"
-                                data-price-mode="list"
-                                class="${currentStructurePriceMode === "list" ? "active" : ""}"
-                                aria-pressed="${currentStructurePriceMode === "list"}"
+                                aria-pressed="${articleSwapMode}"
+                                title="${i18n.t(articleSwapMode ? "project.articleSwapModeActive" : "project.articleSwapMode")}"
                             >
-                                ${i18n.t("project.structureListPrices")}
+                                ${i18n.t("project.articleSwapMode")}
                             </button>
-                            <button
-                                type="button"
-                                data-price-mode="discounted"
-                                class="${currentStructurePriceMode === "discounted" ? "active" : ""}"
-                                aria-pressed="${currentStructurePriceMode === "discounted"}"
+
+                            <div
+                                class="project-structure-price-toggle"
+                                role="group"
+                                aria-label="${i18n.t("project.structurePriceDisplay")}"
                             >
-                                ${i18n.t("project.structureDiscountedPrices")}
-                            </button>
+                                <button
+                                    type="button"
+                                    data-price-mode="list"
+                                    class="${currentStructurePriceMode === "list" ? "active" : ""}"
+                                    aria-pressed="${currentStructurePriceMode === "list"}"
+                                >
+                                    ${i18n.t("project.structureListPrices")}
+                                </button>
+                                <button
+                                    type="button"
+                                    data-price-mode="discounted"
+                                    class="${currentStructurePriceMode === "discounted" ? "active" : ""}"
+                                    aria-pressed="${currentStructurePriceMode === "discounted"}"
+                                >
+                                    ${i18n.t("project.structureDiscountedPrices")}
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -725,7 +741,10 @@ async function renderView(
                     tabindex="0"
                 ></div>
 
-                <div class="project-articles-card">
+                <div
+                    id="project-articles-card"
+                    class="project-articles-card"
+                >
 
                     <h2>
                         ${i18n.t("project.articles")}
@@ -840,6 +859,7 @@ async function renderView(
     triggerPendingProjectAction(projectId);
     registerProjectDescriptionPersistence(projectId);
     registerProjectStructurePriceToggle(projectId);
+    registerProjectArticleSwapMode();
     registerProjectEditorResizer(projectId);
     generateNodeHandler(projectId);
     registerNodeButtons(projectId);
@@ -847,6 +867,7 @@ async function renderView(
     registerArticleDropTargets(projectId);
     registerArticleSearch(articles);
     registerArticleFavorites(articles, projectId);
+    registerNodeArticleCatalogDropTarget(projectId);
     registerNodeToggles(projectId);
     registerProjectNodeMenus(projectId);
     registerProjectNodeDragAndDrop(projectId);
@@ -1756,6 +1777,43 @@ function registerProjectStructurePriceToggle(
     );
 }
 
+function registerProjectArticleSwapMode() {
+    const button = document.getElementById(
+        "project-article-swap-toggle"
+    );
+
+    if (!button) {
+        return;
+    }
+
+    const updateButton = () => {
+        button.classList.toggle(
+            "active",
+            articleSwapMode
+        );
+        button.setAttribute(
+            "aria-pressed",
+            String(articleSwapMode)
+        );
+        button.title = i18n.t(
+            articleSwapMode
+                ? "project.articleSwapModeActive"
+                : "project.articleSwapMode"
+        );
+    };
+
+    button.addEventListener(
+        "click",
+        () => {
+            articleSwapMode = !articleSwapMode;
+            updateButton();
+            clearArticleDropIndicators();
+        }
+    );
+
+    updateButton();
+}
+
 // Render Nodes
 function renderNodes(nodes, nodeArticles, articles, nodeTotals) {
     return renderChildNodes(nodes, nodeArticles, articles, nodeTotals, null);
@@ -2369,19 +2427,25 @@ function calculateProjectTotals(
                             nodeArticle
                         );
 
-                    const listTotal =
-                        listUnitPrice
-                        *
-                        quantity;
-
-                    const discountedTotal =
-                        listTotal
-                        *
-                        (1 - (discountPercent / 100));
+                    const specialPrice = getSpecialPrice(
+                        nodeArticle.specialPrice
+                    );
+                    const positionPricing =
+                        calculateProjectPositionPricing({
+                            listPrice: listUnitPrice,
+                            quantity,
+                            customerDiscountPercent: discountPercent,
+                            projectDiscountPercent: project?.projectDiscount,
+                            specialPrice
+                        });
+                    const listTotal = positionPricing.listTotal;
+                    const discountedTotal = positionPricing.discountedTotal;
 
                     if (nodeArticle.isOptional) {
                         totals.optionalListTotal += listTotal;
                         totals.optionalDiscountedTotal += discountedTotal;
+                        totals.optionalProjectDiscountableTotal +=
+                            positionPricing.projectDiscountableTotal;
 
                         return totals;
 
@@ -2390,6 +2454,8 @@ function calculateProjectTotals(
                     if (nodeArticle.isAlternative) {
                         totals.alternativeListTotal += listTotal;
                         totals.alternativeDiscountedTotal += discountedTotal;
+                        totals.alternativeProjectDiscountableTotal +=
+                            positionPricing.projectDiscountableTotal;
 
                         return totals;
 
@@ -2409,12 +2475,13 @@ function calculateProjectTotals(
                         listTotal;
 
                     totals.discount +=
-                        listTotal
-                        -
-                        discountedTotal;
+                        positionPricing.discountTotal;
 
                     totals.discountedPrice +=
                         discountedTotal;
+
+                    totals.projectDiscountablePrice +=
+                        positionPricing.projectDiscountableTotal;
 
                     return totals;
 
@@ -2426,8 +2493,11 @@ function calculateProjectTotals(
                     discountedPrice: 0,
                     optionalListTotal: 0,
                     optionalDiscountedTotal: 0,
+                    optionalProjectDiscountableTotal: 0,
                     alternativeListTotal: 0,
                     alternativeDiscountedTotal: 0,
+                    alternativeProjectDiscountableTotal: 0,
+                    projectDiscountablePrice: 0,
                     gridVisItems: 0,
                     gridVisUncheckedPositions: 0
                 }
@@ -2439,18 +2509,22 @@ function calculateProjectTotals(
         );
 
     totals.projectDiscount =
-        totals.discountedPrice
+        totals.projectDiscountablePrice
         *
         (projectDiscountPercent / 100);
 
     totals.discountedPrice -=
         totals.projectDiscount;
 
-    totals.optionalDiscountedTotal *=
-        1 - (projectDiscountPercent / 100);
+    totals.optionalDiscountedTotal -=
+        totals.optionalProjectDiscountableTotal
+        *
+        (projectDiscountPercent / 100);
 
-    totals.alternativeDiscountedTotal *=
-        1 - (projectDiscountPercent / 100);
+    totals.alternativeDiscountedTotal -=
+        totals.alternativeProjectDiscountableTotal
+        *
+        (projectDiscountPercent / 100);
 
     return totals;
 
@@ -3002,6 +3076,321 @@ function openProjectModal({
             .select();
 
     });
+
+}
+
+function openArticleReplacementModal({
+    currentArticleNumber = ""
+}) {
+
+    return new Promise(resolve => {
+
+        const modal =
+            document.createElement(
+                "div"
+            );
+
+        modal.className =
+            "project-modal-backdrop";
+
+        modal.innerHTML = `
+
+            <form class="project-modal project-article-replacement-modal">
+
+                <h3>
+                    ${escapeHtml(i18n.t("project.replaceArticleNumber"))}
+                </h3>
+
+                <label for="project-article-replacement-search">
+                    ${escapeHtml(i18n.t("project.articleSearchLabel"))}
+                </label>
+
+                <input
+                    id="project-article-replacement-search"
+                    class="project-modal-input project-article-replacement-input"
+                    type="search"
+                    value="${escapeAttribute(currentArticleNumber)}"
+                    placeholder="${escapeAttribute(i18n.t("project.articleSearchPlaceholder"))}"
+                    autocomplete="off"
+                >
+
+                <div
+                    class="project-article-replacement-results"
+                    role="listbox"
+                    aria-label="${escapeAttribute(i18n.t("project.articleSearchLabel"))}"
+                ></div>
+
+                <p
+                    class="project-article-replacement-error"
+                    role="alert"
+                ></p>
+
+                <div class="project-modal-actions">
+
+                    <button
+                        type="button"
+                        data-action="cancel"
+                    >
+                        ${escapeHtml(i18n.t("project.cancel"))}
+                    </button>
+
+                    <button
+                        type="submit"
+                    >
+                        ${escapeHtml(i18n.t("project.save"))}
+                    </button>
+
+                </div>
+
+            </form>
+
+        `;
+
+        const form = modal.querySelector("form");
+        const input = modal.querySelector(
+            ".project-article-replacement-input"
+        );
+        const results = modal.querySelector(
+            ".project-article-replacement-results"
+        );
+        const error = modal.querySelector(
+            ".project-article-replacement-error"
+        );
+        let selectedArticleNumber = null;
+
+        const close = result => {
+
+            modal.remove();
+            resolve(result);
+
+        };
+
+        const renderResults = query => {
+
+            const matches =
+                getArticleReplacementMatches(
+                    query
+                );
+
+            results.innerHTML = matches.length
+                ? matches.map(article => `
+
+                    <button
+                        class="project-article-replacement-result${
+                            String(article.articleNumber)
+                            ===
+                            String(selectedArticleNumber)
+                                ? " selected"
+                                : ""
+                        }"
+                        type="button"
+                        role="option"
+                        aria-selected="${
+                            String(article.articleNumber)
+                            ===
+                            String(selectedArticleNumber)
+                        }"
+                        data-article-number="${escapeAttribute(article.articleNumber)}"
+                    >
+                        <img
+                            src="${escapeAttribute(getArticleIcon(article))}"
+                            alt=""
+                        >
+                        <span>
+                            <strong>${escapeHtml(article.articleNumber)}</strong>
+                            <span>${escapeHtml(article.manufacturerType)}</span>
+                            ${article.description ? `
+                                <small>${escapeHtml(article.description)}</small>
+                            ` : ""}
+                        </span>
+                    </button>
+
+                `).join("")
+                : `<p class="project-article-replacement-empty">
+                    ${escapeHtml(i18n.t("project.articleSearchNoResults"))}
+                </p>`;
+
+        };
+
+        modal.addEventListener(
+            "mousedown",
+            event => {
+
+                if (event.target === modal) {
+
+                    close(null);
+
+                }
+
+            }
+        );
+
+        modal.querySelector(
+            "[data-action=\"cancel\"]"
+        ).addEventListener(
+            "click",
+            () => close(null)
+        );
+
+        input.addEventListener(
+            "input",
+            () => {
+
+                selectedArticleNumber = null;
+                error.textContent = "";
+                renderResults(input.value);
+
+            }
+        );
+
+        results.addEventListener(
+            "click",
+            event => {
+
+                const result = event.target.closest(
+                    ".project-article-replacement-result"
+                );
+
+                if (!result) {
+
+                    return;
+
+                }
+
+                selectedArticleNumber =
+                    result.dataset.articleNumber;
+                input.value =
+                    selectedArticleNumber;
+                error.textContent = "";
+                renderResults(input.value);
+                input.focus();
+
+            }
+        );
+
+        form.addEventListener(
+            "submit",
+            event => {
+
+                event.preventDefault();
+
+                const query =
+                    input.value.trim();
+                const exactMatch =
+                    currentArticles.find(article =>
+                        String(article.articleNumber)
+                            .trim()
+                            .toLowerCase()
+                        ===
+                        query.toLowerCase()
+                    );
+
+                if (!exactMatch) {
+
+                    error.textContent =
+                        i18n.t("project.articleSearchSelect");
+                    return;
+
+                }
+
+                close(
+                    String(exactMatch.articleNumber)
+                );
+
+            }
+        );
+
+        modal.addEventListener(
+            "keydown",
+            event => {
+
+                if (event.key === "Escape") {
+
+                    close(null);
+
+                }
+
+            }
+        );
+
+        document.body.appendChild(modal);
+        selectedArticleNumber =
+            String(currentArticleNumber ?? "");
+        renderResults(input.value);
+        input.focus();
+        input.select();
+
+    });
+
+}
+
+function getArticleReplacementMatches(
+    query
+) {
+
+    const normalizedQuery =
+        normalizeSearchText(query);
+
+    return currentArticles
+        .map((article, index) => {
+
+            const articleNumber =
+                normalizeSearchText(article.articleNumber);
+            const manufacturerType =
+                normalizeSearchText(article.manufacturerType);
+            const description =
+                normalizeSearchText(article.description);
+            const allArticleData =
+                getArticleSearchText(article, true);
+            let rank = normalizedQuery
+                ? Number.POSITIVE_INFINITY
+                : 10;
+
+            if (!normalizedQuery) {
+
+                rank = 10;
+
+            } else if (articleNumber === normalizedQuery) {
+
+                rank = 0;
+
+            } else if (articleNumber.startsWith(normalizedQuery)) {
+
+                rank = 1;
+
+            } else if (articleNumber.includes(normalizedQuery)) {
+
+                rank = 2;
+
+            } else if (manufacturerType.includes(normalizedQuery)) {
+
+                rank = 3;
+
+            } else if (description.includes(normalizedQuery)) {
+
+                rank = 4;
+
+            } else if (allArticleData.includes(normalizedQuery)) {
+
+                rank = 5;
+
+            }
+
+            return {
+                article,
+                rank,
+                index
+            };
+
+        })
+        .filter(item => Number.isFinite(item.rank))
+        .sort((first, second) =>
+            first.rank - second.rank
+            ||
+            first.index - second.index
+        )
+        .slice(0, 40)
+        .map(item => item.article);
 
 }
 
@@ -4688,14 +5077,69 @@ function registerArticleDropTargets(
 
                     }
 
+                    if (
+                        event.target.closest(
+                            ".node-article"
+                        )
+                        ||
+                        articleSwapMode
+                    ) {
+
+                        return;
+
+                    }
+
+                    const articleChildren =
+                        getDirectNodeArticleChildren(
+                            dropTarget
+                        );
+
+                    if (
+                        isDirectNodeArticleChildrenTarget(
+                            event,
+                            articleChildren
+                        )
+                    ) {
+
+                        const placement =
+                            getNodeArticleDropPlacement(
+                                articleChildren,
+                                event
+                            );
+
+                        event.preventDefault();
+                        event.stopPropagation();
+                        event.dataTransfer.dropEffect =
+                            "copy";
+                        clearArticleDropIndicators();
+
+                        if (placement.targetArticle) {
+
+                            markNodeArticleDropPosition(
+                                placement.targetArticle,
+                                placement.insertAfter
+                            );
+
+                        } else {
+
+                            markNodeArticleDropTarget(
+                                node
+                            );
+
+                        }
+
+                        return;
+
+                    }
+
                     event.preventDefault();
                     event.stopPropagation();
 
                     event.dataTransfer.dropEffect =
                         "copy";
 
-                    node.classList.add(
-                        "article-drop-over"
+                    markNodeArticleDropTarget(
+                        node
                     );
 
                 };
@@ -4730,6 +5174,66 @@ function registerArticleDropTargets(
                         );
 
                     if (!articleNumber) {
+
+                        return;
+
+                    }
+
+                    if (
+                        event.target.closest(
+                            ".node-article"
+                        )
+                        ||
+                        articleSwapMode
+                    ) {
+
+                        return;
+
+                    }
+
+                    const articleChildren =
+                        getDirectNodeArticleChildren(
+                            dropTarget
+                        );
+
+                    if (
+                        isDirectNodeArticleChildrenTarget(
+                            event,
+                            articleChildren
+                        )
+                    ) {
+
+                        event.preventDefault();
+                        event.stopPropagation();
+
+                        const placement =
+                            getNodeArticleDropPlacement(
+                                articleChildren,
+                                event
+                            );
+                        const fullArticle =
+                            getCurrentArticleByNumber(
+                                articleNumber
+                            );
+
+                        clearArticleDropIndicators();
+
+                        if (!fullArticle) {
+
+                            return;
+
+                        }
+
+                        await addArticleToNode(
+                            node.dataset.id,
+                            articleNumber,
+                            fullArticle,
+                            projectId,
+                            placement.sortOrder
+                        );
+
+                        draggedArticleNumber =
+                            null;
 
                         return;
 
@@ -4785,6 +5289,92 @@ function getDraggedArticleNumber(
         "application/x-project-article-number"
     );
 
+}
+
+function getDirectNodeArticleChildren(
+    dropTarget
+) {
+    return dropTarget?.querySelector(
+        ":scope > .project-node-children"
+    ) || null;
+}
+
+function isDirectNodeArticleChildrenTarget(
+    event,
+    children
+) {
+    return Boolean(
+        children
+        &&
+        event.target.closest(
+            ".project-node-children"
+        ) === children
+    );
+}
+
+function getNodeArticleDropPlacement(
+    children,
+    event,
+    draggedArticle = null
+) {
+    const articles =
+        Array.from(
+            children?.querySelectorAll(
+                ":scope > .node-article"
+            ) || []
+        ).filter(article =>
+            article !== draggedArticle
+        );
+
+    const targetArticle =
+        articles.find(article => {
+            const rect =
+                article.getBoundingClientRect();
+
+            return event.clientY <
+                rect.top + rect.height / 2;
+        }) || null;
+
+    if (targetArticle) {
+        return {
+            targetArticle,
+            insertAfter: false,
+            sortOrder: articles.indexOf(
+                targetArticle
+            ),
+            referenceElement: targetArticle
+        };
+    }
+
+    const lastArticle =
+        articles[articles.length - 1] || null;
+
+    return {
+        targetArticle: lastArticle,
+        insertAfter: Boolean(lastArticle),
+        sortOrder: articles.length,
+        referenceElement: lastArticle
+            ? lastArticle.nextSibling
+            : children?.querySelector(
+                ":scope > .project-node-wrapper"
+            ) || null
+    };
+}
+
+function placeNodeArticleAtDropPlacement(
+    article,
+    nodeId,
+    children,
+    placement
+) {
+    article.dataset.nodeId =
+        nodeId;
+
+    insertElementBeforeIfChanged(
+        children,
+        article,
+        placement.referenceElement
+    );
 }
 
 function registerArticleSearch(
@@ -5129,6 +5719,14 @@ function registerFavoriteArticleDragAndDrop() {
 
                     event.stopPropagation();
 
+                    favorite.dataset.favoriteOriginalOrder =
+                        JSON.stringify(
+                            getFavoriteOrderFromDom()
+                        );
+
+                    favorite.dataset.favoriteListDrop =
+                        "false";
+
                     favorite.classList.add(
                         "dragging"
                     );
@@ -5156,6 +5754,26 @@ function registerFavoriteArticleDragAndDrop() {
                 "dragend",
                 () => {
 
+                    const wasDroppedInFavoriteList =
+                        favorite.dataset.favoriteListDrop
+                        ===
+                        "true";
+                    let originalOrder = [];
+
+                    try {
+
+                        originalOrder = JSON.parse(
+                            favorite.dataset.favoriteOriginalOrder
+                            ||
+                            "[]"
+                        );
+
+                    } catch {
+
+                        originalOrder = [];
+
+                    }
+
                     favorite.classList.remove(
                         "dragging"
                     );
@@ -5168,7 +5786,20 @@ function registerFavoriteArticleDragAndDrop() {
                     favorite.dataset.wasDragged =
                         "true";
 
-                    saveFavoriteOrderFromDom();
+                    if (wasDroppedInFavoriteList) {
+
+                        saveFavoriteOrderFromDom();
+
+                    } else {
+
+                        restoreFavoriteOrderInDom(
+                            originalOrder
+                        );
+
+                    }
+
+                    delete favorite.dataset.favoriteOriginalOrder;
+                    delete favorite.dataset.favoriteListDrop;
 
                     window.setTimeout(
                         () => {
@@ -5229,7 +5860,26 @@ function registerFavoriteArticleDragAndDrop() {
                 "drop",
                 event => {
 
+                    const draggedFavorite =
+                        document.querySelector(
+                            ".project-article-favorite.dragging"
+                        );
+
+                    if (
+                        !draggedFavorite
+                        ||
+                        draggedFavorite === favorite
+                    ) {
+
+                        return;
+
+                    }
+
                     event.preventDefault();
+                    event.stopPropagation();
+
+                    draggedFavorite.dataset.favoriteListDrop =
+                        "true";
 
                     saveFavoriteOrderFromDom();
 
@@ -5240,17 +5890,186 @@ function registerFavoriteArticleDragAndDrop() {
 
 }
 
+function registerNodeArticleCatalogDropTarget(
+    projectId
+) {
+    const card = document.getElementById(
+        "project-articles-card"
+    );
+
+    if (
+        !card
+        ||
+        card.dataset.nodeArticleDropRegistered === "true"
+    ) {
+        return;
+    }
+
+    card.dataset.nodeArticleDropRegistered =
+        "true";
+
+    card.addEventListener(
+        "dragover",
+        event => {
+            const draggedArticle =
+                document.querySelector(
+                    ".node-article.dragging"
+                );
+
+            if (!draggedArticle) {
+                return;
+            }
+
+            const target =
+                event.target.closest(
+                    ".project-article, .project-article-favorite"
+                );
+
+            if (articleSwapMode && !target) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            event.dataTransfer.dropEffect =
+                "move";
+            clearArticleDropIndicators();
+
+            if (articleSwapMode) {
+                target.classList.add(
+                    "project-article-swap-target"
+                );
+            } else {
+                card.classList.add(
+                    "project-articles-drop-over"
+                );
+            }
+        },
+        true
+    );
+
+    card.addEventListener(
+        "dragleave",
+        event => {
+            if (
+                card.contains(
+                    event.relatedTarget
+                )
+            ) {
+                return;
+            }
+
+            clearArticleDropIndicators();
+        },
+        true
+    );
+
+    card.addEventListener(
+        "drop",
+        async event => {
+            const draggedArticle =
+                document.querySelector(
+                    ".node-article.dragging"
+                );
+
+            if (!draggedArticle) {
+                return;
+            }
+
+            const target =
+                event.target.closest(
+                    ".project-article, .project-article-favorite"
+                );
+
+            if (articleSwapMode && !target) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            clearArticleDropIndicators();
+            draggedArticle.dataset.dropHandled =
+                "true";
+
+            if (articleSwapMode) {
+                await replaceDraggedNodeArticleWithCatalogArticle(
+                    draggedArticle,
+                    target.dataset.articleNumber,
+                    projectId
+                );
+                return;
+            }
+
+            await removeNodeArticleFromProject(
+                draggedArticle,
+                projectId
+            );
+        },
+        true
+    );
+}
+
 function saveFavoriteOrderFromDom() {
 
     saveFavoriteArticleNumberList(
-        Array.from(
-            document.querySelectorAll(
-                ".project-article-favorite"
-            )
-        ).map(favorite =>
-            favorite.dataset.articleNumber
-        )
+        getFavoriteOrderFromDom()
     );
+
+}
+
+function getFavoriteOrderFromDom() {
+
+    return Array.from(
+        document.querySelectorAll(
+            ".project-article-favorite"
+        )
+    ).map(favorite =>
+        favorite.dataset.articleNumber
+    );
+
+}
+
+function restoreFavoriteOrderInDom(
+    favoriteOrder
+) {
+
+    const favoriteList =
+        document.querySelector(
+            ".project-article-favorites-list"
+        );
+
+    if (!favoriteList || !Array.isArray(favoriteOrder)) {
+
+        return;
+
+    }
+
+    const favoritesByArticleNumber =
+        new Map(
+            Array.from(
+                favoriteList.querySelectorAll(
+                    ".project-article-favorite"
+                )
+            ).map(favorite => [
+                String(favorite.dataset.articleNumber),
+                favorite
+            ])
+        );
+
+    favoriteOrder.forEach(articleNumber => {
+
+        const favorite =
+            favoritesByArticleNumber.get(
+                String(articleNumber)
+            );
+
+        if (favorite) {
+
+            favoriteList.append(favorite);
+
+        }
+
+    });
 
 }
 
@@ -5293,6 +6112,68 @@ function clearArticleDropIndicators() {
 
         });
 
+    document
+        .querySelectorAll(
+            ".project-articles-card.project-articles-drop-over, .project-article-swap-target"
+        )
+        .forEach(target => {
+
+            target.classList.remove(
+                "project-articles-drop-over",
+                "project-article-swap-target"
+            );
+
+        });
+
+    clearNodeArticleDropIndicators();
+
+}
+
+function clearNodeArticleDropIndicators() {
+
+    document
+        .querySelectorAll(
+            ".node-article.drag-over, .node-article.article-drop-before, .node-article.article-drop-after, .node-article.article-swap-over"
+        )
+        .forEach(article => {
+
+            article.classList.remove(
+                "drag-over",
+                "article-drop-before",
+                "article-drop-after",
+                "article-swap-over"
+            );
+
+        });
+
+}
+
+function markNodeArticleDropPosition(
+    article,
+    insertAfter
+) {
+
+    clearNodeArticleDropIndicators();
+
+    article.classList.add(
+        "drag-over",
+        insertAfter
+            ? "article-drop-after"
+            : "article-drop-before"
+    );
+
+}
+
+function markNodeArticleSwapTarget(
+    article
+) {
+
+    clearArticleDropIndicators();
+
+    article.classList.add(
+        "article-swap-over"
+    );
+
 }
 
 function markNodeArticleDropTarget(
@@ -5311,7 +6192,8 @@ async function addArticleToNode(
     nodeId,
     articleNumber,
     fullArticle,
-    projectId
+    projectId,
+    sortOrder = null
 ) {
 
     const response =
@@ -5335,7 +6217,11 @@ async function addArticleToNode(
                     projectNodeId:
                         nodeId,
 
-                    articleNumber
+                    articleNumber,
+
+                    ...(Number.isFinite(sortOrder)
+                        ? { sortOrder }
+                        : {})
 
                 })
 
@@ -5408,7 +6294,46 @@ async function addArticleToNode(
             ":scope > .project-node-wrapper"
         );
 
-    if (childNodeWrapper) {
+    if (Number.isFinite(sortOrder)) {
+
+        children.insertAdjacentHTML(
+            "beforeend",
+            renderNodeArticle(
+                nodeId,
+                articleNumber,
+                fullArticle,
+                nodeArticle
+            )
+        );
+
+        const insertedArticle =
+            children.querySelector(
+                `.node-article[data-id="${nodeArticle.id}"]`
+            );
+        const articleElements =
+            Array.from(
+                children.querySelectorAll(
+                    ":scope > .node-article"
+                )
+            ).filter(articleElement =>
+                articleElement !== insertedArticle
+            );
+        const referenceArticle =
+            articleElements[sortOrder]
+            ||
+            childNodeWrapper;
+
+        insertElementBeforeIfChanged(
+            children,
+            insertedArticle,
+            referenceArticle
+        );
+
+        await saveNodeArticleOrder(
+            nodeId
+        );
+
+    } else if (childNodeWrapper) {
 
         childNodeWrapper.insertAdjacentHTML(
 
@@ -6690,10 +7615,9 @@ function registerNodeArticleMenus(
                             ) ?? {};
 
                         const replacementArticleNumber =
-                            await openProjectModal({
-                                title: i18n.t("project.replaceArticleNumber"),
-                                label: i18n.t("project.newArticleNumber"),
-                                value: currentPosition.articleNumber ?? ""
+                            await openArticleReplacementModal({
+                                currentArticleNumber:
+                                    currentPosition.articleNumber ?? ""
                             });
 
                         if (replacementArticleNumber === null) {
@@ -7004,7 +7928,8 @@ function registerNodeArticleInfoCards() {
 
         if (
             event.target.closest?.(
-                ".node-article-menu, .node-article-quantity-input"
+                ".node-article-menu, .node-article-quantity-input, "
+                + ".article-favorite-toggle, .project-article-favorite-remove"
             )
         ) {
 
@@ -7013,35 +7938,36 @@ function registerNodeArticleInfoCards() {
 
         }
 
-        const articleContent = event.target.closest?.(
-            ".node-article-content"
-        );
-        const articleElement = articleContent?.closest(
-            ".node-article"
-        );
+        const articleElement =
+            getArticleInfoTarget(event.target);
 
         if (
             !articleElement
-            || articleContent.contains(event.relatedTarget)
+            || articleElement.contains(event.relatedTarget)
         ) {
 
             return;
 
         }
 
-        scheduleArticleInfoCard(articleElement, articleInfoCardDelay);
+        scheduleArticleInfoCard(
+            articleElement,
+            articleInfoCardDelay,
+            {
+                x: event.clientX,
+                y: event.clientY
+            }
+        );
 
     });
 
     view.addEventListener("pointerout", event => {
 
-        const articleContent = event.target.closest?.(
-            ".node-article-content"
-        );
-
+        const articleElement =
+            getArticleInfoTarget(event.target);
         if (
-            !articleContent
-            || articleContent.contains(event.relatedTarget)
+            !articleElement
+            || articleElement.contains(event.relatedTarget)
         ) {
 
             return;
@@ -7054,9 +7980,8 @@ function registerNodeArticleInfoCards() {
 
     view.addEventListener("focusin", event => {
 
-        const articleElement = event.target.closest?.(
-            ".node-article-content"
-        )?.closest(".node-article");
+        const articleElement =
+            getArticleInfoTarget(event.target);
 
         if (articleElement) {
 
@@ -7068,16 +7993,12 @@ function registerNodeArticleInfoCards() {
 
     view.addEventListener("focusout", event => {
 
-        const articleContent = event.target.closest?.(
-            ".node-article-content"
-        );
-        const articleElement = articleContent?.closest(
-            ".node-article"
-        );
+        const articleElement =
+            getArticleInfoTarget(event.target);
 
         if (
             articleElement
-            && !articleContent.contains(event.relatedTarget)
+            && !articleElement.contains(event.relatedTarget)
         ) {
 
             scheduleArticleInfoCardHide();
@@ -7098,17 +8019,59 @@ function registerNodeArticleInfoCards() {
 
 }
 
+function getArticleInfoTarget(
+    target
+) {
+
+    if (!target?.closest) {
+
+        return null;
+
+    }
+
+    if (
+        target.closest(
+            ".node-article-menu, .node-article-quantity-input, "
+            + ".article-favorite-toggle, .project-article-favorite-remove"
+        )
+    ) {
+
+        return null;
+
+    }
+
+    return target.closest(
+        ".node-article, .project-article, .project-article-favorite"
+    );
+
+}
+
+function getArticleInfoTargetKey(
+    articleElement
+) {
+
+    if (articleElement.dataset.id) {
+
+        return `position:${articleElement.dataset.id}`;
+
+    }
+
+    return `article:${articleElement.dataset.articleNumber}`;
+
+}
+
 function scheduleArticleInfoCard(
     articleElement,
-    delay
+    delay,
+    pointerPosition = null
 ) {
 
     clearTimeout(articleInfoCardHideTimer);
     clearTimeout(articleInfoCardShowTimer);
 
     if (
-        activeArticleInfoCard?.dataset.positionId
-        === articleElement.dataset.id
+        activeArticleInfoCard?.dataset.infoTargetKey
+        === getArticleInfoTargetKey(articleElement)
     ) {
 
         return;
@@ -7116,7 +8079,10 @@ function scheduleArticleInfoCard(
     }
 
     articleInfoCardShowTimer = setTimeout(
-        () => showArticleInfoCard(articleElement),
+        () => showArticleInfoCard(
+            articleElement,
+            pointerPosition
+        ),
         delay
     );
 
@@ -7156,7 +8122,10 @@ function hideArticleInfoCard(immediately = false) {
 
 }
 
-function showArticleInfoCard(articleElement) {
+function showArticleInfoCard(
+    articleElement,
+    pointerPosition = null
+) {
 
     if (!articleElement.isConnected) return;
 
@@ -7164,15 +8133,18 @@ function showArticleInfoCard(articleElement) {
     const article = currentArticles.find(item =>
         String(item.articleNumber) === String(articleNumber)
     );
-    const nodeArticle = currentNodeArticles.find(item =>
-        String(item.id) === String(articleElement.dataset.id)
-    );
+    const nodeArticle = articleElement.dataset.id
+        ? currentNodeArticles.find(item =>
+            String(item.id) === String(articleElement.dataset.id)
+        )
+        : null;
 
     if (!article) return;
 
     hideArticleInfoCard(true);
 
     const quantity = Number(nodeArticle?.quantity) || 1;
+    const isProjectPosition = Boolean(nodeArticle);
     const listPrice = Number(article.listPrice);
     const specialDiscount = getSpecialDiscountPercent(
         nodeArticle?.specialDiscount
@@ -7193,21 +8165,25 @@ function showArticleInfoCard(articleElement) {
         .join(" / ");
     const gridVisItems = article.gridVisItems;
     const rows = [
-        [i18n.t("project.quantity"), formatQuantity(quantity)],
+        ...(isProjectPosition
+            ? [[i18n.t("project.quantity"), formatQuantity(quantity)]]
+            : []),
         [i18n.t("articles.price"), formatArticleInfoPrice(listPrice, currency)],
         [i18n.t("articles.discountGroup"), article.discountGroup],
-        ...(specialDiscount !== null
+        ...(isProjectPosition && specialDiscount !== null
             ? [[i18n.t("project.specialDiscount"), `${formatQuantity(specialDiscount)} %`]]
             : []),
-        ...(specialPrice !== null
+        ...(isProjectPosition && specialPrice !== null
             ? [[i18n.t("project.specialPrice"), formatArticleInfoPrice(specialPrice, currency)]]
             : []),
         [i18n.t("project.discount"), discount ? `${formatQuantity(discount)} %` : ""],
         [i18n.t("project.discountedPrice"), formatArticleInfoPrice(discountedUnitPrice, currency)],
-        [i18n.t("project.totalPrice"), formatArticleInfoPrice(
-            discountedUnitPrice === null ? null : discountedUnitPrice * quantity,
-            currency
-        )],
+        ...(isProjectPosition
+            ? [[i18n.t("project.totalPrice"), formatArticleInfoPrice(
+                discountedUnitPrice === null ? null : discountedUnitPrice * quantity,
+                currency
+            )]]
+            : []),
         [i18n.t("articles.gridVisItems"), gridVisItems === null || gridVisItems === undefined
             ? ""
             : `${formatQuantity(gridVisItems)} / ${i18n.t("project.unit")}`],
@@ -7222,7 +8198,10 @@ function showArticleInfoCard(articleElement) {
 
     const card = document.createElement("aside");
     card.className = "node-article-info-card";
-    card.dataset.positionId = articleElement.dataset.id;
+    card.dataset.infoTargetKey =
+        getArticleInfoTargetKey(articleElement);
+    card.dataset.articleNumber =
+        articleElement.dataset.articleNumber;
     card.setAttribute("role", "tooltip");
     card.innerHTML = `
         <div class="node-article-info-content">
@@ -7258,7 +8237,11 @@ function showArticleInfoCard(articleElement) {
     card.addEventListener("pointerleave", scheduleArticleInfoCardHide);
     document.body.append(card);
     activeArticleInfoCard = card;
-    positionArticleInfoCard(card, articleElement);
+    positionArticleInfoCard(
+        card,
+        articleElement,
+        pointerPosition
+    );
     requestAnimationFrame(() => card.classList.add("visible"));
 
 }
@@ -7284,27 +8267,189 @@ function formatArticleInfoPrice(value, currency) {
 
 }
 
-function positionArticleInfoCard(card, articleElement) {
+function positionArticleInfoCard(
+    card,
+    articleElement,
+    pointerPosition = null
+) {
 
     const margin = 12;
     const anchor = articleElement.getBoundingClientRect();
     const cardRect = card.getBoundingClientRect();
-    let left = anchor.right + margin;
-    let opensToRight = true;
+    const hasPointerPosition =
+        Number.isFinite(Number(pointerPosition?.x))
+        &&
+        Number.isFinite(Number(pointerPosition?.y));
+    const pointerX = hasPointerPosition
+        ? Number(pointerPosition.x)
+        : null;
+    const pointerY = hasPointerPosition
+        ? Number(pointerPosition.y)
+        : null;
+    const maxLeft = Math.max(
+        margin,
+        window.innerWidth - cardRect.width - margin
+    );
+    const maxTop = Math.max(
+        margin,
+        window.innerHeight - cardRect.height - margin
+    );
+    const clampLeft = value => Math.min(
+        Math.max(margin, value),
+        maxLeft
+    );
+    const clampTop = value => Math.min(
+        Math.max(margin, value),
+        maxTop
+    );
+    const coversPointer = (left, top) =>
+        hasPointerPosition
+        &&
+        pointerX >= left
+        &&
+        pointerX <= left + cardRect.width
+        &&
+        pointerY >= top
+        &&
+        pointerY <= top + cardRect.height;
+    const targetType = articleElement.matches(
+        ".node-article"
+    )
+        ? "project-structure"
+        : articleElement.matches(
+            ".project-article-favorite"
+        )
+            ? "favorite"
+            : "article-table";
+    let left;
+    let opensToRight;
+    let top;
+    let anchorY;
 
-    if (left + cardRect.width > window.innerWidth - margin) {
+    if (targetType === "project-structure") {
 
-        left = anchor.left - cardRect.width - margin;
-        opensToRight = false;
+        const menu = articleElement.querySelector(
+            ".node-article-menu"
+        );
+        const menuRect = menu?.getBoundingClientRect()
+            || anchor;
+
+        left = clampLeft(
+            menuRect.right + margin
+        );
+        opensToRight = true;
+        top = clampTop(menuRect.top);
+        anchorY = menuRect.top + menuRect.height / 2;
+
+    } else if (targetType === "article-table") {
+
+        const tableRightPosition =
+            anchor.left + anchor.width / 2 + margin;
+        const tableTop = clampTop(anchor.top);
+        const canUseTablePosition =
+            tableRightPosition <= maxLeft
+            &&
+            !coversPointer(
+                tableRightPosition,
+                tableTop
+            );
+
+        if (canUseTablePosition) {
+
+            left = tableRightPosition;
+            opensToRight = true;
+            top = tableTop;
+            anchorY = anchor.top + anchor.height / 2;
+
+        } else {
+
+            const rightPosition =
+                hasPointerPosition
+                    ? pointerX + margin
+                    : anchor.right + margin;
+            const leftPosition =
+                hasPointerPosition
+                    ? pointerX - cardRect.width - margin
+                    : anchor.left - cardRect.width - margin;
+
+            if (
+                rightPosition <= maxLeft
+            ) {
+
+                left = rightPosition;
+                opensToRight = true;
+
+            } else if (leftPosition >= margin) {
+
+                left = leftPosition;
+                opensToRight = false;
+
+            } else {
+
+                left = clampLeft(rightPosition);
+                opensToRight = true;
+
+            }
+
+            top = hasPointerPosition
+                ? clampTop(pointerY - 18)
+                : tableTop;
+            anchorY = hasPointerPosition
+                ? pointerY
+                : anchor.top + anchor.height / 2;
+
+        }
+
+    } else {
+
+        const rightPosition =
+            Math.max(
+                hasPointerPosition
+                    ? pointerX + margin
+                    : 0,
+                anchor.right + margin
+            );
+        const leftPosition =
+            anchor.left - cardRect.width - margin;
+
+        if (
+            rightPosition <= maxLeft
+        ) {
+
+            left = rightPosition;
+            opensToRight = true;
+
+        } else if (
+            leftPosition >= margin
+        ) {
+
+            left = leftPosition;
+            opensToRight = false;
+
+        } else {
+
+            left = anchor.right + margin;
+            opensToRight = true;
+
+            if (left > maxLeft) {
+
+                left = anchor.left - cardRect.width - margin;
+                opensToRight = false;
+
+            }
+
+        }
+
+        left = clampLeft(left);
+        top = hasPointerPosition
+            ? clampTop(pointerY - 18)
+            : clampTop(anchor.top);
+        anchorY = anchor.top + anchor.height / 2;
 
     }
 
-    const top = Math.min(
-        Math.max(margin, anchor.top),
-        Math.max(margin, window.innerHeight - cardRect.height - margin)
-    );
     const anchorOffset = Math.min(
-        Math.max(18, anchor.top + anchor.height / 2 - top),
+        Math.max(18, anchorY - top),
         Math.max(18, cardRect.height - 18)
     );
 
@@ -7497,9 +8642,12 @@ function registerNodeArticleDragAndDrop(
                             ".node-article.dragging"
                         );
 
+                    const articleNumber =
+                        getDraggedArticleNumber(event);
+
                     if (
-                        !draggedArticle
-                        ||
+                        draggedArticle
+                        &&
                         draggedArticle === article
                     ) {
 
@@ -7507,29 +8655,37 @@ function registerNodeArticleDragAndDrop(
 
                     }
 
-                    const targetNodeId =
-                        article.dataset.nodeId;
+                    if (!draggedArticle && !articleNumber) {
 
-                    const originalNodeId =
-                        draggedArticle.dataset.originalNodeId
-                        ||
-                        draggedArticle.dataset.nodeId;
+                        return;
+
+                    }
+
+                    if (
+                        articleSwapMode
+                        &&
+                        draggedArticle
+                    ) {
+
+                        return;
+
+                    }
 
                     event.preventDefault();
                     event.stopPropagation();
 
                     event.dataTransfer.dropEffect =
-                        "move";
+                        draggedArticle
+                            ? "move"
+                            : "copy";
 
-                    article.classList.add(
-                        "drag-over"
-                    );
+                    clearArticleDropIndicators();
 
-                    if (
-                        originalNodeId
-                        !==
-                        targetNodeId
-                    ) {
+                    if (articleSwapMode) {
+
+                        markNodeArticleSwapTarget(
+                            article
+                        );
 
                         return;
 
@@ -7544,6 +8700,20 @@ function registerNodeArticleDragAndDrop(
                         articleRect.top
                         +
                         articleRect.height / 2;
+
+                    markNodeArticleDropPosition(
+                        article,
+                        insertAfter
+                    );
+
+                    if (!draggedArticle) {
+
+                        return;
+
+                    }
+
+                    const targetNodeId =
+                        article.dataset.nodeId;
 
                     draggedArticle.dataset.nodeId =
                         targetNodeId;
@@ -7564,7 +8734,10 @@ function registerNodeArticleDragAndDrop(
                 () => {
 
                     article.classList.remove(
-                        "drag-over"
+                        "drag-over",
+                        "article-drop-before",
+                        "article-drop-after",
+                        "article-swap-over"
                     );
 
                 }
@@ -7572,14 +8745,41 @@ function registerNodeArticleDragAndDrop(
 
             article.addEventListener(
                 "drop",
-                event => {
+                async event => {
 
                     const draggedArticle =
                         document.querySelector(
                             ".node-article.dragging"
                         );
 
-                    if (!draggedArticle) {
+                    const articleNumber =
+                        getDraggedArticleNumber(event);
+
+                    if (
+                        !draggedArticle
+                        &&
+                        !articleNumber
+                    ) {
+
+                        return;
+
+                    }
+
+                    if (
+                        draggedArticle
+                        ===
+                        article
+                    ) {
+
+                        return;
+
+                    }
+
+                    if (
+                        articleSwapMode
+                        &&
+                        draggedArticle
+                    ) {
 
                         return;
 
@@ -7588,8 +8788,63 @@ function registerNodeArticleDragAndDrop(
                     event.preventDefault();
                     event.stopPropagation();
 
-                    article.classList.remove(
-                        "drag-over"
+                    const insertAfter =
+                        article.classList.contains(
+                            "article-drop-after"
+                        )
+                        ||
+                        event.clientY
+                        >
+                        article.getBoundingClientRect().top
+                        +
+                        article.getBoundingClientRect().height / 2;
+
+                    clearArticleDropIndicators();
+
+                    if (articleSwapMode) {
+
+                        await replaceNodeArticleWithArticleNumber(
+                            article,
+                            articleNumber,
+                            projectId
+                        );
+
+                        return;
+
+                    }
+
+                    if (draggedArticle) {
+
+                        await moveNodeArticleToArticleAndSave(
+                            draggedArticle,
+                            article,
+                            insertAfter,
+                            projectId
+                        );
+
+                        return;
+
+                    }
+
+                    const fullArticle =
+                        getCurrentArticleByNumber(
+                            articleNumber
+                        );
+
+                    if (!fullArticle) {
+
+                        return;
+
+                    }
+
+                    await addArticleToNode(
+                        article.dataset.nodeId,
+                        articleNumber,
+                        fullArticle,
+                        projectId,
+                        insertAfter
+                            ? getNodeArticleIndex(article) + 1
+                            : getNodeArticleIndex(article)
                     );
 
                     syncArticleListHeight();
@@ -7660,6 +8915,70 @@ function registerNodeArticleDropTargets(
                         )
                         !==
                         dropTarget
+                    ) {
+
+                        return;
+
+                    }
+
+                    const articleChildren =
+                        getDirectNodeArticleChildren(
+                            dropTarget
+                        );
+
+                    if (
+                        !articleSwapMode
+                        &&
+                        isDirectNodeArticleChildrenTarget(
+                            event,
+                            articleChildren
+                        )
+                    ) {
+
+                        const placement =
+                            getNodeArticleDropPlacement(
+                                articleChildren,
+                                event,
+                                draggedArticle
+                            );
+
+                        event.preventDefault();
+                        event.stopPropagation();
+                        event.dataTransfer.dropEffect =
+                            "move";
+                        clearArticleDropIndicators();
+                        placeNodeArticleAtDropPlacement(
+                            draggedArticle,
+                            node.dataset.id,
+                            articleChildren,
+                            placement
+                        );
+
+                        if (placement.targetArticle) {
+
+                            markNodeArticleDropPosition(
+                                placement.targetArticle,
+                                placement.insertAfter
+                            );
+
+                        } else {
+
+                            markNodeArticleDropTarget(
+                                node
+                            );
+
+                        }
+
+                        return;
+
+                    }
+
+                    if (
+                        articleSwapMode
+                        ||
+                        event.target.closest(
+                            ".node-article"
+                        )
                     ) {
 
                         return;
@@ -7740,6 +9059,67 @@ function registerNodeArticleDropTargets(
                         )
                         !==
                         dropTarget
+                    ) {
+
+                        return;
+
+                    }
+
+                    const articleChildren =
+                        getDirectNodeArticleChildren(
+                            dropTarget
+                        );
+
+                    if (
+                        !articleSwapMode
+                        &&
+                        isDirectNodeArticleChildrenTarget(
+                            event,
+                            articleChildren
+                        )
+                    ) {
+
+                        event.preventDefault();
+                        event.stopPropagation();
+
+                        const placement =
+                            getNodeArticleDropPlacement(
+                                articleChildren,
+                                event,
+                                draggedArticle
+                            );
+
+                        clearArticleDropIndicators();
+
+                        if (placement.targetArticle) {
+
+                            await moveNodeArticleToArticleAndSave(
+                                draggedArticle,
+                                placement.targetArticle,
+                                placement.insertAfter,
+                                projectId
+                            );
+
+                        } else {
+
+                            await moveNodeArticleToNodeAndSave(
+                                draggedArticle,
+                                node.dataset.id,
+                                projectId
+                            );
+
+                        }
+
+                        return;
+
+                    }
+
+                    if (
+                        articleSwapMode
+                        ||
+                        event.target.closest(
+                            ".node-article"
+                        )
                     ) {
 
                         return;
@@ -7834,6 +9214,32 @@ function moveNodeArticleElementToNode(
 
 }
 
+function moveNodeArticleElementToArticle(
+    article,
+    targetArticle,
+    insertAfter
+) {
+    const targetNodeId =
+        targetArticle.dataset.nodeId;
+    const targetParent =
+        targetArticle.parentElement;
+
+    if (!targetParent) {
+        return;
+    }
+
+    article.dataset.nodeId =
+        targetNodeId;
+
+    insertElementBeforeIfChanged(
+        targetParent,
+        article,
+        insertAfter
+            ? targetArticle.nextSibling
+            : targetArticle
+    );
+}
+
 async function moveNodeArticleToNodeAndSave(
     article,
     targetNodeId,
@@ -7892,6 +9298,322 @@ async function moveNodeArticleToNodeAndSave(
         projectId
     );
 
+}
+
+async function moveNodeArticleToArticleAndSave(
+    article,
+    targetArticle,
+    insertAfter,
+    projectId
+) {
+    article.dataset.dropHandled =
+        "true";
+
+    await waitForPendingNodeArticleQuantities();
+
+    const originalNodeId =
+        article.dataset.originalNodeId
+        ||
+        article.dataset.nodeId;
+    const targetNodeId =
+        targetArticle.dataset.nodeId;
+
+    moveNodeArticleElementToArticle(
+        article,
+        targetArticle,
+        insertAfter
+    );
+
+    await updateNodeArticlePosition(
+        article.dataset.id,
+        {
+            projectNodeId:
+                targetNodeId,
+            sortOrder:
+                getNodeArticleIndex(
+                    article
+                )
+        }
+    );
+
+    await Promise.all([
+        saveNodeArticleOrder(
+            originalNodeId
+        ),
+        ...(String(originalNodeId) === String(targetNodeId)
+            ? []
+            : [saveNodeArticleOrder(targetNodeId)])
+    ]);
+
+    updateProjectNodeTotals();
+    syncArticleListHeight();
+
+    if (
+        String(originalNodeId)
+        !==
+        String(targetNodeId)
+    ) {
+        await refreshProjectTree(
+            projectId
+        );
+    }
+}
+
+async function replaceNodeArticleByDrag(
+    targetArticle,
+    draggedArticle,
+    draggedArticleNumber,
+    projectId
+) {
+    if (
+        draggedArticle
+        &&
+        draggedArticle === targetArticle
+    ) {
+        return;
+    }
+
+    const targetPosition =
+        currentNodeArticles.find(item =>
+            String(item.id)
+            ===
+            String(targetArticle.dataset.id)
+        );
+    const sourcePosition = draggedArticle
+        ? currentNodeArticles.find(item =>
+            String(item.id)
+            ===
+            String(draggedArticle.dataset.id)
+        )
+        : null;
+    const replacementArticleNumber =
+        sourcePosition?.articleNumber
+        ||
+        draggedArticleNumber;
+
+    if (
+        !targetPosition
+        ||
+        !replacementArticleNumber
+        ||
+        String(targetPosition.articleNumber)
+        ===
+        String(replacementArticleNumber)
+    ) {
+        return;
+    }
+
+    if (draggedArticle) {
+        draggedArticle.dataset.dropHandled =
+            "true";
+    }
+
+    try {
+        const updatedTarget =
+            await updateNodeArticlePosition(
+                targetPosition.id,
+                {
+                    articleNumber:
+                        replacementArticleNumber
+                }
+            );
+
+        if (sourcePosition) {
+            const response =
+                await fetch(
+                    `/api/projectNodeArticles/${sourcePosition.id}`,
+                    {
+                        method: "DELETE"
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    "Die ursprüngliche Artikelposition konnte nicht entfernt werden."
+                );
+            }
+
+            removeCurrentNodeArticle(
+                sourcePosition.id
+            );
+            draggedArticle.remove();
+        }
+
+        updateNodeArticleElement(
+            targetArticle,
+            updatedTarget,
+            projectId
+        );
+
+        updateProjectNodeTotals();
+        syncArticleListHeight();
+
+    } catch (error) {
+        await refreshProjectTree(
+            projectId
+        );
+        await showAlert(
+            error.message,
+            {
+                title: i18n.t(
+                    "project.replaceArticleNumber"
+                )
+            }
+        );
+    }
+}
+
+async function replaceNodeArticleWithArticleNumber(
+    targetArticle,
+    replacementArticleNumber,
+    projectId
+) {
+    const targetPosition =
+        currentNodeArticles.find(item =>
+            String(item.id)
+            ===
+            String(targetArticle.dataset.id)
+        );
+
+    if (
+        !targetPosition
+        ||
+        !replacementArticleNumber
+        ||
+        String(targetPosition.articleNumber)
+        ===
+        String(replacementArticleNumber)
+    ) {
+        return;
+    }
+
+    try {
+        const updatedTarget =
+            await updateNodeArticlePosition(
+                targetPosition.id,
+                {
+                    articleNumber:
+                        replacementArticleNumber
+                }
+            );
+
+        updateNodeArticleElement(
+            targetArticle,
+            updatedTarget,
+            projectId
+        );
+
+    } catch (error) {
+        await refreshProjectTree(
+            projectId
+        );
+        await showAlert(
+            error.message,
+            {
+                title: i18n.t(
+                    "project.replaceArticleNumber"
+                )
+            }
+        );
+    }
+}
+
+async function replaceDraggedNodeArticleWithCatalogArticle(
+    draggedArticle,
+    replacementArticleNumber,
+    projectId
+) {
+    const sourcePosition =
+        currentNodeArticles.find(item =>
+            String(item.id)
+            ===
+            String(draggedArticle.dataset.id)
+        );
+
+    if (
+        !sourcePosition
+        ||
+        !replacementArticleNumber
+        ||
+        String(sourcePosition.articleNumber)
+        ===
+        String(replacementArticleNumber)
+    ) {
+        return;
+    }
+
+    try {
+        const updatedPosition =
+            await updateNodeArticlePosition(
+                sourcePosition.id,
+                {
+                    articleNumber:
+                        replacementArticleNumber
+                }
+            );
+
+        updateNodeArticleElement(
+            draggedArticle,
+            updatedPosition,
+            projectId
+        );
+
+    } catch (error) {
+        await refreshProjectTree(
+            projectId
+        );
+        await showAlert(
+            error.message,
+            {
+                title: i18n.t(
+                    "project.replaceArticleNumber"
+                )
+            }
+        );
+    }
+}
+
+async function removeNodeArticleFromProject(
+    article,
+    projectId
+) {
+    try {
+        await waitForPendingNodeArticleQuantities();
+
+        const response =
+            await fetch(
+                `/api/projectNodeArticles/${article.dataset.id}`,
+                {
+                    method: "DELETE"
+                }
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                "Die Artikelposition konnte nicht gelöscht werden."
+            );
+        }
+
+        removeCurrentNodeArticle(
+            article.dataset.id
+        );
+        article.remove();
+        updateProjectNodeTotals();
+        syncArticleListHeight();
+
+    } catch (error) {
+        await refreshProjectTree(
+            projectId
+        );
+        await showAlert(
+            error.message,
+            {
+                title: i18n.t(
+                    "project.delete"
+                )
+            }
+        );
+    }
 }
 
 function getNodeArticleIndex(

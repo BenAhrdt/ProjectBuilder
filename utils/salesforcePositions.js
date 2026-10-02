@@ -37,6 +37,61 @@ const GROUP_NODE_TYPES = {
     commercial_meter: "meter"
 };
 
+function normalizeOptionalNumber(value) {
+    if (value === null || value === undefined || String(value).trim() === "") {
+        return null;
+    }
+
+    const number = Number(String(value).trim().replace(",", "."));
+    return Number.isFinite(number) ? number : null;
+}
+
+function normalizePercent(value) {
+    const number = Number(value);
+    return Number.isFinite(number)
+        ? Math.min(Math.max(number, 0), 100)
+        : 0;
+}
+
+function roundCurrency(value) {
+    return Math.round(Number(value || 0) * 100) / 100;
+}
+
+export function resolveSalesforcePositionPrice({
+    listPrice,
+    baseDiscount = 0,
+    specialDiscount = null,
+    specialPrice = null
+}) {
+    const normalizedListPrice = Number(listPrice);
+    const safeListPrice = Number.isFinite(normalizedListPrice)
+        ? normalizedListPrice
+        : 0;
+    const normalizedSpecialPrice = normalizeOptionalNumber(specialPrice);
+    const normalizedSpecialDiscount = normalizeOptionalNumber(specialDiscount);
+
+    if (normalizedSpecialPrice !== null && normalizedSpecialPrice >= 0) {
+        const effectiveDiscount = safeListPrice > 0
+            ? normalizePercent((1 - normalizedSpecialPrice / safeListPrice) * 100)
+            : 0;
+        return {
+            unitPrice: roundCurrency(normalizedSpecialPrice),
+            discountPercent: Math.round(effectiveDiscount * 100) / 100
+        };
+    }
+
+    const discountPercent = normalizedSpecialDiscount !== null
+        ? normalizePercent(normalizedSpecialDiscount)
+        : normalizePercent(baseDiscount);
+
+    return {
+        unitPrice: roundCurrency(
+            safeListPrice * (1 - discountPercent / 100)
+        ),
+        discountPercent
+    };
+}
+
 export function buildSalesforcePositions(nodes, nodeArticles, mode = "commercial_total") {
     const byNode = new Map();
     for (const position of nodeArticles) {
@@ -66,15 +121,26 @@ export function buildSalesforcePositions(nodes, nodeArticles, mode = "commercial
             const articleNumber = String(position.articleNumber);
             const isOptional = Boolean(position.isOptional);
             const isAlternative = Boolean(position.isAlternative);
+            const specialDiscount = normalizeOptionalNumber(position.specialDiscount);
+            const specialPrice = normalizeOptionalNumber(position.specialPrice);
             const group = mode === "projected" ? `position:${position.id}` : groupForNode(node);
-            const key = `${group}\0${articleNumber}\0${Number(isOptional)}\0${Number(isAlternative)}`;
+            const key = [
+                group,
+                articleNumber,
+                Number(isOptional),
+                Number(isAlternative),
+                specialDiscount ?? "",
+                specialPrice ?? ""
+            ].join("\0");
             if (!summaries.has(key)) {
                 summaries.set(key, {
                     articleNumber,
                     quantity: 0,
                     discountGroup: position.discountGroup,
                     isOptional,
-                    isAlternative
+                    isAlternative,
+                    ...(specialDiscount !== null ? { specialDiscount } : {}),
+                    ...(specialPrice !== null ? { specialPrice } : {})
                 });
             }
             summaries.get(key).quantity += quantity;
@@ -85,23 +151,31 @@ export function buildSalesforcePositions(nodes, nodeArticles, mode = "commercial
 
 export function buildSalesforceLineItems(pricedPositions) {
     return {
-        opportunityLineItems: pricedPositions.map(item => ({
-            PricebookEntryId: item.PricebookEntryId,
-            Product2Id: item.Product2Id,
-            Quantity: item.Quantity,
-            UnitPrice: Math.round(item.listPrice * (1 - item.baseDiscount / 100) * 100) / 100,
-            BasicDiscount__c: item.baseDiscount > 0 ? -item.baseDiscount : 0,
-            Alternative__c: item.isAlternative,
-        })),
-        quoteLineItems: pricedPositions.map((item, index) => ({
-            PricebookEntryId: item.PricebookEntryId,
-            Product2Id: item.Product2Id,
-            Quantity: item.Quantity,
-            UnitPrice: Math.round(item.listPrice * (1 - item.baseDiscount / 100) * 100) / 100,
-            SortOrder: index + 1,
-            Position__c: index + 1,
-            Alternative__c: item.isAlternative,
-            Option__c: item.isOptional
-        }))
+        opportunityLineItems: pricedPositions.map(item => {
+            const price = resolveSalesforcePositionPrice(item);
+            return {
+                PricebookEntryId: item.PricebookEntryId,
+                Product2Id: item.Product2Id,
+                Quantity: item.Quantity,
+                UnitPrice: price.unitPrice,
+                BasicDiscount__c: price.discountPercent > 0
+                    ? -price.discountPercent
+                    : 0,
+                Alternative__c: item.isAlternative,
+            };
+        }),
+        quoteLineItems: pricedPositions.map((item, index) => {
+            const price = resolveSalesforcePositionPrice(item);
+            return {
+                PricebookEntryId: item.PricebookEntryId,
+                Product2Id: item.Product2Id,
+                Quantity: item.Quantity,
+                UnitPrice: price.unitPrice,
+                SortOrder: index + 1,
+                Position__c: index + 1,
+                Alternative__c: item.isAlternative,
+                Option__c: item.isOptional
+            };
+        })
     };
 }

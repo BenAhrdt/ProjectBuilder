@@ -2,6 +2,26 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.39 - 02.10.2026
+
+### Mejorado
+
+- Los articulos se pueden insertar en una posicion exacta mediante arrastrar y
+  soltar o sustituir directamente con el modo de intercambio activado.
+- Los articulos se pueden arrastrar desde la estructura del proyecto al area
+  de articulos para eliminarlos sin abrir el menu de tres puntos.
+- Las tarjetas de informacion estan disponibles tambien para favoritos y
+  resultados de busqueda y se colocan junto al puntero del raton.
+
+### Corregido
+
+- Los precios especiales se incluyen en el descuento del resumen del proyecto
+  y no reciben un descuento de proyecto adicional.
+- Los precios especiales y descuentos especificos se transfieren como precios
+  concretos de posicion durante la sincronizacion con Salesforce.
+- Las posiciones de Salesforce con condiciones especiales distintas ya no se
+  agrupan en una sola posicion.
+
 ## 1.5.38 - 01.10.2026
 
 ### Nuevo

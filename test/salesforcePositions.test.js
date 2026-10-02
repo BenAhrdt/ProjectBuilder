@@ -2,7 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
     buildSalesforceLineItems,
-    buildSalesforcePositions
+    buildSalesforcePositions,
+    resolveSalesforcePositionPrice
 } from "../utils/salesforcePositions.js";
 
 test("includes and labels regular, optional and alternative Salesforce positions", () => {
@@ -99,4 +100,72 @@ test("maps Salesforce flags and leaves optional opportunity items unmarked", () 
     assert.equal(quoteLineItems[1].Alternative__c, true);
     assert.equal(quoteLineItems[1].UnitPrice, 50);
     assert.equal("Discount" in quoteLineItems[1], false);
+});
+
+test("uses a special price as the Salesforce line price and derives its effective discount", () => {
+    const price = resolveSalesforcePositionPrice({
+        listPrice: 1374,
+        baseDiscount: 0,
+        specialPrice: 999
+    });
+
+    assert.equal(price.unitPrice, 999);
+    assert.equal(price.discountPercent, 27.29);
+
+    const { opportunityLineItems, quoteLineItems } = buildSalesforceLineItems([
+        {
+            PricebookEntryId: "pricebook-entry",
+            Product2Id: "product",
+            Quantity: 1,
+            listPrice: 1374,
+            baseDiscount: 0,
+            specialPrice: 999,
+            isOptional: false,
+            isAlternative: false
+        }
+    ]);
+
+    assert.equal(opportunityLineItems[0].UnitPrice, 999);
+    assert.equal(opportunityLineItems[0].BasicDiscount__c, -27.29);
+    assert.equal(quoteLineItems[0].UnitPrice, 999);
+});
+
+test("uses a position-specific special discount instead of the customer discount", () => {
+    const price = resolveSalesforcePositionPrice({
+        listPrice: 100,
+        baseDiscount: 35,
+        specialDiscount: 12.5
+    });
+
+    assert.equal(price.unitPrice, 87.5);
+    assert.equal(price.discountPercent, 12.5);
+});
+
+test("does not merge positions with different special prices", () => {
+    const positions = buildSalesforcePositions([
+        { id: 1, parentId: null, sortOrder: 1 }
+    ], [
+        {
+            id: 1,
+            projectNodeId: 1,
+            sortOrder: 1,
+            articleNumber: "A",
+            quantity: 1,
+            specialPrice: 999
+        },
+        {
+            id: 2,
+            projectNodeId: 1,
+            sortOrder: 2,
+            articleNumber: "A",
+            quantity: 2,
+            specialPrice: 950
+        }
+    ]);
+
+    assert.equal(positions.length, 2);
+    assert.deepEqual(
+        positions.map(position => [position.specialPrice, position.quantity]),
+        [[999, 1], [950, 2]]
+    );
 });

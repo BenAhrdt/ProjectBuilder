@@ -868,6 +868,7 @@ async function renderView(
     registerArticleSearch(articles);
     registerArticleFavorites(articles, projectId);
     registerNodeArticleCatalogDropTarget(projectId);
+    registerProjectArticleSwapDropTargets(projectId);
     registerNodeToggles(projectId);
     registerProjectNodeMenus(projectId);
     registerProjectNodeDragAndDrop(projectId);
@@ -6004,6 +6005,192 @@ function registerNodeArticleCatalogDropTarget(
         },
         true
     );
+}
+
+function registerProjectArticleSwapDropTargets(
+    projectId
+) {
+
+    const root = document.documentElement;
+
+    if (
+        root.dataset.projectArticleSwapDropRegistered
+        ===
+        "true"
+    ) {
+
+        return;
+
+    }
+
+    root.dataset.projectArticleSwapDropRegistered =
+        "true";
+
+    const getDropContext = event => {
+
+        if (!articleSwapMode) {
+
+            return null;
+
+        }
+
+        const draggedNodeArticle =
+            document.querySelector(
+                ".node-article.dragging"
+            );
+        const target =
+            event.target?.closest?.(
+                ".node-article, .project-article, .project-article-favorite"
+            );
+
+        if (!target) {
+
+            return null;
+
+        }
+
+        if (draggedNodeArticle) {
+
+            if (
+                !target.matches(
+                    ".project-article, .project-article-favorite"
+                )
+            ) {
+
+                return null;
+
+            }
+
+            return {
+                direction: "node-to-catalog",
+                draggedNodeArticle,
+                target,
+                replacementArticleNumber:
+                    target.dataset.articleNumber
+            };
+
+        }
+
+        const draggedArticleNumber =
+            getDraggedArticleNumber(event);
+
+        if (
+            !draggedArticleNumber
+            ||
+            !target.matches(
+                ".node-article"
+            )
+        ) {
+
+            return null;
+
+        }
+
+        return {
+            direction: "catalog-to-node",
+            target,
+            replacementArticleNumber:
+                draggedArticleNumber
+        };
+
+    };
+
+    document.addEventListener(
+        "dragover",
+        event => {
+
+            const context =
+                getDropContext(event);
+
+            if (!context) {
+
+                return;
+
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            event.dataTransfer.dropEffect =
+                context.direction
+                ===
+                "node-to-catalog"
+                    ? "move"
+                    : "copy";
+            clearArticleDropIndicators();
+
+            if (
+                context.direction
+                ===
+                "catalog-to-node"
+            ) {
+
+                markNodeArticleSwapTarget(
+                    context.target
+                );
+
+            } else {
+
+                context.target.classList.add(
+                    "project-article-swap-target"
+                );
+
+            }
+
+        },
+        true
+    );
+
+    document.addEventListener(
+        "drop",
+        async event => {
+
+            const context =
+                getDropContext(event);
+
+            if (!context) {
+
+                return;
+
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            clearArticleDropIndicators();
+
+            const activeProjectId =
+                currentProject?.id
+                ??
+                projectId;
+
+            if (
+                context.direction
+                ===
+                "catalog-to-node"
+            ) {
+
+                await replaceNodeArticleWithArticleNumber(
+                    context.target,
+                    context.replacementArticleNumber,
+                    activeProjectId
+                );
+
+                return;
+
+            }
+
+            context.draggedNodeArticle.dataset.dropHandled =
+                "true";
+
+            await replaceDraggedNodeArticleWithCatalogArticle(
+                context.draggedNodeArticle,
+                context.replacementArticleNumber,
+                activeProjectId
+            );
+
+        },
+        true
+    );
+
 }
 
 function saveFavoriteOrderFromDom() {

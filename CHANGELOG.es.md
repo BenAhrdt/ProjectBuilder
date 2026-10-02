@@ -2,6 +2,14 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.41 - 02.10.2026
+
+### Corregido
+
+- El cambio de artículos mediante arrastrar y soltar funciona ahora de forma
+  fiable en el modo de intercambio entre favoritos, búsqueda y posiciones del
+  proyecto en ambas direcciones.
+
 ## 1.5.40 - 02.10.2026
 
 ### Corregido

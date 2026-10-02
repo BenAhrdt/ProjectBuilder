@@ -2,6 +2,14 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.41 - 02.10.2026
+
+### Behoben
+
+- Der Artikeltausch per Drag-and-Drop funktioniert im aktiven Tauschmodus
+  zuverlässig zwischen Favoriten, Artikelsuche und Projektpositionen in beide
+  Richtungen.
+
 ## 1.5.40 - 02.10.2026
 
 ### Behoben

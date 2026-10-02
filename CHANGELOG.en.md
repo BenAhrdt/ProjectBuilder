@@ -2,6 +2,13 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.41 - 2026-10-02
+
+### Fixed
+
+- Article replacement by drag and drop now works reliably in swap mode between
+  favorites, article search results, and project positions in both directions.
+
 ## 1.5.40 - 2026-10-02
 
 ### Fixed

@@ -163,7 +163,10 @@ async function synchronizeProjectDocuments(opportunityId, project, nodes, nodeAr
 function syncCustomer(customer, localId = null, source = "salesforce-sync") {
     const now = new Date().toISOString();
     const discounts = Object.fromEntries(
-        customerDiscountGroupKeys.map(key => [key, customer[key] ?? null])
+        customerDiscountGroupKeys.map(key => [key, getIncomingDiscountValue(customer[key])])
+    );
+    const discountsForInsert = Object.fromEntries(
+        customerDiscountGroupKeys.map(key => [key, discounts[key] ?? 0])
     );
     const existing = localId
         ? database.customers.prepare("SELECT * FROM customers WHERE id = ?").get(localId)
@@ -215,7 +218,7 @@ function syncCustomer(customer, localId = null, source = "salesforce-sync") {
             @salesforceSyncedAt, @salesforceLastModifiedAt,
             ${customerDiscountGroupKeys.map(key => `@${key}`).join(", ")}
         )
-    `).run({ ...customer, ...discounts, salesforceSyncedAt: now });
+        `).run({ ...customer, ...discountsForInsert, salesforceSyncedAt: now });
     const customerId = Number(result.lastInsertRowid);
     const after = database.customers.prepare(
         "SELECT * FROM customers WHERE id = ?"
@@ -227,6 +230,12 @@ function syncCustomer(customer, localId = null, source = "salesforce-sync") {
         after
     });
     return { id: customerId, created: true };
+}
+
+function getIncomingDiscountValue(value) {
+    if (value === null || value === undefined) return null;
+    if (typeof value === "string" && value.trim() === "") return 0;
+    return value;
 }
 
 function handleError(res, error) {

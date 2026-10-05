@@ -6,7 +6,11 @@ export const customerDiscountGroupNumbers = Object.freeze([
     6,
     7,
     8,
-    14
+    13,
+    14,
+    15,
+    16,
+    17
 ]);
 
 export const customerDiscountGroupKeys = Object.freeze(

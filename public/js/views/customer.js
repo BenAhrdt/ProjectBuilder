@@ -897,12 +897,15 @@ function renderDiscounts(
 
     let html = "";
 
-    for (const i of [1, 3, 4, 5, 6, 7, 8, 14]) {
+    for (const i of [1, 5, 3, 4, 6, 7, 8, 13, 14, 15, 16, 17]) {
         html += `
             <div class="discount-row">
 
-                <label>
-                    PG${i}
+                <label class="discount-label">
+                    <span class="discount-group-code">PG${i}</span>
+                    <span class="discount-group-description">${escapeHtml(
+                        i18n.t(`customer.discountGroup.pg${i}`)
+                    )}</span>
                 </label>
 
                 <div class="discount-input-wrapper">
@@ -912,7 +915,9 @@ function renderDiscounts(
                         type="number"
                         min="0"
                         max="100"
-                        value="${customer[`pg${i}`] ?? ""}"
+                        value="${escapeHtml(customer[`pg${i}`] == null || String(customer[`pg${i}`]).trim() === ""
+                            ? 0
+                            : customer[`pg${i}`])}"
                     >
                     <span>%</span>
                 </div>
@@ -1153,7 +1158,10 @@ function getDiscountInputValue(
 
     return input
         ? input.value
-        : customer?.[`pg${discountGroup}`] ?? "";
+        : customer?.[`pg${discountGroup}`] == null
+            || String(customer[`pg${discountGroup}`]).trim() === ""
+            ? 0
+            : customer[`pg${discountGroup}`];
 
 }
 
@@ -1188,14 +1196,14 @@ function getCustomerFormData(customer = {}) {
                 pg1:
                     getDiscountInputValue(1, customer),
 
+                pg5:
+                    getDiscountInputValue(5, customer),
+
                 pg3:
                     getDiscountInputValue(3, customer),
 
                 pg4:
                     getDiscountInputValue(4, customer),
-
-                pg5:
-                    getDiscountInputValue(5, customer),
 
                 pg6:
                     getDiscountInputValue(6, customer),
@@ -1206,8 +1214,20 @@ function getCustomerFormData(customer = {}) {
                 pg8:
                     getDiscountInputValue(8, customer),
 
+                pg13:
+                    getDiscountInputValue(13, customer),
+
                 pg14:
-                    getDiscountInputValue(14, customer)
+                    getDiscountInputValue(14, customer),
+
+                pg15:
+                    getDiscountInputValue(15, customer),
+
+                pg16:
+                    getDiscountInputValue(16, customer),
+
+                pg17:
+                    getDiscountInputValue(17, customer)
 
     };
 

@@ -40,7 +40,11 @@ customers.prepare(`
         pg8 REAL,
         pg9 REAL,
         pg10 REAL,
-        pg14 REAL
+        pg13 REAL DEFAULT 0,
+        pg14 REAL,
+        pg15 REAL DEFAULT 0,
+        pg16 REAL DEFAULT 0,
+        pg17 REAL DEFAULT 0
     )
 
 `).run();
@@ -62,8 +66,10 @@ for (const [name, definition] of [
     }
 }
 
-if (!customerColumns.has("pg14")) {
-    customers.exec("ALTER TABLE customers ADD COLUMN pg14 REAL");
+for (const name of ["pg13", "pg15", "pg16", "pg17"]) {
+    if (!customerColumns.has(name)) {
+        customers.exec(`ALTER TABLE customers ADD COLUMN ${name} REAL DEFAULT 0`);
+    }
 }
 
 customers.exec(`

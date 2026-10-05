@@ -2,6 +2,27 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.43 - 05.10.2026
+
+### Neu
+
+- Das Kundenformular unterstützt jetzt alle Preisgruppen des neuen Modells,
+  einschließlich PG13, PG15, PG16 und PG17. Leere Rabattfelder werden als 0 %
+  angezeigt beziehungsweise gespeichert.
+- Die PG-Bezeichnungen zeigen zusätzlich eine kurze, lokalisierte Beschreibung
+  auf Deutsch, Englisch und Spanisch an.
+
+### Verbessert
+
+- Historische Opportunity- und Angebotspositionen werden vorerst nicht mehr zur
+  Ermittlung von Kundenrabatten verwendet, solange die neuen Salesforce-Felder
+  noch nicht vorhanden sind.
+- Beim Salesforce-Kundenimport überschreiben nur tatsächlich gelieferte Werte
+  die lokalen Rabattgruppen; fehlende Felder lassen bestehende Werte unverändert.
+- Preisgruppen-Auswahl, Datenbank, Backups und Projektpreisberechnung wurden um
+  die neuen Gruppen erweitert. Die Rabattfelder bleiben in einem kompakten,
+  festen Raster ausgerichtet.
+
 ## 1.5.42 - 02.10.2026
 
 ### Behoben

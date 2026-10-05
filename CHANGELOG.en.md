@@ -2,6 +2,26 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.43 - 2026-10-05
+
+### Added
+
+- The customer form now supports all price groups from the new model,
+  including PG13, PG15, PG16, and PG17. Empty discount fields are shown and
+  stored as 0%.
+- PG labels now include short, localized descriptions in German, English, and
+  Spanish.
+
+### Improved
+
+- Historical opportunity and quote line items are no longer used to derive
+  customer discounts while the new Salesforce fields are not available.
+- Salesforce customer imports overwrite local discount groups only with values
+  that are actually provided; missing fields leave existing values unchanged.
+- Price-group selection, the database, backups, and project price calculation
+  now include the new groups. Discount fields remain aligned in a compact,
+  fixed grid.
+
 ## 1.5.42 - 2026-10-02
 
 ### Fixed

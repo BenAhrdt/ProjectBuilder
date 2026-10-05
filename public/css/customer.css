@@ -924,8 +924,7 @@
 
     display: grid;
 
-    grid-template-columns:
-        repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
 
     column-gap: 16px;
     row-gap: 8px;
@@ -934,17 +933,47 @@
 
 .discount-row {
 
+    display: grid;
+
+    grid-template-columns: 150px 84px;
+
+    align-items: start;
+
+    column-gap: 6px;
+    justify-content: start;
+
+}
+
+.discount-row label {
+
     display: flex;
+    flex-direction: column;
+    min-width: 0;
+    width: auto;
 
-    align-items: center;
+}
 
-    gap: 10px;
+.discount-group-code {
+
+    font-weight: 700;
+    line-height: 1.2;
+
+}
+
+.discount-group-description {
+
+    overflow-wrap: anywhere;
+    color: #667085;
+    font-size: 11px;
+    line-height: 1.2;
 
 }
 
 .discount-row input {
 
     width: 100px;
+    box-sizing: border-box;
+    text-align: center;
 
 }
 
@@ -978,6 +1007,18 @@
     .customer-order-intake-details-content { grid-template-columns: 1fr; }
     .customer-top-devices-grid { grid-template-columns: 1fr; }
     .customer-sales-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 900px) {
+    .customer-discounts-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 560px) {
+    .customer-discounts-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 400px) {
+    .customer-discounts-grid { grid-template-columns: 1fr; }
 }
 
 @media (min-width: 1051px) and (max-width: 1350px) {

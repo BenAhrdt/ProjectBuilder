@@ -6564,7 +6564,12 @@ async function ensureSalesforceImportCustomer(project) {
     const customer = await salesforce.getCustomerById(project.customerSalesforceId);
     if (!customer) return;
     const discounts = Object.fromEntries(
-        customerDiscountGroupKeys.map(key => [key, customer[key] ?? null])
+        customerDiscountGroupKeys.map(key => [key,
+            customer[key] === null || customer[key] === undefined
+                || String(customer[key]).trim() === ""
+                ? 0
+                : customer[key]
+        ])
     );
     const result = database.customers.prepare(`
         INSERT INTO customers (customerNumber, name, street, postalCode, city,

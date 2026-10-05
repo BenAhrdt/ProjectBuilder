@@ -23,7 +23,8 @@ const tableColumns = {
     customers: [
         "id", "customerNumber", "name", "street", "postalCode", "city", "additionalInfo",
         "salesforceId", "salesforceSyncedAt", "salesforceLastModifiedAt",
-        "pg1", "pg3", "pg4", "pg5", "pg6", "pg7", "pg8", "pg14"
+        "pg1", "pg3", "pg4", "pg5", "pg6", "pg7", "pg8",
+        "pg13", "pg14", "pg15", "pg16", "pg17"
     ],
     projects: [
         "id", "customerId", "name", "description", "projectDiscount",

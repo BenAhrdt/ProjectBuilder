@@ -2,7 +2,6 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import open from "open";
-import { mapCustomerPricingGroupDiscounts } from "../utils/salesforceCustomerDiscounts.js";
 import { isSalesforceAuthenticationError } from "../utils/externalError.js";
 import { inferSalesArticleCategory } from "../utils/salesArticleCategory.js";
 import {
@@ -332,34 +331,10 @@ export async function getCustomersByIds(ids) {
 }
 
 export async function getCustomerPricingGroupDiscounts(accountIds) {
-    const validIds = [...new Set(accountIds)].filter(id => /^[a-zA-Z0-9]{15,18}$/.test(id));
-    if (validIds.length === 0) return new Map();
-    const list = validIds.map(id => `'${escapeSoql(id)}'`).join(", ");
-    const lineItems = await queryAll(`
-        SELECT Opportunity.AccountId, Product2Id, BasicDiscount__c,
-            ListPrice, UnitPrice, LastModifiedDate
-        FROM OpportunityLineItem
-        WHERE Opportunity.AccountId IN (${list})
-        ORDER BY LastModifiedDate DESC
-    `);
-    const productIds = [...new Set(lineItems.map(item => String(item.Product2Id ?? "")).filter(Boolean))];
-    if (productIds.length === 0) return new Map();
-    const pricingGroupsByProduct = new Map();
-    for (let offset = 0; offset < productIds.length; offset += 100) {
-        const products = productIds.slice(offset, offset + 100)
-            .map(id => `'${escapeSoql(id)}'`).join(", ");
-        const records = await queryAll(`
-            SELECT Product__c, ProductPricingGroup__c
-            FROM DistributionChain__c
-            WHERE Product__c IN (${products})
-              AND SalesOrganisation__c = '1100'
-              AND DistributionChannel__c = '10'
-        `);
-        for (const record of records) {
-            pricingGroupsByProduct.set(String(record.Product__c), record.ProductPricingGroup__c);
-        }
-    }
-    return mapCustomerPricingGroupDiscounts(lineItems, pricingGroupsByProduct);
+    // Dedicated Salesforce customer price-group fields are not available yet.
+    // In particular, do not derive discounts from historical opportunities or quotes.
+    // The empty map makes customer refreshes leave all existing local discounts intact.
+    return new Map();
 }
 
 export async function getCustomerById(id) {

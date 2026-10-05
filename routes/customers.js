@@ -296,7 +296,7 @@ router.put(
 
 function normalizeCustomerDiscount(value) {
     if (value === null || value === undefined || String(value).trim() === "") {
-        return null;
+        return 0;
     }
 
     const discount = Number(String(value).trim().replace(",", "."));

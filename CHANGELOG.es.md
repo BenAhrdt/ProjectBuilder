@@ -2,6 +2,28 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.43 - 05.10.2026
+
+### Nuevo
+
+- El formulario de clientes ahora admite todos los grupos de precios del nuevo
+  modelo, incluidos PG13, PG15, PG16 y PG17. Los campos de descuento vacíos se
+  muestran y guardan como 0 %.
+- Las etiquetas de PG incluyen descripciones breves y localizadas en alemán,
+  inglés y español.
+
+### Mejorado
+
+- Las posiciones históricas de Opportunities y ofertas ya no se utilizan para
+  calcular descuentos de clientes mientras no estén disponibles los nuevos
+  campos de Salesforce.
+- Las importaciones de clientes desde Salesforce solo sobrescriben los grupos
+  de descuento con valores realmente recibidos; los campos ausentes conservan
+  los valores existentes.
+- La selección de grupos, la base de datos, las copias de seguridad y el
+  cálculo de precios de proyectos incluyen ahora los nuevos grupos. Los campos
+  de descuento permanecen alineados en una cuadrícula compacta y fija.
+
 ## 1.5.42 - 02.10.2026
 
 ### Corregido

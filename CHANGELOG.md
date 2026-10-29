@@ -2,6 +2,20 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.44 - 29.10.2026
+
+### Neu
+
+- Projekte enthalten jetzt den Tab "Daten / Bilder" fuer projektbezogene
+  Dateien und Bilder. Dateien koennen per Auswahl oder Drag & Drop hinzugefuegt,
+  angezeigt, geoeffnet, heruntergeladen, umbenannt und geloescht werden.
+- Beliebige Dateitypen werden bis zu einer Groesse von 100 MB pro Datei
+  unterstuetzt. Bilder, PDFs, Text-, Audio- und Videodateien erhalten eine
+  direkte Vorschau.
+- Beim Salesforce-Versand koennen im eigenen Bereich "Projektdateien"
+  ausgewaehlte Projektdokumente an die Opportunity uebertragen werden. Die
+  Auswahl wird je Projekt gespeichert und bei geloeschten Dateien bereinigt.
+
 ## 1.5.43 - 05.10.2026
 
 ### Neu

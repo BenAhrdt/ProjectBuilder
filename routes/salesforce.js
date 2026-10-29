@@ -1,4 +1,5 @@
 import express from "express";
+import fs from "node:fs";
 import PDFDocument from "pdfkit";
 import SVGtoPDF from "svg-to-pdfkit";
 import * as database from "../database/index.js";
@@ -28,6 +29,7 @@ import {
 } from "../utils/discountGroups.js";
 import { logCustomerDiscountChange } from "../utils/customerDiscountHistory.js";
 import { buildOverviewDocuments } from "../public/js/views/projectOverview.js";
+import { getProjectFilePath } from "../utils/projectFiles.js";
 
 const router = express.Router();
 
@@ -53,6 +55,37 @@ function parseSavedDocuments(value) {
     try {
         return JSON.parse(value == null ? '["overview"]' : value)
             .filter(item => SALESFORCE_DOCUMENT_TYPES.has(item));
+    } catch {
+        return [];
+    }
+}
+
+function getProjectFiles(projectId) {
+    return database.projects.prepare(`
+        SELECT id, projectId, name, storedName, mimeType, size, createdAt, updatedAt
+        FROM projectFiles
+        WHERE projectId = ?
+        ORDER BY createdAt DESC, id DESC
+    `).all(projectId).filter(file => {
+        try {
+            return fs.existsSync(getProjectFilePath(file.storedName));
+        } catch {
+            return false;
+        }
+    });
+}
+
+function parseSavedProjectFileIds(value, files = []) {
+    const validIds = new Set(files.map(file => String(file.id)));
+    try {
+        const parsed = Array.isArray(value)
+            ? value
+            : JSON.parse(value == null ? "[]" : value);
+        return [...new Set(
+            (parsed || [])
+                .map(String)
+                .filter(id => validIds.has(id))
+        )];
     } catch {
         return [];
     }
@@ -157,6 +190,45 @@ async function synchronizeProjectDocuments(opportunityId, project, nodes, nodeAr
     return {
         uploaded: results.filter(result => result.success).map(result => result.type),
         errors: results.filter(result => !result.success).map(({ type, error }) => ({ type, error }))
+    };
+}
+
+async function synchronizeSelectedProjectFiles(opportunityId, projectId, selectedIds) {
+    const selectedIdSet = new Set((Array.isArray(selectedIds) ? selectedIds : []).map(String));
+    if (selectedIdSet.size === 0) return { uploaded: [], errors: [] };
+
+    const files = getProjectFiles(projectId).filter(file => selectedIdSet.has(String(file.id)));
+    const results = [];
+    for (const file of files) {
+        try {
+            const data = fs.readFileSync(getProjectFilePath(file.storedName));
+            await salesforce.uploadOpportunityFile(opportunityId, {
+                title: `ProjectBuilder - ${file.name}`,
+                filename: file.name,
+                data
+            });
+            results.push({ name: file.name, success: true });
+        } catch (error) {
+            results.push({
+                name: file.name,
+                success: false,
+                error: error?.message ?? String(error)
+            });
+        }
+    }
+
+    return {
+        uploaded: results.filter(result => result.success).map(result => result.name),
+        errors: results
+            .filter(result => !result.success)
+            .map(({ name, error }) => ({ type: name, error }))
+    };
+}
+
+function mergeSalesforceDocumentResults(...results) {
+    return {
+        uploaded: results.flatMap(result => result?.uploaded ?? []),
+        errors: results.flatMap(result => result?.errors ?? [])
     };
 }
 
@@ -316,11 +388,29 @@ router.get("/projects/:projectId/quote-options", async (req, res) => {
             ?? salesAreaRecords[0]
             ?? null;
         const recommendedTaxCode = recommendSalesforceTaxCode(result.account, salesArea ?? {});
+        const projectFiles = getProjectFiles(result.project.id);
+        const projectFileIds = parseSavedProjectFileIds(
+            result.project.salesforceProjectFileIds,
+            projectFiles
+        );
+        if (JSON.stringify(projectFileIds) !== String(result.project.salesforceProjectFileIds ?? "")) {
+            database.projects.prepare(`
+                UPDATE projects SET salesforceProjectFileIds = ? WHERE id = ?
+            `).run(JSON.stringify(projectFileIds), result.project.id);
+        }
         res.json({
             success: true,
             ...options,
             accountCountry: result.account.BillingCountry ?? "",
             accountCountryCode: result.account.BillingCountryCode ?? "",
+            projectFiles: projectFiles.map(file => ({
+                id: file.id,
+                name: file.name,
+                mimeType: file.mimeType,
+                size: file.size,
+                createdAt: file.createdAt,
+                updatedAt: file.updatedAt
+            })),
             saved: {
                 contactId: result.project.salesforceContactId ?? "",
                 deliveryTime: result.project.salesforceDeliveryTime ?? "",
@@ -328,6 +418,7 @@ router.get("/projects/:projectId/quote-options", async (req, res) => {
                 syncScope: result.project.salesforceSyncScope ?? "opportunity_quote",
                 taxCode: result.project.salesforceTaxCode ?? existingQuote?.Tax__c ?? recommendedTaxCode,
                 documents: parseSavedDocuments(result.project.salesforceDocuments),
+                projectFileIds,
                 uploadProjectFile: result.project.salesforceUploadProjectFile !== 0,
                 showDiscount: result.project.salesforceShowDiscount !== 0,
                 showAdditionalDiscount: result.project.salesforceShowAdditionalDiscountConfigured === 1
@@ -715,6 +806,8 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
             .filter(item => SALESFORCE_UPLOAD_TYPES.has(item));
         const documents = uploads.filter(item => SALESFORCE_DOCUMENT_TYPES.has(item));
         const uploadProjectFile = uploads.includes("project");
+        const projectFiles = getProjectFiles(project.id);
+        const projectFileIds = parseSavedProjectFileIds(req.body.projectFileIds, projectFiles);
         const [syncOptions, salesAreaRecords] = syncScope === "opportunity_quote"
             ? await Promise.all([
                 salesforce.getQuoteSyncOptions(accountId),
@@ -845,16 +938,20 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
             await salesforce.replaceLineItems("OpportunityLineItem", "OpportunityId", opportunity.Id, opportunityLineItems);
             project.salesforceOpportunityId = opportunity.Id;
             project.salesforceQuoteId = null;
-            const documentResult = await synchronizeProjectDocuments(opportunity.Id, project, nodes, nodeArticles,
-                uploadProjectFile ? [...documents, "project"] : documents);
+            const documentResult = mergeSalesforceDocumentResults(
+                await synchronizeProjectDocuments(opportunity.Id, project, nodes, nodeArticles,
+                    uploadProjectFile ? [...documents, "project"] : documents),
+                await synchronizeSelectedProjectFiles(opportunity.Id, project.id, projectFileIds)
+            );
             database.projects.prepare(`
                 UPDATE projects SET salesforceOpportunityId = ?, salesforceSyncedAt = ?,
                     salesforceContactId = ?, salesforceDeliveryTime = ?,
                     salesforceArticleMode = ?, salesforceSyncScope = ?, salesforceDocuments = ?,
-                    salesforceTaxCode = ?, salesforceUploadProjectFile = ?
+                    salesforceProjectFileIds = ?, salesforceTaxCode = ?, salesforceUploadProjectFile = ?
                 WHERE id = ?
             `).run(opportunity.Id, new Date().toISOString(), req.body.contactId ?? null,
                 req.body.deliveryTime ?? null, articleMode, syncScope, JSON.stringify(documents),
+                JSON.stringify(projectFileIds),
                 req.body.taxCode ?? project.salesforceTaxCode ?? null,
                 uploadProjectFile ? 1 : 0, project.id);
             saveProjectSalesforceLink(project.id, accountId, opportunity.Id, null);
@@ -963,12 +1060,15 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
         );
         project.salesforceOpportunityId = opportunity.Id;
         project.salesforceQuoteId = quote.Id;
-        const documentResult = await synchronizeProjectDocuments(
-            opportunity.Id,
-            project,
-            nodes,
-            nodeArticles,
-            uploadProjectFile ? [...documents, "project"] : documents
+        const documentResult = mergeSalesforceDocumentResults(
+            await synchronizeProjectDocuments(
+                opportunity.Id,
+                project,
+                nodes,
+                nodeArticles,
+                uploadProjectFile ? [...documents, "project"] : documents
+            ),
+            await synchronizeSelectedProjectFiles(opportunity.Id, project.id, projectFileIds)
         );
         if (createdQuoteDetails) {
             quote = await createdQuoteDetails ?? quote;
@@ -977,13 +1077,14 @@ router.post("/projects/:projectId/opportunity-quote", async (req, res) => {
         database.projects.prepare(`
             UPDATE projects SET salesforceOpportunityId = ?, salesforceQuoteId = ?, salesforceSyncedAt = ?,
                 salesforceContactId = ?, salesforceDeliveryTime = ?, salesforceArticleMode = ?, salesforceSyncScope = ?,
-                salesforceDocuments = ?, salesforceTaxCode = ?, salesforceShowDiscount = ?,
+                salesforceDocuments = ?, salesforceProjectFileIds = ?, salesforceTaxCode = ?, salesforceShowDiscount = ?,
                 salesforceShowAdditionalDiscount = ?, salesforceShowAdditionalDiscountConfigured = 1,
                 salesforceExportQuote = ?,
                 salesforceUploadProjectFile = ?
             WHERE id = ?
         `).run(opportunity.Id, quote.Id, new Date().toISOString(), req.body.contactId ?? null,
             req.body.deliveryTime ?? null, articleMode, syncScope, JSON.stringify(documents),
+            JSON.stringify(projectFileIds),
             req.body.taxCode ?? project.salesforceTaxCode ?? null,
             quoteSettings.has("show_discount") ? 1 : 0,
             quoteSettings.has("show_additional_discount") ? 1 : 0,

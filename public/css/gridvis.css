@@ -2717,3 +2717,65 @@ body.gridvis-nav-open #below::before {
     }
 }
 
+/* Projektdaten / Bilder: dieselbe kompakte GridVis-Arbeitsflaeche wie die
+   Projektstruktur, mit einer klaren Dateiablage und weissen Karten. */
+#project-panel-files {
+    padding: 0;
+    background: var(--gridvis-workspace);
+}
+
+#project-panel-files .project-files-card {
+    margin: 0;
+    padding: 0 0 14px;
+    background: var(--gridvis-workspace);
+}
+
+#project-panel-files .project-files-header {
+    min-height: 38px;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 5px 12px;
+    background: var(--gridvis-navy);
+    color: #fff;
+}
+
+#project-panel-files .project-files-header h2 {
+    color: inherit;
+    font-size: 14px;
+}
+
+#project-panel-files .project-files-header p {
+    color: #d7e3ef;
+}
+
+#project-panel-files #project-files-select {
+    min-height: 28px;
+    padding: 5px 9px;
+    border-color: #b9c8dc;
+    border-radius: 2px;
+}
+
+#project-panel-files .project-files-dropzone {
+    margin: 12px 12px 0;
+    border-radius: 2px;
+    background: #fff;
+}
+
+#project-panel-files .project-files-status {
+    margin: 0 12px;
+}
+
+#project-panel-files .project-files-list {
+    margin: 12px;
+}
+
+#project-panel-files .project-file-card {
+    border-radius: 2px;
+    box-shadow: none;
+}
+
+#project-panel-files .project-file-actions button,
+#project-panel-files .project-file-actions a {
+    border-radius: 2px;
+}
+

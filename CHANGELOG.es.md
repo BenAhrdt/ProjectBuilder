@@ -2,6 +2,20 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.44 - 29.10.2026
+
+### Nuevo
+
+- Los proyectos ahora incluyen una pestaña "Datos / imágenes" para archivos e
+  imágenes relacionados con el proyecto. Los archivos se pueden añadir,
+  previsualizar, abrir, descargar, renombrar y eliminar mediante selección o
+  arrastrar y soltar.
+- Se admiten todos los tipos de archivo hasta 100 MB por archivo. Las imágenes,
+  los PDF y los archivos de texto, audio y vídeo tienen vista previa directa.
+- El diálogo de envío a Salesforce incluye ahora una selección independiente de
+  "Archivos del proyecto". La selección se guarda por proyecto y los archivos
+  eliminados se quitan automáticamente de la selección guardada.
+
 ## 1.5.43 - 05.10.2026
 
 ### Nuevo

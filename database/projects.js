@@ -52,6 +52,7 @@ for (const [name, definition] of [
     ["salesforceArticleMode", "TEXT DEFAULT 'commercial_total'"],
     ["salesforceSyncScope", "TEXT DEFAULT 'opportunity_quote'"],
     ["salesforceDocuments", "TEXT DEFAULT '[\"overview\"]'"],
+    ["salesforceProjectFileIds", "TEXT DEFAULT '[]'"],
     ["salesforceTaxCode", "TEXT"],
     ["salesforceShowDiscount", "INTEGER DEFAULT 1"],
     ["salesforceShowAdditionalDiscount", "INTEGER DEFAULT 0"],
@@ -86,6 +87,24 @@ projects.exec(`
         syncedAt TEXT,
         PRIMARY KEY (projectId, customerSalesforceId)
     )
+`);
+
+projects.exec(`
+    CREATE TABLE IF NOT EXISTS projectFiles (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        projectId INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        storedName TEXT NOT NULL UNIQUE,
+        mimeType TEXT NOT NULL DEFAULT 'application/octet-stream',
+        size INTEGER NOT NULL DEFAULT 0,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT NOT NULL
+    )
+`);
+
+projects.exec(`
+    CREATE INDEX IF NOT EXISTS projectFilesProjectIdIndex
+    ON projectFiles(projectId)
 `);
 
 export {

@@ -2,6 +2,19 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.44 - 2026-10-29
+
+### Added
+
+- Projects now include a "Data / images" tab for project-related files and
+  images. Files can be added by selection or drag and drop, previewed, opened,
+  downloaded, renamed, and deleted.
+- All file types are supported up to 100 MB per file. Images, PDFs, text,
+  audio, and video files receive a direct preview.
+- The Salesforce send dialog now has a dedicated "Project files" selection.
+  The selected files are transferred to the opportunity and remembered per
+  project; deleted files are removed from the saved selection automatically.
+
 ## 1.5.43 - 2026-10-05
 
 ### Added

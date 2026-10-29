@@ -31,6 +31,13 @@ import {
 } from "../utils/projectFile.js";
 import { customerDiscountGroupKeys } from "../utils/discountGroups.js";
 import { logCustomerDiscountChange } from "../utils/customerDiscountHistory.js";
+import {
+    PROJECT_FILE_MAX_SIZE,
+    createProjectFileStorageName,
+    getProjectFilePath,
+    getProjectFilesDirectory,
+    removeProjectFile
+} from "../utils/projectFiles.js";
 
 const router =
     express.Router();
@@ -51,6 +58,19 @@ const publicIconsDirectory =
 const upload =
     multer({
         dest: "uploads/"
+    });
+
+const projectFileUpload =
+    multer({
+        storage: multer.diskStorage({
+            destination: (_req, _file, callback) =>
+                callback(null, getProjectFilesDirectory()),
+            filename: (_req, _file, callback) =>
+                callback(null, createProjectFileStorageName())
+        }),
+        limits: {
+            fileSize: PROJECT_FILE_MAX_SIZE
+        }
     });
 
 const exportVersion =
@@ -776,6 +796,211 @@ router.post(
     }
 );
 
+function getProjectFile(projectId, fileId) {
+    return database.projects.prepare(`
+        SELECT * FROM projectFiles
+        WHERE projectId = ? AND id = ?
+    `).get(projectId, fileId);
+}
+
+function normalizeProjectFileName(value) {
+    const name = path.basename(String(value ?? "").replaceAll("\\", "/")).trim();
+    return name.slice(0, 255) || "Datei";
+}
+
+function getProjectFileResponse(file) {
+    return {
+        id: file.id,
+        projectId: file.projectId,
+        name: file.name,
+        mimeType: file.mimeType,
+        size: file.size,
+        createdAt: file.createdAt,
+        updatedAt: file.updatedAt
+    };
+}
+
+function sendProjectFileUploadError(res, error) {
+    if (error?.code === "LIMIT_FILE_SIZE") {
+        res.status(413).json({
+            ok: false,
+            error: `Die Datei ist zu groß. Maximal ${Math.round(PROJECT_FILE_MAX_SIZE / 1024 / 1024)} MB sind erlaubt.`
+        });
+        return;
+    }
+
+    res.status(400).json({
+        ok: false,
+        error: error?.message || "Die Datei konnte nicht hochgeladen werden."
+    });
+}
+
+router.get("/:id/files", (req, res) => {
+    const project = database.projects.prepare(
+        "SELECT id FROM projects WHERE id = ?"
+    ).get(req.params.id);
+
+    if (!project) {
+        res.status(404).json({ ok: false, error: "Projekt nicht gefunden" });
+        return;
+    }
+
+    const files = database.projects.prepare(`
+        SELECT id, projectId, name, mimeType, size, createdAt, updatedAt
+        FROM projectFiles
+        WHERE projectId = ?
+        ORDER BY createdAt DESC, id DESC
+    `).all(req.params.id);
+
+    res.json({
+        files,
+        maxFileSize: PROJECT_FILE_MAX_SIZE
+    });
+});
+
+router.post("/:id/files", (req, res) => {
+    projectFileUpload.single("file")(req, res, error => {
+        if (error) {
+            if (req.file?.filename) removeProjectFile(req.file.filename);
+            sendProjectFileUploadError(res, error);
+            return;
+        }
+
+        const project = database.projects.prepare(
+            "SELECT id FROM projects WHERE id = ?"
+        ).get(req.params.id);
+
+        if (!project) {
+            if (req.file?.filename) removeProjectFile(req.file.filename);
+            res.status(404).json({ ok: false, error: "Projekt nicht gefunden" });
+            return;
+        }
+
+        if (!req.file) {
+            res.status(400).json({ ok: false, error: "Keine Datei ausgewählt." });
+            return;
+        }
+
+        const now = new Date().toISOString();
+        const file = {
+            projectId: Number(req.params.id),
+            name: normalizeProjectFileName(req.file.originalname),
+            storedName: req.file.filename,
+            mimeType: req.file.mimetype || "application/octet-stream",
+            size: req.file.size,
+            createdAt: now,
+            updatedAt: now
+        };
+
+        try {
+            const result = database.projects.prepare(`
+                INSERT INTO projectFiles (
+                    projectId, name, storedName, mimeType, size, createdAt, updatedAt
+                ) VALUES (
+                    @projectId, @name, @storedName, @mimeType, @size, @createdAt, @updatedAt
+                )
+            `).run(file);
+
+            res.status(201).json({
+                ok: true,
+                file: getProjectFileResponse({ ...file, id: result.lastInsertRowid })
+            });
+        } catch {
+            removeProjectFile(req.file.filename);
+            res.status(500).json({
+                ok: false,
+                error: "Die Datei konnte nicht gespeichert werden."
+            });
+        }
+    });
+});
+
+router.patch("/:id/files/:fileId", (req, res) => {
+    const file = getProjectFile(req.params.id, req.params.fileId);
+    if (!file) {
+        res.status(404).json({ ok: false, error: "Datei nicht gefunden" });
+        return;
+    }
+
+    const name = normalizeProjectFileName(req.body?.name);
+    const updatedAt = new Date().toISOString();
+    database.projects.prepare(`
+        UPDATE projectFiles SET name = ?, updatedAt = ?
+        WHERE id = ? AND projectId = ?
+    `).run(name, updatedAt, req.params.fileId, req.params.id);
+
+    res.json({
+        ok: true,
+        file: getProjectFileResponse({ ...file, name, updatedAt })
+    });
+});
+
+router.get("/:id/files/:fileId/content", (req, res) => {
+    const file = getProjectFile(req.params.id, req.params.fileId);
+    if (!file) {
+        res.status(404).json({ ok: false, error: "Datei nicht gefunden" });
+        return;
+    }
+
+    let filePath;
+    try {
+        filePath = getProjectFilePath(file.storedName);
+    } catch {
+        res.status(404).json({ ok: false, error: "Datei nicht gefunden" });
+        return;
+    }
+
+    if (!fs.existsSync(filePath)) {
+        res.status(404).json({ ok: false, error: "Datei nicht gefunden" });
+        return;
+    }
+
+    const safeName = String(file.name || "Datei")
+        .replace(/[\r\n"\\]/g, "_");
+    const fallbackName = safeName.replace(/[^\x20-\x7E]/g, "_") || "Datei";
+    const mimeType = String(file.mimeType || "application/octet-stream").toLowerCase();
+    const safeInlineType =
+        (mimeType.startsWith("image/") && mimeType !== "image/svg+xml")
+        || mimeType === "application/pdf"
+        || mimeType.startsWith("video/")
+        || mimeType.startsWith("audio/")
+        || mimeType === "text/plain"
+        || mimeType === "text/csv";
+    const disposition = req.query.download === "1" || !safeInlineType
+        ? "attachment"
+        : "inline";
+
+    res.setHeader("Content-Type", mimeType);
+    res.setHeader(
+        "Content-Disposition",
+        `${disposition}; filename="${fallbackName}"; filename*=UTF-8''${encodeURIComponent(safeName)}`
+    );
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Cache-Control", "private, no-store");
+    res.sendFile(filePath);
+});
+
+router.delete("/:id/files/:fileId", (req, res) => {
+    const file = getProjectFile(req.params.id, req.params.fileId);
+    if (!file) {
+        res.status(404).json({ ok: false, error: "Datei nicht gefunden" });
+        return;
+    }
+
+    try {
+        removeProjectFile(file.storedName);
+    } catch (error) {
+        res.status(500).json({ ok: false, error: error.message });
+        return;
+    }
+
+    database.projects.prepare(
+        "DELETE FROM projectFiles WHERE id = ? AND projectId = ?"
+    ).run(req.params.fileId, req.params.id);
+
+    res.json({ ok: true });
+});
+
 router.get(
     "/:id",
     (req, res) => {
@@ -1058,8 +1283,17 @@ router.delete(
 
         }
 
+        const projectFiles = database.projects.prepare(`
+            SELECT storedName FROM projectFiles WHERE projectId = ?
+        `).all(req.params.id);
+
         const deleteProject =
             database.projects.transaction(projectId => {
+
+                database.projects.prepare(`
+                    DELETE FROM projectFiles
+                    WHERE projectId = ?
+                `).run(projectId);
 
                 database.projectNodeArticles.prepare(`
 
@@ -1104,6 +1338,14 @@ router.delete(
         deleteProject(
             req.params.id
         );
+
+        projectFiles.forEach(file => {
+            try {
+                removeProjectFile(file.storedName);
+            } catch {
+                // Die Datenbank ist bereits bereinigt; ein fehlendes Blob ist unkritisch.
+            }
+        });
 
         res.json({
             success: true

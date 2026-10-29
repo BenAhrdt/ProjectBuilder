@@ -348,7 +348,7 @@ const view =
 
 function getProjectTab(projectId) {
     const tab = sessionStorage.getItem(`projectBuilder.projectTab.${projectId}`);
-    return ["data", "structure", "export"].includes(tab) ? tab : "structure";
+    return ["data", "structure", "files", "export"].includes(tab) ? tab : "structure";
 }
 
 function renderProjectTab(name, label, projectId) {
@@ -523,6 +523,7 @@ async function renderView(
                 aria-label="${i18n.t("project.sections")}">
                 ${renderProjectTab("data", i18n.t("project.tabData"), projectId)}
                 ${renderProjectTab("structure", i18n.t("project.tabStructure"), projectId)}
+                ${renderProjectTab("files", i18n.t("project.tabFiles"), projectId)}
                 ${renderProjectTab("export", i18n.t("project.tabExport"), projectId)}
             </div>
 
@@ -794,6 +795,32 @@ async function renderView(
 
             </section>
 
+            <section id="project-panel-files" class="project-tab-panel" role="tabpanel"
+                aria-labelledby="project-tab-files" hidden>
+                <div class="project-files-card">
+                    <div class="project-files-header">
+                        <div>
+                            <h2>${i18n.t("project.filesTitle")}</h2>
+                            <p>${i18n.t("project.filesDescription")}</p>
+                        </div>
+                        <button id="project-files-select" type="button">
+                            <span class="project-files-upload-icon">＋</span>
+                            <span>${i18n.t("project.filesAdd")}</span>
+                        </button>
+                        <input id="project-files-input" type="file" multiple hidden>
+                    </div>
+
+                    <div id="project-files-dropzone" class="project-files-dropzone" role="button" tabindex="0">
+                        <span class="project-files-dropzone-icon">⇧</span>
+                        <strong>${i18n.t("project.filesDropTitle")}</strong>
+                        <span>${i18n.t("project.filesDropHint")}</span>
+                    </div>
+
+                    <div id="project-files-status" class="project-files-status" aria-live="polite"></div>
+                    <div id="project-files-list" class="project-files-list"></div>
+                </div>
+            </section>
+
             <section id="project-panel-export" class="project-tab-panel" role="tabpanel"
                 aria-labelledby="project-tab-export" hidden>
                 <div class="project-export-card">
@@ -850,6 +877,7 @@ async function renderView(
         () => router.navigate(`/customer/${project.customerId}`)
     );
     registerProjectOverview(projectId);
+    registerProjectFiles(projectId);
     registerProjectExport(projectId);
     registerProjectFileExport(projectId);
     registerProjectTenderExport(projectId);
@@ -888,6 +916,286 @@ async function renderView(
         target?.classList.add("project-node-search-target");
         setTimeout(() => target?.classList.remove("project-node-search-target"), 2400);
     }
+}
+
+function getProjectFileKind(file) {
+    const mimeType = String(file.mimeType || "").toLowerCase();
+    const fileName = String(file.name || "").toLowerCase();
+
+    if (mimeType.startsWith("image/") && mimeType !== "image/svg+xml") return "image";
+    if (mimeType === "application/pdf" || fileName.endsWith(".pdf")) return "pdf";
+    if (mimeType.startsWith("video/")) return "video";
+    if (mimeType.startsWith("audio/")) return "audio";
+    if (mimeType === "text/plain" || mimeType === "text/csv") return "text";
+    if (/\.(xlsx?|ods)$/i.test(fileName)) return "spreadsheet";
+    if (/\.(docx?|odt)$/i.test(fileName)) return "word";
+    if (/\.(pptx?|odp)$/i.test(fileName)) return "presentation";
+    return "file";
+}
+
+function getProjectFileUrl(projectId, file, download = false) {
+    const suffix = download ? "?download=1" : "";
+    return `/api/projects/${encodeURIComponent(projectId)}/files/${encodeURIComponent(file.id)}/content${suffix}`;
+}
+
+function getProjectFileTypeLabel(kind) {
+    return i18n.t({
+        image: "project.filesTypeImage",
+        pdf: "project.filesTypePdf",
+        video: "project.filesTypeVideo",
+        audio: "project.filesTypeAudio",
+        text: "project.filesTypeText",
+        spreadsheet: "project.filesTypeSpreadsheet",
+        word: "project.filesTypeWord",
+        presentation: "project.filesTypePresentation",
+        file: "project.filesTypeFile"
+    }[kind] || "project.filesTypeFile");
+}
+
+function getProjectFilePreview(projectId, file, kind) {
+    const url = getProjectFileUrl(projectId, file);
+    const safeName = escapeHtml(file.name);
+
+    if (kind === "image") {
+        return `<img src="${url}" alt="${safeName}" loading="lazy">`;
+    }
+
+    if (kind === "pdf" || kind === "text") {
+        return `<iframe src="${url}" title="${safeName}" loading="lazy"></iframe>`;
+    }
+
+    if (kind === "video") {
+        return `<video controls preload="metadata"><source src="${url}"></video>`;
+    }
+
+    if (kind === "audio") {
+        return `<audio controls preload="metadata" src="${url}"></audio>`;
+    }
+
+    const extension = String(file.name || "")
+        .split(".")
+        .pop()
+        .toUpperCase();
+    const tileLabel = extension && extension !== String(file.name || "").toUpperCase()
+        ? extension.slice(0, 7)
+        : getProjectFileTypeLabel(kind);
+    return `<span class="project-file-preview-tile">${escapeHtml(tileLabel)}</span>`;
+}
+
+function formatProjectFileSize(size) {
+    const bytes = Number(size) || 0;
+    if (bytes < 1024) return `${bytes} B`;
+    const units = ["KB", "MB", "GB"];
+    let value = bytes;
+    let unitIndex = -1;
+    while (value >= 1024 && unitIndex < units.length - 1) {
+        value /= 1024;
+        unitIndex += 1;
+    }
+    return `${value.toLocaleString(i18n.getCurrentLanguage(), {
+        maximumFractionDigits: value >= 100 ? 0 : 1
+    })} ${units[unitIndex]}`;
+}
+
+function formatProjectFileDate(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return new Intl.DateTimeFormat(i18n.getCurrentLanguage(), {
+        dateStyle: "medium",
+        timeStyle: "short"
+    }).format(date);
+}
+
+function renderProjectFiles(projectId, files) {
+    const list = document.getElementById("project-files-list");
+    if (!list) return;
+
+    if (!files.length) {
+        list.innerHTML = `<div class="project-files-empty">${i18n.t("project.filesEmpty")}</div>`;
+        return;
+    }
+
+    list.innerHTML = files.map(file => {
+        const kind = getProjectFileKind(file);
+        return `
+            <article class="project-file-card" data-file-id="${file.id}">
+                <div class="project-file-preview project-file-preview-${kind}">
+                    ${getProjectFilePreview(projectId, file, kind)}
+                </div>
+                <div class="project-file-body">
+                    <strong class="project-file-name" title="${escapeHtml(file.name)}">
+                        ${escapeHtml(file.name)}
+                    </strong>
+                    <span class="project-file-meta">
+                        ${escapeHtml(getProjectFileTypeLabel(kind))} · ${formatProjectFileSize(file.size)}
+                    </span>
+                    <span class="project-file-date">${escapeHtml(formatProjectFileDate(file.createdAt))}</span>
+                    <div class="project-file-actions">
+                        <button type="button" data-file-action="open">${i18n.t("project.filesOpen")}</button>
+                        <a href="${getProjectFileUrl(projectId, file, true)}" download>${i18n.t("project.filesDownload")}</a>
+                        <button type="button" data-file-action="rename">${i18n.t("project.filesRename")}</button>
+                        <button type="button" class="project-file-delete" data-file-action="delete">${i18n.t("project.filesDelete")}</button>
+                    </div>
+                </div>
+            </article>
+        `;
+    }).join("");
+}
+
+function setProjectFilesStatus(message, isError = false) {
+    const status = document.getElementById("project-files-status");
+    if (!status) return;
+    status.textContent = message;
+    status.classList.toggle("is-error", isError);
+}
+
+function registerProjectFiles(projectId) {
+    const input = document.getElementById("project-files-input");
+    const selectButton = document.getElementById("project-files-select");
+    const dropzone = document.getElementById("project-files-dropzone");
+    const list = document.getElementById("project-files-list");
+    if (!input || !selectButton || !dropzone || !list) return;
+
+    let files = [];
+    let maxFileSize = 100 * 1024 * 1024;
+
+    const loadFiles = async () => {
+        try {
+            const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}/files`);
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || i18n.t("project.filesLoadFailed"));
+            files = Array.isArray(result.files) ? result.files : [];
+            maxFileSize = Number(result.maxFileSize) || maxFileSize;
+            renderProjectFiles(projectId, files);
+        } catch (error) {
+            setProjectFilesStatus(error.message, true);
+        }
+    };
+
+    const uploadFiles = async selectedFiles => {
+        const uploadErrors = [];
+        const fileList = Array.from(selectedFiles || []);
+        if (!fileList.length) return;
+
+        selectButton.disabled = true;
+        dropzone.classList.add("is-uploading");
+        setProjectFilesStatus(i18n.t("project.filesUploading"));
+
+        for (const file of fileList) {
+            if (file.size > maxFileSize) {
+                uploadErrors.push(`${file.name}: ${i18n.t("project.filesTooLarge")}`);
+                continue;
+            }
+
+            const formData = new FormData();
+            formData.append("file", file);
+            try {
+                const response = await fetch(
+                    `/api/projects/${encodeURIComponent(projectId)}/files`,
+                    { method: "POST", body: formData }
+                );
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || i18n.t("project.filesUploadFailed"));
+            } catch (error) {
+                uploadErrors.push(`${file.name}: ${error.message}`);
+            }
+        }
+
+        input.value = "";
+        selectButton.disabled = false;
+        dropzone.classList.remove("is-uploading");
+        await loadFiles();
+        setProjectFilesStatus(
+            uploadErrors.length
+                ? uploadErrors.join(" · ")
+                : i18n.t("project.filesUploadComplete"),
+            uploadErrors.length > 0
+        );
+    };
+
+    selectButton.addEventListener("click", () => input.click());
+    input.addEventListener("change", () => uploadFiles(input.files));
+    dropzone.addEventListener("click", event => {
+        if (event.target.closest("button, a")) return;
+        input.click();
+    });
+    dropzone.addEventListener("keydown", event => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        input.click();
+    });
+    ["dragenter", "dragover"].forEach(eventName => {
+        dropzone.addEventListener(eventName, event => {
+            event.preventDefault();
+            dropzone.classList.add("is-dragging");
+        });
+    });
+    ["dragleave", "drop"].forEach(eventName => {
+        dropzone.addEventListener(eventName, event => {
+            event.preventDefault();
+            dropzone.classList.remove("is-dragging");
+        });
+    });
+    dropzone.addEventListener("drop", event => uploadFiles(event.dataTransfer.files));
+
+    list.addEventListener("click", async event => {
+        const actionElement = event.target.closest("[data-file-action]");
+        if (!actionElement) return;
+        const file = files.find(item => String(item.id) === String(
+            actionElement.closest("[data-file-id]")?.dataset.fileId
+        ));
+        if (!file) return;
+
+        if (actionElement.dataset.fileAction === "open") {
+            const opened = window.open(getProjectFileUrl(projectId, file), "_blank", "noopener,noreferrer");
+            if (!opened) window.location.href = getProjectFileUrl(projectId, file);
+            return;
+        }
+
+        if (actionElement.dataset.fileAction === "rename") {
+            const name = await openProjectModal({
+                title: i18n.t("project.filesRenameTitle"),
+                label: i18n.t("project.filesName"),
+                value: file.name
+            });
+            if (name === null || !name.trim() || name.trim() === file.name) return;
+            const response = await fetch(
+                `/api/projects/${encodeURIComponent(projectId)}/files/${encodeURIComponent(file.id)}`,
+                {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name: name.trim() })
+                }
+            );
+            const result = await response.json();
+            if (!response.ok) {
+                await showAlert(result.error || i18n.t("project.filesRenameFailed"));
+                return;
+            }
+            await loadFiles();
+            return;
+        }
+
+        if (actionElement.dataset.fileAction === "delete") {
+            const confirmed = await showConfirm(i18n.t("project.filesDeleteConfirm"), {
+                title: i18n.t("project.filesDeleteTitle"),
+                confirmText: i18n.t("project.filesDelete")
+            });
+            if (!confirmed) return;
+            const response = await fetch(
+                `/api/projects/${encodeURIComponent(projectId)}/files/${encodeURIComponent(file.id)}`,
+                { method: "DELETE" }
+            );
+            const result = await response.json();
+            if (!response.ok) {
+                await showAlert(result.error || i18n.t("project.filesDeleteFailed"));
+                return;
+            }
+            await loadFiles();
+        }
+    });
+
+    loadFiles();
 }
 
 function triggerPendingProjectAction(projectId) {
@@ -1050,6 +1358,16 @@ function registerProjectSalesforceSync(projectId) {
                     options: quoteOptions.taxOptions.map(item => ({
                         value: item.value,
                         label: `${item.value} – ${item.label}`
+                    }))
+                }] : []),
+                ...(quoteOptions.projectFiles?.length ? [{
+                    type: "checkboxes",
+                    name: "projectFileIds",
+                    label: i18n.t("project.salesforceProjectFiles"),
+                    value: quoteOptions.saved.projectFileIds,
+                    options: quoteOptions.projectFiles.map(file => ({
+                        value: String(file.id),
+                        label: `${file.name} (${formatProjectFileSize(file.size)})`
                     }))
                 }] : []),
                 { type: "checkboxes", name: "documents", label: i18n.t("project.salesforceDocuments"),

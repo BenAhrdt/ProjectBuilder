@@ -198,8 +198,11 @@ async function createWindow() {
 
     mainWindow.once("ready-to-show", () => mainWindow.show());
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-        if (!url.startsWith(appUrl)) shell.openExternal(url);
-        return { action: "deny" };
+        if (!url.startsWith(appUrl)) {
+            shell.openExternal(url);
+            return { action: "deny" };
+        }
+        return { action: "allow" };
     });
     mainWindow.webContents.on("will-navigate", (event, url) => {
         if (!url.startsWith(appUrl)) {

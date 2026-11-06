@@ -487,6 +487,19 @@ body.gridvis-nav-open #below::before {
     text-underline-offset: 2px;
 }
 
+.app-footer-wiki {
+    color: #fff;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.app-footer-wiki:hover,
+.app-footer-wiki:focus-visible {
+    color: #55b8dd;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
 .app-footer-local-port {
     color: #92a0ad;
     white-space: nowrap;

@@ -51,6 +51,7 @@
     "navbar.localPort": "Puerto local",
     "navbar.unknownVersion": "desconocida",
     "navbar.openChangelog": "Abrir registro de cambios",
+    "navbar.openWiki": "Abrir wiki",
     "navbar.updatePreparing": "Preparando actualización…",
     "navbar.updateDownloading": "Descargando actualización…",
     "navbar.updateReady": "La actualización está lista",

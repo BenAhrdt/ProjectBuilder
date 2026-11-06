@@ -2,6 +2,15 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.45 - 06.11.2026
+
+### Mejorado
+
+- La wiki de GitHub ahora está disponible directamente desde el pie de página
+  de la aplicación.
+- La documentación en línea ahora incluye páginas de funciones y un plan de
+  capturas de pantalla para ProjectBuilder.
+
 ## 1.5.44 - 29.10.2026
 
 ### Nuevo

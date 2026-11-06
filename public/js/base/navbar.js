@@ -83,6 +83,15 @@ if (appFooter) {
             >
                 ${i18n.t("changelog.title")}
             </button>
+            <a
+                class="app-footer-wiki"
+                href="https://github.com/BenAhrdt/ProjectBuilder/wiki"
+                target="_blank"
+                rel="noreferrer"
+                title="${i18n.t("navbar.openWiki")}"
+            >
+                ${i18n.t("navbar.openWiki")}
+            </a>
             <span class="app-footer-version">${i18n.t("navbar.currentVersion")}: ${version}</span>
             ${electronPort ? `<span class="app-footer-local-port">${i18n.t("navbar.localPort")}: ${electronPort}</span>` : ""}
             <div id="app-footer-update-status" hidden aria-live="polite">

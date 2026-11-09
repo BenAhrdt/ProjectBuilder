@@ -2,6 +2,18 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.46 - 09.11.2026
+
+### Behoben
+
+- Projekte lassen sich wieder zuverlässig löschen. Die Löschtransaktion
+  verwendet dafür eine gemeinsame SQLite-Verbindung und räumt zugehörige
+  Salesforce-Verknüpfungen mit auf.
+- Der Löschbutton ist in der Projektdetailansicht direkt in der Kopfzeile
+  sichtbar; Fehler der Löschanfrage werden verständlich angezeigt.
+- Die Projektliste im Kundenbereich wird nach Änderungen neu geladen, damit
+  gelöschte Projekte nicht als veraltete Zeilen stehen bleiben.
+
 ## 1.5.45 - 06.11.2026
 
 ### Verbessert

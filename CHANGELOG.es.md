@@ -2,6 +2,18 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.46 - 09.11.2026
+
+### Corregido
+
+- Los proyectos se pueden eliminar de forma fiable de nuevo. La transacción
+  de eliminación utiliza una única conexión SQLite y también elimina los
+  enlaces de Salesforce relacionados.
+- El botón de eliminación está visible directamente en la cabecera del
+  detalle del proyecto y los errores se muestran claramente.
+- La lista de proyectos del cliente se vuelve a cargar tras los cambios para
+  que los proyectos eliminados no permanezcan como filas obsoletas.
+
 ## 1.5.45 - 06.11.2026
 
 ### Mejorado

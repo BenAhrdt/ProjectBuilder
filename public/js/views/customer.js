@@ -270,7 +270,7 @@ function activateTab(name, customerId, customer, focus = true) {
     document.querySelectorAll(".customer-tab-panel").forEach(panel => {
         panel.hidden = panel.id !== `customer-panel-${name}`;
     });
-    if (name === "projects") loadCustomerProjects(customerId);
+    if (name === "projects") loadCustomerProjects(customerId, true);
     if (name === "sales") loadCustomerOrderIntake(customerId, customer);
 }
 

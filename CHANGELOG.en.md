@@ -2,6 +2,17 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.46 - 2026-11-09
+
+### Fixed
+
+- Projects can be deleted reliably again. The delete transaction now uses one
+  shared SQLite connection and also removes related Salesforce links.
+- The delete button is directly visible in the project detail header, and
+  deletion errors are shown clearly.
+- The customer project list reloads after changes so deleted projects do not
+  remain as stale rows.
+
 ## 1.5.45 - 2026-11-06
 
 ### Improved

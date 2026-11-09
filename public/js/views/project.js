@@ -497,6 +497,14 @@ async function renderView(
                             ← ${i18n.t("project.backToCustomer")}
                         </button>
                     ` : ""}
+                    <button
+                        id="delete-project"
+                        type="button"
+                        title="${i18n.t("project.deleteProject")}"
+                        aria-label="${i18n.t("project.deleteProject")}"
+                    >
+                        ${i18n.t("project.deleteProject")}
+                    </button>
                     <div id="project-salesforce-links"></div>
                 </div>
             </div>
@@ -537,19 +545,6 @@ async function renderView(
                     <h2>
                         ${i18n.t("project.projectData")}
                     </h2>
-
-                    <div class="project-card-header-actions">
-
-                        <button
-                            id="delete-project"
-                            type="button"
-                            title="${i18n.t("project.deleteProject")}"
-                            aria-label="${i18n.t("project.deleteProject")}"
-                        >
-                            ${i18n.t("project.deleteProject")}
-                        </button>
-
-                    </div>
 
                 </div>
 
@@ -5066,34 +5061,43 @@ function registerProjectDelete(
                 saveTimeout
             );
 
-            const response =
-                await fetch(
+            try {
+                const response = await fetch(
                     `/api/projects/${projectId}`,
-                    {
-                        method: "DELETE"
-                    }
+                    { method: "DELETE" }
                 );
+                const responseText = await response.text();
+                let result = {};
+                try {
+                    result = responseText ? JSON.parse(responseText) : {};
+                } catch {
+                    result = {};
+                }
 
-            const result =
-                await response.json();
+                console.info("[ProjectBuilder] Project deletion response", {
+                    projectId,
+                    status: response.status,
+                    success: result.success === true
+                });
 
-            if (
-                !response.ok
-                || !result.success
-            ) {
+                if (!response.ok || !result.success) {
+                    throw new Error(
+                        result.error
+                        || `${i18n.t("project.deleteProjectError")} (HTTP ${response.status})`
+                    );
+                }
 
+                router.navigate("/projects");
+            } catch (error) {
+                console.error("[ProjectBuilder] Project deletion failed", {
+                    projectId,
+                    message: error?.message ?? String(error)
+                });
                 await showAlert(
-                    result.error
+                    error?.message
                     || i18n.t("project.deleteProjectError")
                 );
-
-                return;
-
             }
-
-            router.navigate(
-                "/projects"
-            );
 
         }
     );

@@ -2115,6 +2115,21 @@ body.gridvis-nav-open #below::before {
     box-shadow: none;
 }
 
+#view:has(#project-content) .project-view-links #delete-project {
+    min-height: 28px;
+    padding: 4px 9px;
+    border-color: #e4a3a0;
+    border-radius: 2px;
+    background: #fff;
+    color: #b42318;
+    box-shadow: none;
+}
+
+#view:has(#project-content) .project-view-links #delete-project:hover {
+    border-color: #d92d20;
+    background: #fff5f5;
+}
+
 #project-panel-export .project-export-card > p {
     margin: 0;
     padding: 12px 14px 6px;

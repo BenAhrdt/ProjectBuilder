@@ -1295,7 +1295,7 @@ router.delete(
                     WHERE projectId = ?
                 `).run(projectId);
 
-                database.projectNodeArticles.prepare(`
+                database.projects.prepare(`
 
                     DELETE FROM projectNodeArticles
 
@@ -1313,7 +1313,12 @@ router.delete(
                     projectId
                 );
 
-                database.projectNodes.prepare(`
+                database.projects.prepare(`
+                    DELETE FROM projectSalesforceLinks
+                    WHERE projectId = ?
+                `).run(projectId);
+
+                database.projects.prepare(`
 
                     DELETE FROM projectNodes
 
@@ -1335,9 +1340,21 @@ router.delete(
 
             });
 
-        deleteProject(
-            req.params.id
-        );
+        try {
+            deleteProject(
+                req.params.id
+            );
+        } catch (error) {
+            console.error("[ProjectBuilder] Project deletion failed", {
+                projectId: req.params.id,
+                message: error?.message ?? String(error)
+            });
+            res.status(500).json({
+                success: false,
+                error: "Projekt konnte nicht gelöscht werden."
+            });
+            return;
+        }
 
         projectFiles.forEach(file => {
             try {

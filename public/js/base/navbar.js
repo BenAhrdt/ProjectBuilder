@@ -93,7 +93,16 @@ if (appFooter) {
                 ${i18n.t("navbar.openWiki")}
             </a>
             <span class="app-footer-version">${i18n.t("navbar.currentVersion")}: ${version}</span>
-            ${electronPort ? `<span class="app-footer-local-port">${i18n.t("navbar.localPort")}: ${electronPort}</span>` : ""}
+            ${electronPort ? `
+                <a
+                    id="app-footer-local-port"
+                    class="app-footer-local-port"
+                    href="${window.location.origin}/"
+                    target="_blank"
+                    rel="noreferrer"
+                    title="${i18n.t("navbar.openLocalPort")}"
+                >${i18n.t("navbar.localPort")}: ${electronPort}</a>
+            ` : ""}
             <div id="app-footer-update-status" hidden aria-live="polite">
                 <div class="app-footer-update-label">
                     <span id="app-footer-update-text"></span>
@@ -104,6 +113,12 @@ if (appFooter) {
         </div>
     `;
 }
+
+document.getElementById("app-footer-local-port")?.addEventListener("click", event => {
+    if (!window.projectBuilder?.openInBrowser) return;
+    event.preventDefault();
+    window.projectBuilder.openInBrowser().catch(() => {});
+});
 
 document.dispatchEvent(new CustomEvent("projectbuilder:navbar-ready"));
 

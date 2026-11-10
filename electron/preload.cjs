@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld("projectBuilder", {
             defaultPath
         ),
     getUpdateStatus: () => ipcRenderer.invoke("update:get-status"),
+    openInBrowser: () => ipcRenderer.invoke("app:open-in-browser"),
     setLanguage: language => ipcRenderer.invoke("app:set-language", language),
     exportCurrentViewPdf: suggestedName =>
         ipcRenderer.invoke("pdf:export-current-view", suggestedName),

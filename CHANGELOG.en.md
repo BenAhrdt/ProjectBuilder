@@ -2,6 +2,15 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.47 - 2026-11-10
+
+### Improved
+
+- The browser startup setting is now clearly available under
+  "Settings > Application startup".
+- The local port in the Electron footer is now clickable and opens the
+  running application in the default browser.
+
 ## 1.5.46 - 2026-11-09
 
 ### Fixed

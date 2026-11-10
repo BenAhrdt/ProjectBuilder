@@ -505,6 +505,13 @@ body.gridvis-nav-open #below::before {
     white-space: nowrap;
 }
 
+.app-footer-local-port:hover,
+.app-footer-local-port:focus-visible {
+    color: #55b8dd;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
 .app-footer-version {
     color: #fff;
     white-space: nowrap;

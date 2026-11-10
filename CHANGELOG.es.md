@@ -2,6 +2,15 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.47 - 10.11.2026
+
+### Mejorado
+
+- La opcion de inicio en el navegador ahora esta claramente disponible en
+  "Configuracion > Inicio de la aplicacion".
+- El puerto local del pie de pagina de Electron ahora es un enlace y abre la
+  aplicacion en el navegador predeterminado.
+
 ## 1.5.46 - 09.11.2026
 
 ### Corregido

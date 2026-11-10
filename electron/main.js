@@ -11,6 +11,7 @@ const iconPath = path.join(__dirname, "..", "icon.png");
 
 let mainWindow;
 let expressServer;
+let projectBuilderUrl = "";
 let updateStatus = { state: "idle", percent: 0 };
 let appLanguage = "de";
 let browserModeEnabled = false;
@@ -177,7 +178,7 @@ async function createWindow() {
         console.warn(`Port ${preferredPort} ist belegt; ein freier Port wird verwendet.`);
         expressServer = await startServer({ port: 0, host: "127.0.0.1" });
     }
-    const appUrl = expressServer.projectBuilderUrl;
+    projectBuilderUrl = expressServer.projectBuilderUrl;
 
     mainWindow = new BrowserWindow({
         width: 1400,
@@ -198,24 +199,24 @@ async function createWindow() {
 
     mainWindow.once("ready-to-show", () => mainWindow.show());
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-        if (!url.startsWith(appUrl)) {
+        if (!url.startsWith(projectBuilderUrl)) {
             shell.openExternal(url);
             return { action: "deny" };
         }
         return { action: "allow" };
     });
     mainWindow.webContents.on("will-navigate", (event, url) => {
-        if (!url.startsWith(appUrl)) {
+        if (!url.startsWith(projectBuilderUrl)) {
             event.preventDefault();
             shell.openExternal(url);
         }
     });
 
-    await mainWindow.loadURL(appUrl);
+    await mainWindow.loadURL(projectBuilderUrl);
     setTimeout(async () => {
         await checkForUpdates().catch(console.error);
         if (browserModeEnabled && mainWindow && !mainWindow.isDestroyed()) {
-            await shell.openExternal(appUrl);
+            await shell.openExternal(projectBuilderUrl);
             mainWindow.minimize();
         }
     }, 2000);
@@ -241,6 +242,11 @@ app.whenReady()
                     : result.filePaths[0] ?? null;
             }
         );
+        ipcMain.handle("app:open-in-browser", async () => {
+            if (!projectBuilderUrl) return false;
+            await shell.openExternal(projectBuilderUrl);
+            return true;
+        });
         ipcMain.handle("update:get-status", () => updateStatus);
         ipcMain.handle("app:set-language", (_event, language) => {
             if (Object.hasOwn(nativeTexts, language)) appLanguage = language;

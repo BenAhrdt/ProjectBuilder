@@ -1,6 +1,6 @@
 {
   "name": "projectbuilder",
-  "version": "1.5.46",
+  "version": "1.5.47",
   "type": "module",
   "description": "",
   "main": "electron/main.js",

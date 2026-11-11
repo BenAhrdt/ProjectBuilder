@@ -37,6 +37,13 @@ const GROUP_NODE_TYPES = {
     commercial_meter: "meter"
 };
 
+const FALLBACK_GROUP_NODE_TYPES = {
+    building: ["generalPosition"],
+    panel: ["building", "generalPosition"],
+    field: ["panel", "building", "generalPosition"],
+    meter: ["field", "panel", "building", "generalPosition"]
+};
+
 function normalizeOptionalNumber(value) {
     if (value === null || value === undefined || String(value).trim() === "") {
         return null;
@@ -105,12 +112,26 @@ export function buildSalesforcePositions(nodes, nodeArticles, mode = "commercial
     const groupType = GROUP_NODE_TYPES[mode];
     const groupForNode = node => {
         if (!groupType) return "total";
+
+        const ancestorsByType = new Map();
         let current = node;
         while (current) {
-            if (current.type === groupType) return String(current.id);
+            if (!ancestorsByType.has(current.type)) {
+                ancestorsByType.set(current.type, current);
+            }
             current = current.parentId == null ? null : nodeById.get(String(current.parentId));
         }
-        return `ungrouped:${node?.id ?? "unknown"}`;
+
+        const matchingNode =
+            ancestorsByType.get(groupType)
+            ||
+            FALLBACK_GROUP_NODE_TYPES[groupType]
+                ?.map(type => ancestorsByType.get(type))
+                .find(Boolean);
+
+        return matchingNode
+            ? `${matchingNode.type}:${matchingNode.id}`
+            : `ungrouped:${node?.id ?? "unknown"}`;
     };
     const summaries = new Map();
     for (const node of orderProjectNodes(nodes)) {

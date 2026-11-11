@@ -1,16 +1,17 @@
-import Database from "better-sqlite3";
-import { getDatabasePath } from "./config.js";
+import {
+    getDatabaseProxy,
+    registerDatabaseInitializer
+} from "./config.js";
 
-const customers =
-    new Database(
-        getDatabasePath()
-    );
+const customers = getDatabaseProxy();
+
+function initializeCustomers(database) {
 
 // --------------------------------------------------
 // Tabellen
 // --------------------------------------------------
 
-customers.prepare(`
+database.prepare(`
 
     CREATE TABLE IF NOT EXISTS customers (
 
@@ -50,7 +51,7 @@ customers.prepare(`
 `).run();
 
 const customerColumns = new Set(
-    customers.prepare("PRAGMA table_info(customers)").all().map(column => column.name)
+    database.prepare("PRAGMA table_info(customers)").all().map(column => column.name)
 );
 
 for (const [name, definition] of [
@@ -62,23 +63,23 @@ for (const [name, definition] of [
     ["salesforceLastModifiedAt", "TEXT"]
 ]) {
     if (!customerColumns.has(name)) {
-        customers.exec(`ALTER TABLE customers ADD COLUMN ${name} ${definition}`);
+        database.exec(`ALTER TABLE customers ADD COLUMN ${name} ${definition}`);
     }
 }
 
 for (const name of ["pg13", "pg15", "pg16", "pg17"]) {
     if (!customerColumns.has(name)) {
-        customers.exec(`ALTER TABLE customers ADD COLUMN ${name} REAL DEFAULT 0`);
+        database.exec(`ALTER TABLE customers ADD COLUMN ${name} REAL DEFAULT 0`);
     }
 }
 
-customers.exec(`
+database.exec(`
     CREATE UNIQUE INDEX IF NOT EXISTS customers_salesforce_id_unique
     ON customers (salesforceId)
     WHERE salesforceId IS NOT NULL
 `);
 
-customers.exec(`
+database.exec(`
     CREATE TABLE IF NOT EXISTS customerDiscountHistory (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         customerId INTEGER,
@@ -96,26 +97,30 @@ customers.exec(`
 `);
 
 const customerDiscountHistoryColumns = new Set(
-    customers.prepare("PRAGMA table_info(customerDiscountHistory)").all()
+    database.prepare("PRAGMA table_info(customerDiscountHistory)").all()
         .map(column => column.name)
 );
 
 if (!customerDiscountHistoryColumns.has("status")) {
-    customers.exec(
+    database.exec(
         "ALTER TABLE customerDiscountHistory ADD COLUMN status TEXT NOT NULL DEFAULT 'success'"
     );
 }
 
 if (!customerDiscountHistoryColumns.has("errorMessage")) {
-    customers.exec(
+    database.exec(
         "ALTER TABLE customerDiscountHistory ADD COLUMN errorMessage TEXT"
     );
 }
 
-customers.exec(`
+database.exec(`
     CREATE INDEX IF NOT EXISTS customer_discount_history_customer_id
     ON customerDiscountHistory (customerId, id DESC)
 `);
+}
+
+registerDatabaseInitializer(initializeCustomers);
+initializeCustomers(customers);
 
 export {
     customers

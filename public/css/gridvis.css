@@ -211,6 +211,9 @@ body {
 }
 
 #salesforce-header-connect {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     min-height: 24px;
     padding: 3px 7px;
     border: 1px solid #9fb8d2;
@@ -222,9 +225,36 @@ body {
     font-weight: 700;
 }
 
+#salesforce-header-connect[data-state="connected"] {
+    border-color: #70b58d;
+    background: #f2fbf5;
+}
+
 #salesforce-header-connect:hover {
     border-color: var(--gridvis-cyan);
     background: #eaf3fc;
+}
+
+#salesforce-header-connect[data-state="connected"]:hover {
+    border-color: #36a269;
+    background: #e7f7ed;
+}
+
+.salesforce-header-plug {
+    display: inline-flex;
+    width: 15px;
+    height: 15px;
+    flex: 0 0 15px;
+}
+
+.salesforce-header-plug svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
 }
 
 .language-selector {
@@ -617,6 +647,7 @@ body.gridvis-nav-open #below::before {
 #add-customer-button,
 #add-project-button,
 #import-project-button,
+#clear-projects-button,
 #save-customer-button,
 #save-project-button {
     min-height: 34px;
@@ -644,6 +675,30 @@ body.gridvis-nav-open #below::before {
     border-color: var(--gridvis-blue);
     background: var(--gridvis-blue);
     color: #fff;
+}
+
+.customers-action-danger,
+.projects-action-danger {
+    border-color: #d58b86;
+    color: #b42318;
+}
+
+#clear-projects-button.projects-action-danger {
+    border-color: #d58b86;
+    color: #b42318;
+}
+
+.customers-action-danger:hover,
+.projects-action-danger:hover {
+    border-color: #b42318;
+    background: #fff4f2;
+    color: #b42318;
+}
+
+#clear-projects-button.projects-action-danger:hover {
+    border-color: #b42318;
+    background: #fff4f2;
+    color: #b42318;
 }
 
 .customers-action-primary:hover,

@@ -17,6 +17,8 @@ const labels = {
     summaryFields: "Felder",
     summaryMeters: "Messstellen",
     summaryPositions: "Positionen",
+    directContent: "Direkte Inhalte",
+    distributionOverview: "Verteilungsübersicht",
     prices: "Preise",
     withoutPrices: "Ohne",
     withPrices: "Anzeigen",
@@ -174,11 +176,11 @@ test(
 
         assert.equal(
             documents.detailPages.length,
-            2
+            3
         );
         assert.equal(
             documents.printablePages.pageCount,
-            3
+            4
         );
         assert.match(
             documents.overviewDiagram.svg,
@@ -190,11 +192,19 @@ test(
         );
         assert.match(
             documents.detailPages[0].diagram.svg,
+            /Feld 1/
+        );
+        assert.match(
+            documents.detailPages[0].title,
+            /NSHV.*Verteilungsübersicht/
+        );
+        assert.match(
+            documents.detailPages[1].diagram.svg,
             /Kompressor/
         );
         assert.match(
             documents.printablePages.html,
-            /Seite 3 \/ 3/
+            /Seite 4 \/ 4/
         );
     }
 );
@@ -234,7 +244,7 @@ test(
                 labels
             });
         const detail =
-            documents.detailPages[0];
+            documents.detailPages[1];
         const meterYPositions =
             [...detail.diagram.svg.matchAll(
                 /<g class="project-overview-card" data-type="meter">\s*<rect\s*x="[^"]+"\s*y="([^"]+)"/g
@@ -244,7 +254,7 @@ test(
 
         assert.equal(
             documents.detailPages.length,
-            1
+            2
         );
         assert.equal(
             detail.title,
@@ -258,6 +268,83 @@ test(
             meterYPositions.slice(0, 6),
             Array(6).fill(meterYPositions[0])
         );
+    }
+);
+
+test(
+    "keeps direct panel positions and measuring points beside field pages",
+    () => {
+        const documents =
+            buildOverviewDocuments({
+                project: {
+                    name: "Gemischte Verteilung"
+                },
+                nodes: [
+                    {
+                        id: 1,
+                        parentId: null,
+                        type: "building",
+                        name: "Gebäude"
+                    },
+                    {
+                        id: 2,
+                        parentId: 1,
+                        type: "panel",
+                        name: "Verteilung"
+                    },
+                    {
+                        id: 3,
+                        parentId: 2,
+                        type: "field",
+                        name: "Feld 1"
+                    },
+                    {
+                        id: 4,
+                        parentId: 3,
+                        type: "meter",
+                        name: "Messstelle Feld"
+                    },
+                    {
+                        id: 5,
+                        parentId: 2,
+                        type: "meter",
+                        name: "Messstelle direkt"
+                    }
+                ],
+                nodeArticles: [
+                    {
+                        id: 1,
+                        projectNodeId: 2,
+                        articleNumber: "PANEL-ARTICLE",
+                        quantity: 1
+                    },
+                    {
+                        id: 2,
+                        projectNodeId: 5,
+                        articleNumber: "DIRECT-METER-ARTICLE",
+                        quantity: 1
+                    }
+                ],
+                articles: [
+                    {
+                        articleNumber: "PANEL-ARTICLE",
+                        manufacturerType: "Direktes Gerät"
+                    },
+                    {
+                        articleNumber: "DIRECT-METER-ARTICLE",
+                        manufacturerType: "Direktes Messgerät"
+                    }
+                ],
+                labels
+            });
+
+        assert.equal(documents.detailPages.length, 3);
+        assert.match(documents.detailPages[0].title, /Verteilungsübersicht/);
+        assert.match(documents.detailPages[0].diagram.svg, /Feld 1/);
+        assert.match(documents.detailPages[1].title, /Direkte Inhalte/);
+        assert.match(documents.detailPages[1].diagram.svg, /Messstelle direkt/);
+        assert.match(documents.detailPages[1].diagram.svg, /Direktes Ger/);
+        assert.match(documents.detailPages[2].diagram.svg, /Messstelle Feld/);
     }
 );
 

@@ -1,11 +1,11 @@
-import Database from "better-sqlite3";
-import { getDatabasePath } from "./config.js";
+import {
+    getDatabaseProxy,
+    registerDatabaseInitializer
+} from "./config.js";
 
-const database =
-    new Database(
-        getDatabasePath()
-    );
+const projectNodeArticles = getDatabaseProxy();
 
+function initializeProjectNodeArticles(database) {
 database.exec(`
 
     CREATE TABLE IF NOT EXISTS projectNodeArticles (
@@ -90,7 +90,11 @@ if (!columns.includes("specialPrice")) {
     database.exec(`ALTER TABLE projectNodeArticles ADD COLUMN specialPrice REAL DEFAULT NULL`);
 
 }
+}
+
+registerDatabaseInitializer(initializeProjectNodeArticles);
+initializeProjectNodeArticles(projectNodeArticles);
 
 export {
-    database as projectNodeArticles
+    projectNodeArticles
 };

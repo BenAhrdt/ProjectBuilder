@@ -1,19 +1,17 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { getDataDirectory } from "../database/config.js";
+import {
+    getActiveProfileId,
+    getProfileProjectFilesDirectory
+} from "../database/config.js";
 
 export const PROJECT_FILE_MAX_SIZE = 100 * 1024 * 1024;
 
-const projectFilesDirectory = path.join(
-    getDataDirectory(),
-    "project-files"
-);
-
-fs.mkdirSync(projectFilesDirectory, { recursive: true });
-
 export function getProjectFilesDirectory() {
-    return projectFilesDirectory;
+    const directory = getProfileProjectFilesDirectory(getActiveProfileId());
+    fs.mkdirSync(directory, { recursive: true });
+    return directory;
 }
 
 export function createProjectFileStorageName() {
@@ -26,6 +24,7 @@ export function getProjectFilePath(storedName) {
         throw new Error("Ungültiger Projektdatensatz.");
     }
 
+    const projectFilesDirectory = getProjectFilesDirectory();
     const filePath = path.resolve(projectFilesDirectory, normalizedName);
     if (path.dirname(filePath) !== path.resolve(projectFilesDirectory)) {
         throw new Error("Ungültiger Projektdatensatz.");

@@ -183,6 +183,32 @@ router.post(
     }
 );
 
+router.delete("/", (_req, res) => {
+    const clearCustomers = database.customers.transaction(() => {
+        const customerCount = database.customers.prepare(
+            "SELECT COUNT(*) AS count FROM customers"
+        ).get().count;
+
+        database.customers.prepare("DELETE FROM customerDiscountHistory").run();
+        database.projects.prepare("UPDATE projects SET customerId = NULL").run();
+        database.customers.prepare("DELETE FROM customers").run();
+
+        return Number(customerCount);
+    });
+
+    try {
+        res.json({
+            success: true,
+            deletedCustomers: clearCustomers()
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message || "Kunden konnten nicht gelöscht werden."
+        });
+    }
+});
+
 
 // --------------------------------------------------
 // Speichern

@@ -1,4 +1,8 @@
 import * as i18n from "../utils/i18n.js";
+import {
+    showSalesforceProgress,
+    finishSalesforceProgress
+} from "../utils/salesforceProgress.js";
 await i18n.loadLanguage();
 
 const view = document.getElementById('view');
@@ -123,14 +127,16 @@ function generateHandler() {
     input.addEventListener(
         "change",
         async () => {
-            console.log("Change kommt");
-            importStatus.textContent = i18n.t("importPricelist.running");
             const file =
                 input.files[0];
 
             if (!file) {
                 return;
             }
+
+            importStatus.textContent = i18n.t("importPricelist.running");
+            const progress = showSalesforceProgress("pricelist-import");
+            let progressCompleted = false;
 
             // --------------------------------------------------
             // FormData
@@ -162,35 +168,34 @@ function generateHandler() {
             // Upload
             // --------------------------------------------------
 
-            const response =
-                await fetch(
+            try {
+                const response =
+                    await fetch(
 
-                    "/api/articles/import",
+                        "/api/articles/import",
 
-                    {
-                        method: "POST",
-                        body: formData
-                    }
+                        {
+                            method: "POST",
+                            body: formData
+                        }
 
-                );
+                    );
 
-            const result =
-                await response.json();
+                const result =
+                    await response.json();
 
-            if (!response.ok || result.success === false) {
-                importStatus.textContent =
-                    result.error
-                    || i18n.t("importPricelist.failed");
-                input.value = "";
-                return;
-            }
+                if (!response.ok || result.success === false) {
+                    importStatus.textContent =
+                        result.error
+                        || i18n.t("importPricelist.failed");
+                    return;
+                }
 
-            // --------------------------------------------------
-            // Report anzeigen
-            // --------------------------------------------------
+                // --------------------------------------------------
+                // Report anzeigen
+                // --------------------------------------------------
 
-            
-            importStatus.innerHTML = `
+                importStatus.innerHTML = `
                     <div class="import-report">
                         <h2>
                             ${i18n.t("importPricelist.completed")}
@@ -238,7 +243,14 @@ function generateHandler() {
             importStatus.innerHTML += `
             </div>
             `;
-            input.value = "";
+                await finishSalesforceProgress(progress);
+                progressCompleted = true;
+            } catch (error) {
+                importStatus.textContent = error.message || i18n.t("importPricelist.failed");
+            } finally {
+                if (!progressCompleted) progress.close();
+                input.value = "";
+            }
         }
     );
 }

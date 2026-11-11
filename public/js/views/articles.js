@@ -7,11 +7,20 @@ import {
 } from "../utils/modal.js";
 import * as router from "../router.js";
 import { offerSalesforceConnection } from "../utils/salesforceConnection.js";
+import {
+    showSalesforceProgress,
+    finishSalesforceProgress
+} from "../utils/salesforceProgress.js";
 
 await i18n.loadLanguage();
 
 const view = document.getElementById("view");
 let salesforceAvailability = null;
+const ARTICLE_PAGE_SIZE = 100;
+let displayedArticles = [];
+let articleTotalCount = 0;
+let articleOffset = 0;
+let articleSearchRequestId = 0;
 
 async function renderView() {
 
@@ -19,11 +28,15 @@ async function renderView() {
     // Artikel laden
     // --------------------------------------------------
 
-    const response =
-        await fetch("/api/articles");
+    const articlePage =
+        await loadArticlePage({ search: "", offset: 0 });
 
     const articles =
-        await response.json();
+        articlePage.articles;
+
+    displayedArticles = articles;
+    articleTotalCount = articlePage.total;
+    articleOffset = articlePage.offset;
 
     // --------------------------------------------------
     // Rendern
@@ -36,7 +49,7 @@ async function renderView() {
                 ${i18n.t("articles.articles")}
             </span>
             <div id="articles-meta-infomrations" class="meta-informations">
-                ${i18n.t("articles.articleCount")}: ${articles.length} 
+                ${i18n.t("articles.articleCount")}: ${articleTotalCount}
             </div>
         </div>
 
@@ -160,45 +173,13 @@ async function renderView() {
 
                 <tbody>
 
-                    ${articles.map(article => `
-
-                        <tr>
-
-                            <td data-label="${i18n.t("articles.articleNumber")}">
-                                ${renderArticleNumber(article)}
-                            </td>
-
-                            <td data-label="${i18n.t("articles.name")}">
-                                ${article.manufacturerType ?? ""}
-                            </td>
-
-                            <td data-label="${i18n.t("articles.description")}">
-                                <span
-                                    class="article-description-text"
-                                    title="${escapeHtml(article.description ?? "") }"
-                                >${article.description ?? ""}</span>
-                            </td>
-
-                            <td data-label="${i18n.t("articles.salesCategory")}">${renderSalesCategory(article)}</td>
-
-                            <td data-label="${i18n.t("articles.discountGroup")}">
-                                ${renderDiscountGroup(article)}
-                            </td>
-
-                            <td data-label="${i18n.t("articles.gridVisItems")}">${renderGridVisItems(article)}</td>
-
-                            <td data-label="${i18n.t("articles.price")}">
-                                ${renderArticlePrice(article)}
-                            </td>
-
-                        </tr>
-
-                    `).join("")}
+                    ${renderArticleRows(articles)}
 
                 </tbody>
 
             </table>
             </div>
+            <div id="articles-pagination" class="articles-pagination" aria-live="polite"></div>
 
         </div>
 
@@ -207,6 +188,7 @@ async function renderView() {
     `;
 
     generateHandler();
+    renderArticlePagination();
 
     const pendingSearch = sessionStorage.getItem("projectbuilder.pendingArticleSearch");
     if (pendingSearch) {
@@ -232,17 +214,16 @@ function generateHandler() {
             const value =
                 searchInput.value;
 
-            const response =
-                await fetch(
+            const requestId = ++articleSearchRequestId;
+            const articlePage =
+                await loadArticlePage({ search: value, offset: 0 });
 
-                    `/api/articles?search=${encodeURIComponent(value)}`
-
-                );
-
-            const articles =
-                await response.json();
-
-            renderArticles(articles);
+            if (requestId !== articleSearchRequestId) return;
+            renderArticles(
+                articlePage.articles,
+                articlePage.total,
+                articlePage.offset
+            );
 
         }
     );
@@ -316,6 +297,24 @@ function generateHandler() {
 
 }
 
+async function loadArticlePage({ search = "", offset = 0 } = {}) {
+
+    const response =
+        await fetch(
+            `/api/articles?limit=${ARTICLE_PAGE_SIZE}&offset=${Math.max(Number(offset) || 0, 0)}&search=${encodeURIComponent(search)}`
+        );
+
+    const articles =
+        await response.json();
+
+    return {
+        articles,
+        total: Number(response.headers.get("X-Total-Count")) || articles.length,
+        offset: Math.max(Number(offset) || 0, 0)
+    };
+
+}
+
 async function loadArticlesForCurrentSearch() {
 
     const searchInput =
@@ -326,21 +325,20 @@ async function loadArticlesForCurrentSearch() {
     const search =
         searchInput?.value ?? "";
 
-    const response =
-        await fetch(
-            `/api/articles?search=${encodeURIComponent(search)}`
-        );
-
-    return await response.json();
+    return loadArticlePage({ search, offset: articleOffset });
 
 }
 
 async function refreshArticles() {
 
-    const articles =
+    const articlePage =
         await loadArticlesForCurrentSearch();
 
-    renderArticles(articles);
+    renderArticles(
+        articlePage.articles,
+        articlePage.total,
+        articlePage.offset
+    );
 
 }
 
@@ -469,7 +467,11 @@ function closeManualArticleForm() {
 
 }
 
-function renderArticles(articles) {
+function renderArticles(articles, total = articles.length, offset = 0) {
+
+    displayedArticles = articles;
+    articleTotalCount = total;
+    articleOffset = offset;
 
     const tbody =
         document.querySelector(
@@ -477,7 +479,19 @@ function renderArticles(articles) {
         );
 
     tbody.innerHTML =
-        articles.map(article => `
+        renderArticleRows(articles);
+
+    attachArticlePriceHandlers();
+    attachDiscountGroupHandlers();
+    attachSalesCategoryHandlers();
+    attachGridVisItemHandlers();
+    attachArticleDeleteHandlers();
+    renderArticlePagination();
+
+}
+
+function renderArticleRows(articles) {
+    return articles.map(article => `
 
             <tr>
 
@@ -512,11 +526,61 @@ function renderArticles(articles) {
 
         `).join("");
 
-    attachArticlePriceHandlers();
-    attachDiscountGroupHandlers();
-    attachSalesCategoryHandlers();
-    attachGridVisItemHandlers();
-    attachArticleDeleteHandlers();
+}
+
+function renderArticlePagination() {
+
+    const container = document.getElementById("articles-pagination");
+    if (!container) return;
+
+    const pageCount = Math.max(
+        Math.ceil(articleTotalCount / ARTICLE_PAGE_SIZE),
+        1
+    );
+    const currentPage = Math.floor(articleOffset / ARTICLE_PAGE_SIZE) + 1;
+
+    if (articleTotalCount <= ARTICLE_PAGE_SIZE) {
+        container.hidden = true;
+        container.innerHTML = "";
+        return;
+    }
+
+    container.hidden = false;
+    container.innerHTML = `
+        <button id="articles-page-previous" type="button" ${currentPage <= 1 ? "disabled" : ""}>
+            ${i18n.t("articles.pagePrevious")}
+        </button>
+        <span>${i18n.t("articles.pageInfo")
+            .replace("{page}", currentPage)
+            .replace("{pages}", pageCount)
+            .replace("{count}", articleTotalCount)}</span>
+        <button id="articles-page-next" type="button" ${currentPage >= pageCount ? "disabled" : ""}>
+            ${i18n.t("articles.pageNext")}
+        </button>
+    `;
+
+    document.getElementById("articles-page-previous")?.addEventListener("click", () => {
+        loadArticlePageAndRender(articleOffset - ARTICLE_PAGE_SIZE);
+    });
+    document.getElementById("articles-page-next")?.addEventListener("click", () => {
+        loadArticlePageAndRender(articleOffset + ARTICLE_PAGE_SIZE);
+    });
+
+}
+
+async function loadArticlePageAndRender(offset) {
+
+    const search = document.getElementById("articles-search")?.value ?? "";
+    const articlePage = await loadArticlePage({
+        search,
+        offset: Math.max(offset, 0)
+    });
+
+    renderArticles(
+        articlePage.articles,
+        articlePage.total,
+        articlePage.offset
+    );
 
 }
 
@@ -584,6 +648,8 @@ async function checkSalesforceAvailability() {
     const originalContent = button.innerHTML;
     button.disabled = true;
     button.textContent = i18n.t("articles.checkingSalesforceAvailability");
+    const progress =
+        showSalesforceProgress("article-check");
     try {
         const articles = await fetch("/api/articles").then(response => response.json());
         const response = await fetch("/api/salesforce/articles/availability", {
@@ -597,6 +663,10 @@ async function checkSalesforceAvailability() {
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || i18n.t("articles.salesforceCheckFailed"));
 
+        await finishSalesforceProgress(
+            progress
+        );
+
         salesforceAvailability = new Map(
             result.available.map(item => [String(item.articleNumber), item])
         );
@@ -609,6 +679,7 @@ async function checkSalesforceAvailability() {
                 .replace("{pricebook}", result.pricebookName)
         );
     } catch (error) {
+        progress.close();
         if (await offerSalesforceConnection(error)) {
             button.disabled = false;
             button.innerHTML = originalContent;
@@ -616,6 +687,7 @@ async function checkSalesforceAvailability() {
         }
         await showAlert(error.message || i18n.t("articles.salesforceCheckFailed"));
     } finally {
+        progress.close();
         button.disabled = false;
         button.innerHTML = originalContent;
     }
@@ -626,6 +698,7 @@ async function importSalesforcePricebook() {
     if (!button) return;
 
     const originalContent = button.innerHTML;
+    let progress = null;
     button.disabled = true;
     button.textContent = i18n.t("articles.loadingSalesforcePricebooks");
     try {
@@ -697,6 +770,8 @@ async function importSalesforcePricebook() {
         if (!confirmed) return;
 
         button.textContent = i18n.t("articles.importingSalesforcePricebook");
+        progress =
+            showSalesforceProgress("article-import");
         const importResponse = await fetch("/api/salesforce/articles/import", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -706,6 +781,10 @@ async function importSalesforcePricebook() {
         if (!importResponse.ok) {
             throw new Error(importResult.error || i18n.t("articles.salesforceImportFailed"));
         }
+
+        await finishSalesforceProgress(
+            progress
+        );
 
         salesforceAvailability = null;
         await renderView();
@@ -718,6 +797,7 @@ async function importSalesforcePricebook() {
                 .replace("{currency}", importResult.currencyIsoCode)
         );
     } catch (error) {
+        progress?.close();
         if (await offerSalesforceConnection(error)) {
             button.disabled = false;
             button.innerHTML = originalContent;
@@ -725,6 +805,7 @@ async function importSalesforcePricebook() {
         }
         await showAlert(error.message || i18n.t("articles.salesforceImportFailed"));
     } finally {
+        progress?.close();
         if (button.isConnected) {
             button.disabled = false;
             button.innerHTML = originalContent;

@@ -1,12 +1,13 @@
-import Database from "better-sqlite3";
-import { getDatabasePath } from "./config.js";
+import {
+    getDatabaseProxy,
+    registerDatabaseInitializer
+} from "./config.js";
 
-const projects =
-    new Database(
-        getDatabasePath()
-    );
+const projects = getDatabaseProxy();
 
-projects.prepare(`
+function initializeProjects(database) {
+
+database.prepare(`
 
     CREATE TABLE IF NOT EXISTS projects (
 
@@ -25,7 +26,7 @@ projects.prepare(`
 `).run();
 
 const columns =
-    projects
+    database
         .prepare(
             "PRAGMA table_info(projects)"
         )
@@ -34,7 +35,7 @@ const columns =
 
 if (!columns.includes("projectDiscount")) {
 
-    projects.exec(`
+        database.exec(`
 
         ALTER TABLE projects
         ADD COLUMN projectDiscount REAL DEFAULT 0
@@ -61,12 +62,12 @@ for (const [name, definition] of [
     ["salesforceUploadProjectFile", "INTEGER DEFAULT 1"]
 ]) {
     if (!columns.includes(name)) {
-        projects.exec(`ALTER TABLE projects ADD COLUMN ${name} ${definition}`);
+        database.exec(`ALTER TABLE projects ADD COLUMN ${name} ${definition}`);
     }
 }
 
 if (!columns.includes("salesforceShowAdditionalDiscountConfigured")) {
-    projects.exec(`
+    database.exec(`
         UPDATE projects
         SET salesforceShowAdditionalDiscountConfigured =
             CASE
@@ -78,7 +79,7 @@ if (!columns.includes("salesforceShowAdditionalDiscountConfigured")) {
     `);
 }
 
-projects.exec(`
+database.exec(`
     CREATE TABLE IF NOT EXISTS projectSalesforceLinks (
         projectId INTEGER NOT NULL,
         customerSalesforceId TEXT NOT NULL,
@@ -89,7 +90,7 @@ projects.exec(`
     )
 `);
 
-projects.exec(`
+database.exec(`
     CREATE TABLE IF NOT EXISTS projectFiles (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         projectId INTEGER NOT NULL,
@@ -102,10 +103,14 @@ projects.exec(`
     )
 `);
 
-projects.exec(`
+database.exec(`
     CREATE INDEX IF NOT EXISTS projectFilesProjectIdIndex
     ON projectFiles(projectId)
 `);
+}
+
+registerDatabaseInitializer(initializeProjects);
+initializeProjects(projects);
 
 export {
     projects

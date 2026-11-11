@@ -990,25 +990,7 @@ function generateHandler(customerId, customer) {
                             saveTimeout = null;
                             if (!pendingSave) return;
 
-                            const savePromise =
-                                saveCustomer(
-                                    pendingSave.customerId,
-                                    pendingSave.customerFormData
-                                );
-                            activeCustomerSavePromise = savePromise;
-                            savePromise.then(
-                                () => {
-                                    if (activeCustomerSavePromise === savePromise) {
-                                        activeCustomerSavePromise = null;
-                                    }
-                                },
-                                error => {
-                                    console.error("Kunden-Autosave fehlgeschlagen:", error);
-                                    if (activeCustomerSavePromise === savePromise) {
-                                        activeCustomerSavePromise = null;
-                                    }
-                                }
-                            );
+                            startCustomerSave(pendingSave);
                         },
                         500
                     );
@@ -1127,23 +1109,48 @@ async function saveCustomer(
 
 }
 
-async function flushPendingSave() {
+async function flushPendingSave({ wait = true } = {}) {
+    if (!hasPendingSave()) return;
+
     clearTimeout(saveTimeout);
     saveTimeout = null;
 
     const activeSave = activeCustomerSavePromise;
-    if (activeSave) {
-        await activeSave.catch(() => {});
-    }
-
     const pendingSave = pendingCustomerSave;
     pendingCustomerSave = null;
     if (pendingSave) {
-        await saveCustomer(
-            pendingSave.customerId,
-            pendingSave.customerFormData
-        ).catch(() => {});
+        const savePromise = activeSave
+            ? activeSave.catch(() => {}).then(() => saveCustomer(
+                pendingSave.customerId,
+                pendingSave.customerFormData
+            ))
+            : saveCustomer(pendingSave.customerId, pendingSave.customerFormData);
+        startCustomerSave(pendingSave, savePromise);
+        if (wait) await savePromise.catch(() => {});
+        return;
     }
+
+    if (wait && activeSave) await activeSave.catch(() => {});
+}
+
+function startCustomerSave(pendingSave, savePromise = null) {
+    const promise = savePromise
+        || saveCustomer(pendingSave.customerId, pendingSave.customerFormData);
+    activeCustomerSavePromise = promise;
+    promise.then(
+        () => {
+            if (activeCustomerSavePromise === promise) activeCustomerSavePromise = null;
+        },
+        error => {
+            console.error("Kunden-Autosave fehlgeschlagen:", error);
+            if (activeCustomerSavePromise === promise) activeCustomerSavePromise = null;
+        }
+    );
+    return promise;
+}
+
+function hasPendingSave() {
+    return Boolean(saveTimeout || pendingCustomerSave || activeCustomerSavePromise);
 }
 
 function getDiscountInputValue(
@@ -1235,5 +1242,6 @@ function getCustomerFormData(customer = {}) {
 
 export {
     renderView,
+    hasPendingSave,
     flushPendingSave
 };

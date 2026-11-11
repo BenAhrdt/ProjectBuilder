@@ -102,7 +102,8 @@ function buildOverviewDocuments({
         );
     const detailPages =
         buildDetailPageTrees(
-            fullTree
+            fullTree,
+            labels
         ).map(page => ({
             ...page,
             diagram:
@@ -1043,19 +1044,21 @@ function formatTreeStats(
 }
 
 function buildDetailPageTrees(
-    root
+    root,
+    labels = {}
 ) {
     const pages = [];
 
     const addPage =
         (
             node,
-            path
+            path,
+            titleSuffix = ""
         ) => {
             pages.push({
                 root: node,
                 title:
-                    `${node.typeLabel}: ${node.name}`,
+                    `${node.typeLabel}: ${node.name}${titleSuffix ? ` – ${titleSuffix}` : ""}`,
                 breadcrumb:
                     path
                         .map(item => item.name)
@@ -1091,8 +1094,43 @@ function buildDetailPageTrees(
                     node.children.filter(child =>
                         child.type === "field"
                     );
+                const directChildren =
+                    node.children.filter(child =>
+                        child.type !== "field"
+                    );
 
                 if (fields.length > 0) {
+
+                    addPage(
+                        buildPanelOverviewNode(
+                            node,
+                            labels
+                        ),
+                        nextPath,
+                        labels.distributionOverview
+                            ??
+                            "Verteilungsübersicht"
+                    );
+
+                    if (
+                        node.articles.length > 0
+                        ||
+                        directChildren.length > 0
+                    ) {
+
+                        addPage(
+                            {
+                                ...node,
+                                children: directChildren
+                            },
+                            nextPath,
+                            labels.directContent
+                                ??
+                                "Direkte Inhalte"
+                        );
+
+                    }
+
                     fields.forEach(child =>
                         visit(
                             child,
@@ -1122,6 +1160,41 @@ function buildDetailPageTrees(
                     );
                     return;
                 }
+
+                const directChildren =
+                    node.children.filter(child =>
+                        child.type !== "panel"
+                    );
+
+                if (
+                    node.articles.length > 0
+                    ||
+                    directChildren.length > 0
+                ) {
+
+                    addPage(
+                        {
+                            ...node,
+                            children: directChildren
+                        },
+                        nextPath,
+                        labels.directContent
+                            ??
+                            "Direkte Inhalte"
+                    );
+
+                }
+
+                node.children
+                    .filter(child => child.type === "panel")
+                    .forEach(child =>
+                        visit(
+                            child,
+                            nextPath
+                        )
+                    );
+
+                return;
             }
 
             if (
@@ -1152,6 +1225,45 @@ function buildDetailPageTrees(
     );
 
     return pages;
+}
+
+function buildPanelOverviewNode(
+    panel,
+    labels
+) {
+
+    const panelStats =
+        getTreeStats(
+            panel
+        );
+
+    return {
+        ...panel,
+        meta:
+            formatTreeStats(
+                panelStats,
+                labels
+            ),
+        articles: [],
+        children:
+            panel.children.map(child => {
+                const childStats =
+                    getTreeStats(
+                        child
+                    );
+
+                return {
+                    ...child,
+                    meta:
+                        formatTreeStats(
+                            childStats,
+                            labels
+                        ),
+                    articles: [],
+                    children: []
+                };
+            })
+    };
 }
 
 function containsNodeType(

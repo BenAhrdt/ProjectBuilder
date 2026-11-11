@@ -1,13 +1,17 @@
-import Database from "better-sqlite3";
-import { getDatabasePath } from "./config.js";
+import {
+    getDatabaseProxy,
+    registerDatabaseInitializer
+} from "./config.js";
 import { inferGridVisItems } from "../utils/gridVisItems.js";
-const articles = new Database(getDatabasePath());
+const articles = getDatabaseProxy();
+
+function initializeArticles(database) {
 
 // --------------------------------------------------
 // Tabellen
 // --------------------------------------------------
 
-articles.prepare(`
+database.prepare(`
     CREATE TABLE IF NOT EXISTS articles (
 
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -36,7 +40,7 @@ articles.prepare(`
     )
 `).run();
 
-const columns = articles.prepare("PRAGMA table_info(articles)").all().map(column => column.name);
+const columns = database.prepare("PRAGMA table_info(articles)").all().map(column => column.name);
 for (const [name, definition] of [
     ["salesforceProductId", "TEXT"],
     ["salesforcePricebookId", "TEXT"],
@@ -54,26 +58,30 @@ for (const [name, definition] of [
     ["salesCategoryManual", "INTEGER DEFAULT 0"]
 ]) {
     if (!columns.includes(name)) {
-        articles.exec(`ALTER TABLE articles ADD COLUMN ${name} ${definition}`);
+        database.exec(`ALTER TABLE articles ADD COLUMN ${name} ${definition}`);
     }
 }
 
-const articlesWithAutomaticGridVisItems = articles.prepare(`
+const articlesWithAutomaticGridVisItems = database.prepare(`
     SELECT articleNumber, manufacturerType, description
     FROM articles
     WHERE COALESCE(gridVisItemsManual, 0) = 0
 `).all();
-const saveInferredGridVisItems = articles.prepare(`
+const saveInferredGridVisItems = database.prepare(`
     UPDATE articles SET gridVisItems = @gridVisItems
     WHERE articleNumber = @articleNumber
 `);
-const initializeGridVisItems = articles.transaction(rows => {
+const initializeGridVisItems = database.transaction(rows => {
     for (const row of rows) {
         const gridVisItems = inferGridVisItems(row);
         saveInferredGridVisItems.run({ articleNumber: row.articleNumber, gridVisItems });
     }
 });
 initializeGridVisItems(articlesWithAutomaticGridVisItems);
+}
+
+registerDatabaseInitializer(initializeArticles);
+initializeArticles(articles);
 
 export {
     articles

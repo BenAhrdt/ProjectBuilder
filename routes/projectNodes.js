@@ -268,8 +268,81 @@ router.patch(
 
             `);
 
+        const updateMixedNodeOrder =
+            database.projectNodes.prepare(`
+
+                UPDATE projectNodes
+
+                SET
+                    parentId = @parentId,
+                    sortOrder = @sortOrder
+
+                WHERE id = @id
+                AND projectId = @projectId
+
+            `);
+
+        const updateMixedArticleOrder =
+            database.projectNodeArticles.prepare(`
+
+                UPDATE projectNodeArticles
+
+                SET
+                    projectNodeId = @parentId,
+                    sortOrder = @sortOrder
+
+                WHERE id = @id
+                AND EXISTS (
+                    SELECT 1
+
+                    FROM projectNodes
+
+                    WHERE projectNodes.id = projectNodeArticles.projectNodeId
+                    AND projectNodes.projectId = @projectId
+                )
+
+            `);
+
         const transaction =
             database.projectNodes.transaction(() => {
+
+                if (Array.isArray(req.body.items)) {
+
+                    req.body.items.forEach((item, index) => {
+
+                        if (
+                            item?.type === "article"
+                        ) {
+
+                            updateMixedArticleOrder.run({
+                                id: item.id,
+                                parentId,
+                                projectId: current.projectId,
+                                sortOrder: index
+                            });
+
+                            return;
+
+                        }
+
+                        if (
+                            item?.type === "node"
+                        ) {
+
+                            updateMixedNodeOrder.run({
+                                id: item.id,
+                                parentId,
+                                projectId: current.projectId,
+                                sortOrder: index
+                            });
+
+                        }
+
+                    });
+
+                    return;
+
+                }
 
                 if (Array.isArray(req.body.siblings)) {
 

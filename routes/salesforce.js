@@ -541,6 +541,11 @@ router.post("/login", async (_req, res) => {
     catch (error) { handleError(res, error); }
 });
 
+router.post("/logout", async (_req, res) => {
+    try { res.json(await salesforce.logout()); }
+    catch (error) { handleError(res, error); }
+});
+
 router.get("/customers", async (req, res) => {
     try {
         const customers = await salesforce.searchCustomers(req.query);

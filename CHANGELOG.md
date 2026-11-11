@@ -2,6 +2,38 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.48 - 12.11.2026
+
+### Neu
+
+- Mehrere getrennte Datenbankprofile können erstellt, gewechselt, als Kopie
+  gespeichert und – außer Standard- und aktivem Profil – wieder gelöscht
+  werden. Projektdateien und automatische Backups werden je Profil getrennt
+  verwaltet.
+- Kunden- und Projektlisten können vollständig geleert werden. Das Leeren der
+  Kundenliste entfernt die Kunden und hebt die Kundenzuordnung bestehender
+  Projekte auf; das Leeren der Projektliste entfernt auch Strukturen,
+  Salesforce-Verknüpfungen und Projektdateien.
+
+### Verbessert
+
+- Die Artikelliste lädt nur noch 100 Artikel pro Seite und bleibt dadurch auch
+  bei großen Preislisten schnell bedienbar. Kunden- und Projektseiten laden
+  keine vollständige Artikelliste mehr für den normalen Seitenwechsel.
+- Kunden-Autosaves werden beim Seitenwechsel im Hintergrund fortgeführt.
+- Salesforce-Aktionen und der Preislistenimport zeigen eine gemeinsame
+  Ladeanzeige mit Janitza-Logo, „We love UMG“ und „Coming soon“.
+- Positionsebenen, Artikel und Messstellen können direkt auf zulässigen Ebenen
+  der Projektstruktur angelegt und per Drag & Drop sortiert werden. Der
+  Übersichtsplan enthält zusätzliche Verteilungsübersichten.
+
+### Hinweis
+
+- Projektdateien exportieren Artikelnummern und Positionsdaten, aber keine
+  vollständigen Artikelstammdaten. Beim Import müssen die Artikel deshalb im
+  aktiven Datenbankprofil vorhanden sein; fehlende Artikelnummern werden
+  angezeigt und der Import wird nicht fortgesetzt.
+
 ## 1.5.47 - 10.11.2026
 
 ### Verbessert

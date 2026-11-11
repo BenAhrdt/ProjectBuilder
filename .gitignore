@@ -1,6 +1,7 @@
 node_modules/
 .env
 *.db
+database/database-profiles.json
 release/
 certificates/*.pfx
 secondBrain/

@@ -1208,6 +1208,177 @@ function triggerPendingProjectAction(projectId) {
     requestAnimationFrame(() => document.getElementById(buttonId)?.click());
 }
 
+function showSalesforceProgress(
+    operation
+) {
+
+    activeSalesforceProgress?.close();
+
+    const isLoad =
+        operation === "load";
+    const overlay =
+        document.createElement(
+            "div"
+        );
+
+    overlay.className =
+        "salesforce-progress-overlay";
+    overlay.setAttribute(
+        "role",
+        "dialog"
+    );
+    overlay.setAttribute(
+        "aria-modal",
+        "true"
+    );
+    overlay.setAttribute(
+        "aria-labelledby",
+        "salesforce-progress-title"
+    );
+    overlay.innerHTML = `
+        <section class="salesforce-progress-card">
+            <div class="salesforce-progress-logo-wrap">
+                <img
+                    class="salesforce-progress-logo"
+                    src="/icons/janitza-logo.svg"
+                    alt="Janitza"
+                >
+            </div>
+            <h2 id="salesforce-progress-title">
+                ${isLoad
+                    ? i18n.t("project.salesforceProgressLoad")
+                    : i18n.t("project.salesforceProgressSync")}
+            </h2>
+            <p class="salesforce-progress-message">
+                ${i18n.t("project.salesforceProgressWait")}
+            </p>
+            <div
+                class="salesforce-progress-bar"
+                role="progressbar"
+                aria-label="Salesforce-Fortschritt"
+                aria-valuemin="0"
+                aria-valuemax="100"
+            >
+                <span class="salesforce-progress-bar-fill"></span>
+            </div>
+            <div class="salesforce-progress-percent">…</div>
+            <div class="salesforce-progress-running-gag" aria-live="polite"></div>
+        </section>
+    `;
+
+    document.body.appendChild(
+        overlay
+    );
+
+    const progressBar =
+        overlay.querySelector(
+            ".salesforce-progress-bar"
+        );
+    const progressFill =
+        overlay.querySelector(
+            ".salesforce-progress-bar-fill"
+        );
+    const percent =
+        overlay.querySelector(
+            ".salesforce-progress-percent"
+        );
+    const runningGag =
+        overlay.querySelector(
+            ".salesforce-progress-running-gag"
+        );
+    const runningMessages = [
+        i18n.t("project.salesforceSpinnerComingSoon"),
+        i18n.t("project.salesforceSpinnerWeLoveUmg")
+    ];
+    let messageIndex = 0;
+
+    runningGag.textContent =
+        runningMessages[messageIndex];
+
+    const runningTimer =
+        window.setInterval(
+            () => {
+                messageIndex =
+                    (messageIndex + 1)
+                    %
+                    runningMessages.length;
+                runningGag.textContent =
+                    runningMessages[messageIndex];
+            },
+            6000
+        );
+
+    const progress = {
+        complete() {
+            window.clearInterval(
+                runningTimer
+            );
+            progressBar.classList.remove(
+                "is-indeterminate"
+            );
+            progressFill.style.width =
+                "100%";
+            progressBar.setAttribute(
+                "aria-valuenow",
+                "100"
+            );
+            percent.textContent =
+                i18n.t(
+                    "project.salesforceProgressComplete"
+                );
+            runningGag.textContent =
+                i18n.t(
+                    "project.salesforceProgressComplete"
+                );
+            overlay.classList.add(
+                "is-complete"
+            );
+        },
+        close() {
+            window.clearInterval(
+                runningTimer
+            );
+            overlay.remove();
+            if (
+                activeSalesforceProgress === progress
+            ) {
+                activeSalesforceProgress =
+                    null;
+            }
+        }
+    };
+
+    progressBar.classList.add(
+        "is-indeterminate"
+    );
+    activeSalesforceProgress =
+        progress;
+
+    return progress;
+
+}
+
+async function finishSalesforceProgress(
+    progress
+) {
+
+    if (!progress) {
+
+        return;
+
+    }
+
+    progress.complete();
+    await new Promise(resolve =>
+        window.setTimeout(
+            resolve,
+            450
+        )
+    );
+    progress.close();
+
+}
+
 function registerProjectSalesforceLoad(projectId) {
     const button = document.getElementById("load-project-salesforce");
     if (!button) return;
@@ -1223,6 +1394,8 @@ function registerProjectSalesforceLoad(projectId) {
         button.disabled = true;
         const originalContent = button.innerHTML;
         button.textContent = i18n.t("project.salesforceLoadRunning");
+        const progress =
+            showSalesforceProgress("load");
         try {
             const response = await fetch(`/api/projects/${projectId}/import/salesforce`, {
                 method: "POST"
@@ -1231,11 +1404,15 @@ function registerProjectSalesforceLoad(projectId) {
             if (!response.ok || !result.ok) {
                 throw new Error(result.error || i18n.t("project.salesforceLoadFailed"));
             }
+            await finishSalesforceProgress(
+                progress
+            );
             await renderView(projectId);
             await showAlert(i18n.t("project.salesforceLoadSuccess"), {
                 title: i18n.t("project.salesforceLoad")
             });
         } catch (error) {
+            progress.close();
             button.disabled = false;
             button.innerHTML = originalContent;
             if (await offerSalesforceConnection(error)) return button.click();
@@ -1386,6 +1563,8 @@ function registerProjectSalesforceSync(projectId) {
         button.disabled = true;
         const originalText = button.innerHTML;
         button.textContent = i18n.t("project.salesforceSyncRunning");
+        const progress =
+            showSalesforceProgress("sync");
         try {
             const response = await fetch(
                 `/api/salesforce/projects/${projectId}/opportunity-quote`,
@@ -1400,6 +1579,9 @@ function registerProjectSalesforceSync(projectId) {
             );
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || i18n.t("project.salesforceSyncFailed"));
+            await finishSalesforceProgress(
+                progress
+            );
             const documentWarning = result.errors?.length
                 ? `\n\n${i18n.t("project.salesforceDocumentErrors")} ${result.errors.map(item => `${item.type}: ${item.error}`).join("; ")}`
                 : "";
@@ -1430,6 +1612,7 @@ function registerProjectSalesforceSync(projectId) {
             if (selectedUrl) window.open(selectedUrl, "_blank", "noopener,noreferrer");
             await renderView(projectId);
         } catch (error) {
+            progress.close();
             if (await offerSalesforceConnection(error)) {
                 button.disabled = false;
                 button.innerHTML = originalText;
@@ -2145,22 +2328,65 @@ function renderChildNodes(nodes, nodeArticles, articles, nodeTotals, parentId) {
             )
             .sort(compareNodeArticleOrder);
 
-    return nodes
-        .filter(node =>
-            String(node.parentId) === String(parentId)
-            ||
-            (
-                parentId === null
-                &&
-                node.parentId === null
-            )
-        )
-        .sort(compareProjectNodeOrder)
+    const childNodes =
+        nodes
+            .filter(node =>
+                String(node.parentId) === String(parentId)
+                ||
+                (
+                    parentId === null
+                    &&
+                    node.parentId === null
+                )
+            );
+    const directArticles =
+        parentId === null
+            ? []
+            : getArticlesForNode(parentId);
 
-        .map(node => {
+    return [
+        ...childNodes.map(node => ({
+            kind: "node",
+            id: node.id,
+            sortOrder: node.sortOrder,
+            node
+        })),
+        ...directArticles.map(article => ({
+            kind: "article",
+            id: article.id,
+            sortOrder: article.sortOrder,
+            article
+        }))
+    ]
+        .sort(compareProjectStructureItemOrder)
+        .map(item => {
+
+            if (item.kind === "article") {
+
+                const fullArticle =
+                    articles.find(
+                        article =>
+                            article.articleNumber
+                            ===
+                            item.article.articleNumber
+                    );
+
+                return renderNodeArticle(
+                    parentId,
+                    item.article.articleNumber,
+                    fullArticle,
+                    item.article
+                );
+
+            }
+
+            const node = item.node;
 
             const nextNodeType =
                 getNextNodeType(node.type);
+
+            const additionalNodeTypes =
+                getAdditionalNodeTypes(node.type);
 
             const addNodeLabel =
                 nextNodeType
@@ -2236,6 +2462,16 @@ function renderChildNodes(nodes, nodeArticles, articles, nodeTotals, parentId) {
 
                         <div class="project-node-menu-options">
 
+                            ${additionalNodeTypes.map(option => `
+                                <button
+                                    type="button"
+                                    data-action="add-node"
+                                    data-node-type="${option.type}"
+                                >
+                                    ${option.label}
+                                </button>
+                            `).join("")}
+
                             ${node.type === "meter" ? `
                                 <button
                                     type="button"
@@ -2283,24 +2519,6 @@ function renderChildNodes(nodes, nodeArticles, articles, nodeTotals, parentId) {
                         };
                     "
                 >
-                    ${getArticlesForNode(node.id).map(nodeArticle => {
-
-                        const fullArticle =
-                            articles.find(
-                                article =>
-                                    article.articleNumber
-                                    ===
-                                    nodeArticle.articleNumber
-                            );
-                        return renderNodeArticle(
-                            node.id,
-                            nodeArticle.articleNumber,
-                            fullArticle,
-                            nodeArticle
-                        );
-
-                    }).join("")}
-
                     ${renderChildNodes(
                         nodes,
                         nodeArticles,
@@ -2341,6 +2559,43 @@ function compareProjectNodeOrder(
     if (firstSortOrder !== secondSortOrder) {
 
         return firstSortOrder - secondSortOrder;
+
+    }
+
+    return Number(first.id) - Number(second.id);
+
+}
+
+function compareProjectStructureItemOrder(
+    first,
+    second
+) {
+
+    const firstSortOrder =
+        Number.isFinite(
+            Number(first.sortOrder)
+        )
+            ? Number(first.sortOrder)
+            : Number(first.id);
+
+    const secondSortOrder =
+        Number.isFinite(
+            Number(second.sortOrder)
+        )
+            ? Number(second.sortOrder)
+            : Number(second.id);
+
+    if (firstSortOrder !== secondSortOrder) {
+
+        return firstSortOrder - secondSortOrder;
+
+    }
+
+    if (first.kind !== second.kind) {
+
+        return first.kind === "article"
+            ? -1
+            : 1;
 
     }
 
@@ -4989,6 +5244,10 @@ function registerProjectOverview(
                         i18n.t("project.overviewSummaryMeters"),
                     summaryPositions:
                         i18n.t("project.overviewSummaryPositions"),
+                    directContent:
+                        i18n.t("project.overviewDirectContent"),
+                    distributionOverview:
+                        i18n.t("project.overviewDistributionOverview"),
                     prices:
                         i18n.t("project.overviewPrices"),
                     withoutPrices:
@@ -5271,6 +5530,74 @@ function getNextNodeType(
 
 }
 
+function getAdditionalNodeTypes(
+    type
+) {
+
+    const options = [];
+
+    if (
+        type === "building"
+        ||
+        type === "panel"
+        ||
+        type === "field"
+    ) {
+
+        options.push({
+            type: "generalPosition",
+            label: i18n.t("project.addGeneralPosition")
+        });
+
+    }
+
+    if (
+        type === "building"
+        ||
+        type === "panel"
+        ||
+        type === "generalPosition"
+    ) {
+
+        options.push({
+            type: "meter",
+            label: i18n.t("project.addNode.meter")
+        });
+
+    }
+
+    return options;
+
+}
+
+function getNodeCreationDefaults(
+    type
+) {
+
+    switch (type) {
+
+        case "generalPosition":
+            return {
+                label: i18n.t("project.addGeneralPosition"),
+                name: i18n.t("project.newGeneralPosition")
+            };
+
+        case "meter":
+            return {
+                label: i18n.t("project.addNode.meter"),
+                name: i18n.t("project.newMeter")
+            };
+
+        default:
+            return {
+                label: getAddNodeLabel(type),
+                name: ""
+            };
+
+    }
+
+}
+
 
 function registerArticleDragSources() {
 
@@ -5358,7 +5685,7 @@ function registerArticleDropTargets(
 
     document
         .querySelectorAll(
-            ".project-node[data-type=\"meter\"], .project-node[data-type=\"generalPosition\"]"
+            ".project-node"
         )
         .forEach(node => {
 
@@ -5388,6 +5715,21 @@ function registerArticleDropTargets(
 
             const handleArticleDragOver =
                 event => {
+
+                    const eventNode =
+                        getProjectNodeFromDropEvent(
+                            event
+                        );
+
+                    if (
+                        eventNode
+                        &&
+                        eventNode !== node
+                    ) {
+
+                        return;
+
+                    }
 
                     const articleNumber =
                         getDraggedArticleNumber(
@@ -5490,6 +5832,21 @@ function registerArticleDropTargets(
 
             const handleArticleDrop =
                 async event => {
+
+                    const eventNode =
+                        getProjectNodeFromDropEvent(
+                            event
+                        );
+
+                    if (
+                        eventNode
+                        &&
+                        eventNode !== node
+                    ) {
+
+                        return;
+
+                    }
 
                     const articleNumber =
                         getDraggedArticleNumber(
@@ -5620,6 +5977,36 @@ function getDirectNodeArticleChildren(
     return dropTarget?.querySelector(
         ":scope > .project-node-children"
     ) || null;
+}
+
+function getProjectNodeFromDropEvent(
+    event
+) {
+
+    const target =
+        event.target;
+    const directNode =
+        target?.closest?.(
+            ".project-node"
+        );
+
+    if (directNode) {
+
+        return directNode;
+
+    }
+
+    const wrapper =
+        target?.closest?.(
+            ".project-node-wrapper"
+        );
+
+    return wrapper?.querySelector(
+        ":scope > .project-node"
+    )
+        ??
+        null;
+
 }
 
 function isDirectNodeArticleChildrenTarget(
@@ -6892,12 +7279,13 @@ function clearArticleDropIndicators() {
 
     document
         .querySelectorAll(
-            ".project-node.article-drop-over"
+            ".project-node.article-drop-over, .project-node.article-mixed-drop-target"
         )
         .forEach(node => {
 
             node.classList.remove(
-                "article-drop-over"
+                "article-drop-over",
+                "article-mixed-drop-target"
             );
 
         });
@@ -7119,10 +7507,6 @@ async function addArticleToNode(
             referenceArticle
         );
 
-        await saveNodeArticleOrder(
-            nodeId
-        );
-
     } else if (childNodeWrapper) {
 
         childNodeWrapper.insertAdjacentHTML(
@@ -7152,6 +7536,10 @@ async function addArticleToNode(
         );
 
     }
+
+    await saveNodeArticleOrder(
+        nodeId
+    );
 
     registerNodeArticleMenus(
         projectId
@@ -7608,13 +7996,15 @@ function registerProjectNodeDragAndDrop(
 
                     document
                         .querySelectorAll(
-                            ".project-node-wrapper.node-dragging, .project-node.node-drag-over"
+                            ".project-node-wrapper.node-dragging, .project-node.node-drag-over, .node-drag-target, .project-node.article-mixed-drop-target"
                         )
                         .forEach(element => {
 
                             element.classList.remove(
                                 "node-dragging",
-                                "node-drag-over"
+                                "node-drag-over",
+                                "node-drag-target",
+                                "article-mixed-drop-target"
                             );
 
                         });
@@ -7666,14 +8056,6 @@ function registerProjectNodeDragAndDrop(
                         "node-drag-over"
                     );
 
-                    moveProjectNodeInDom(
-                        draggedWrapper,
-                        targetWrapper,
-                        draggedNode,
-                        node,
-                        event
-                    );
-
                 }
             );
 
@@ -7692,6 +8074,42 @@ function registerProjectNodeDragAndDrop(
                 "drop",
                 event => {
 
+                    const draggedWrapper =
+                        document.querySelector(
+                            ".project-node-wrapper.node-dragging"
+                        );
+                    const draggedNode =
+                        draggedWrapper?.querySelector(
+                            ":scope > .project-node"
+                        );
+                    const targetWrapper =
+                        node.closest(
+                            ".project-node-wrapper"
+                        );
+
+                    if (
+                        draggedWrapper
+                        &&
+                        draggedNode
+                        &&
+                        targetWrapper
+                        &&
+                        canDropProjectNode(
+                            draggedNode,
+                            node
+                        )
+                    ) {
+
+                        moveProjectNodeInDom(
+                            draggedWrapper,
+                            targetWrapper,
+                            draggedNode,
+                            node,
+                            event
+                        );
+
+                    }
+
                     event.preventDefault();
                     event.stopPropagation();
 
@@ -7702,7 +8120,293 @@ function registerProjectNodeDragAndDrop(
                 }
             );
 
+            registerProjectNodeChildrenDragAndDrop(
+                node,
+                projectId
+            );
+
         });
+
+}
+
+function registerProjectNodeChildrenDragAndDrop(
+    node,
+    projectId
+) {
+
+    const wrapper =
+        node.closest(
+            ".project-node-wrapper"
+        );
+    const children =
+        wrapper?.querySelector(
+            ":scope > .project-node-children"
+        );
+
+    if (
+        !children
+        ||
+        children.dataset.nodeDragRegistered === "true"
+    ) {
+
+        return;
+
+    }
+
+    children.dataset.nodeDragRegistered = "true";
+
+    children.addEventListener(
+        "dragover",
+        event => {
+
+            const draggedArticle =
+                document.querySelector(
+                    ".node-article.dragging"
+                );
+            const targetNodeElement =
+                event.target.closest?.(
+                    ".project-node"
+                );
+            const targetWrapper =
+                targetNodeElement?.closest(
+                    ".project-node-wrapper"
+                );
+
+            if (
+                !draggedArticle
+                ||
+                !targetNodeElement
+                ||
+                !targetWrapper
+                ||
+                targetWrapper.parentElement !== children
+                ||
+                !isProjectNodeEdgeDrop(
+                    targetNodeElement,
+                    event
+                )
+            ) {
+
+                return;
+
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            event.dataTransfer.dropEffect =
+                "move";
+
+            document
+                .querySelectorAll(
+                    ".article-mixed-drop-target"
+                )
+                .forEach(element =>
+                    element.classList.remove(
+                        "article-mixed-drop-target"
+                    )
+                );
+            targetNodeElement.classList.add(
+                "article-mixed-drop-target"
+            );
+
+        },
+        true
+    );
+
+    children.addEventListener(
+        "drop",
+        async event => {
+
+            const draggedArticle =
+                document.querySelector(
+                    ".node-article.dragging"
+                );
+            const targetNodeElement =
+                event.target.closest?.(
+                    ".project-node"
+                );
+            const targetWrapper =
+                targetNodeElement?.closest(
+                    ".project-node-wrapper"
+                );
+
+            if (
+                !draggedArticle
+                ||
+                !targetNodeElement
+                ||
+                !targetWrapper
+                ||
+                targetWrapper.parentElement !== children
+                ||
+                !isProjectNodeEdgeDrop(
+                    targetNodeElement,
+                    event
+                )
+            ) {
+
+                return;
+
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            moveNodeArticleBeforeNode(
+                draggedArticle,
+                node,
+                targetWrapper,
+                targetNodeElement,
+                event
+            );
+
+            await moveNodeArticleToMixedPositionAndSave(
+                draggedArticle,
+                node,
+                projectId
+            );
+
+        },
+        true
+    );
+
+    children.addEventListener(
+        "dragover",
+        event => {
+
+            const targetArticle =
+                event.target.closest?.(
+                    ".node-article"
+                );
+            const draggedWrapper =
+                document.querySelector(
+                    ".project-node-wrapper.node-dragging"
+                );
+
+            if (
+                !targetArticle
+                ||
+                targetArticle.parentElement !== children
+                ||
+                !draggedWrapper
+            ) {
+
+                return;
+
+            }
+
+            const draggedNode =
+                draggedWrapper.querySelector(
+                    ":scope > .project-node"
+                );
+
+            if (
+                !draggedNode
+                ||
+                !canDropProjectNode(
+                    draggedNode,
+                    node
+                )
+            ) {
+
+                return;
+
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            event.dataTransfer.dropEffect =
+                "move";
+
+            document
+                .querySelectorAll(
+                    ".node-drag-target"
+                )
+                .forEach(element =>
+                    element.classList.remove(
+                        "node-drag-target"
+                    )
+                );
+            targetArticle.classList.add(
+                "node-drag-target"
+            );
+            node.classList.add(
+                "node-drag-over"
+            );
+
+        }
+    );
+
+    children.addEventListener(
+        "drop",
+        event => {
+
+            const targetArticle =
+                event.target.closest?.(
+                    ".node-article"
+                );
+            const draggedWrapper =
+                document.querySelector(
+                    ".project-node-wrapper.node-dragging"
+                );
+            const draggedNode =
+                draggedWrapper?.querySelector(
+                    ":scope > .project-node"
+                );
+
+            if (
+                !targetArticle
+                ||
+                targetArticle.parentElement !== children
+                ||
+                !draggedWrapper
+                ||
+                !draggedNode
+                ||
+                !canDropProjectNode(
+                    draggedNode,
+                    node
+                )
+            ) {
+
+                return;
+
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            moveProjectNodeBeforeArticle(
+                draggedWrapper,
+                draggedNode,
+                targetArticle,
+                event
+            );
+
+        }
+    );
+
+}
+
+function isProjectNodeEdgeDrop(
+    targetNode,
+    event
+) {
+
+    const targetRect =
+        targetNode.getBoundingClientRect();
+
+    return event.clientY
+        <
+        targetRect.top
+        +
+        targetRect.height * 0.3
+        ||
+        event.clientY
+        >
+        targetRect.bottom
+        -
+        targetRect.height * 0.3;
 
 }
 
@@ -7742,6 +8446,16 @@ function canDropProjectNode(
     }
 
     if (
+        String(draggedNode.dataset.parentId ?? "")
+        ===
+        String(targetNode.dataset.parentId ?? "")
+    ) {
+
+        return true;
+
+    }
+
+    if (
         draggedNode.dataset.type
         ===
         targetNode.dataset.type
@@ -7751,11 +8465,11 @@ function canDropProjectNode(
 
     }
 
-    return getValidParentType(
+    return getValidParentTypes(
         draggedNode.dataset.type
-    )
-    ===
-    targetNode.dataset.type;
+    ).includes(
+        targetNode.dataset.type
+    );
 
 }
 
@@ -7767,14 +8481,36 @@ function moveProjectNodeInDom(
     event
 ) {
 
-    if (
+    const sameParent =
+        String(draggedNode.dataset.parentId ?? "")
+        ===
+        String(targetNode.dataset.parentId ?? "");
+    const sameType =
         draggedNode.dataset.type
         ===
-        targetNode.dataset.type
-    ) {
+        targetNode.dataset.type;
+    const canBecomeChild =
+        getValidParentTypes(
+            draggedNode.dataset.type
+        ).includes(
+            targetNode.dataset.type
+        );
+    const targetRect =
+        targetNode.getBoundingClientRect();
+    const edgeDrop =
+        event.clientY < targetRect.top + targetRect.height * 0.3
+        ||
+        event.clientY > targetRect.bottom - targetRect.height * 0.3;
 
-        const targetRect =
-            targetNode.getBoundingClientRect();
+    if (
+        sameType
+        ||
+        (
+            sameParent
+            &&
+            (!canBecomeChild || edgeDrop)
+        )
+    ) {
 
         const insertAfter =
             event.clientY
@@ -7789,6 +8525,13 @@ function moveProjectNodeInDom(
                 ? targetWrapper.nextSibling
                 : targetWrapper
         );
+
+        draggedNode.dataset.parentId =
+            getProjectNodeParentIdFromDom(
+                draggedWrapper
+            )
+            ??
+            "";
 
         return;
 
@@ -7805,33 +8548,72 @@ function moveProjectNodeInDom(
             draggedWrapper
         );
 
+        draggedNode.dataset.parentId =
+            getProjectNodeParentIdFromDom(
+                draggedWrapper
+            )
+            ??
+            "";
+
     }
 
 }
 
-function getValidParentType(
+function moveProjectNodeBeforeArticle(
+    draggedWrapper,
+    draggedNode,
+    targetArticle,
+    event
+) {
+
+    const targetRect =
+        targetArticle.getBoundingClientRect();
+    const insertAfter =
+        event.clientY
+        >
+        targetRect.top
+        +
+        targetRect.height / 2;
+
+    targetArticle.parentElement.insertBefore(
+        draggedWrapper,
+        insertAfter
+            ? targetArticle.nextSibling
+            : targetArticle
+    );
+
+    draggedNode.dataset.parentId =
+        getProjectNodeParentIdFromDom(
+            draggedWrapper
+        )
+        ??
+        "";
+
+}
+
+function getValidParentTypes(
     type
 ) {
 
     switch(type) {
 
         case "building":
-            return null;
+            return [];
 
         case "generalPosition":
-            return null;
+            return ["building", "panel", "field"];
 
         case "panel":
-            return "building";
+            return ["building"];
 
         case "field":
-            return "panel";
+            return ["panel"];
 
         case "meter":
-            return "field";
+            return ["building", "panel", "field", "generalPosition"];
 
         default:
-            return null;
+            return [];
 
     }
 
@@ -7873,21 +8655,68 @@ function getProjectNodePositionSignature(
         ??
         "";
 
-    const siblings =
-        Array.from(
-            nodeWrapper.parentElement.querySelectorAll(
-                ":scope > .project-node-wrapper"
-            )
-        ).map(wrapper =>
-            wrapper.querySelector(
-                ":scope > .project-node"
-            ).dataset.id
-        );
+    const items =
+        getProjectNodeMixedChildren(
+            nodeWrapper
+        ).map(item => ({
+            type: item.type,
+            id: item.id
+        }));
 
     return JSON.stringify({
         parentId,
-        siblings
+        items
     });
+
+}
+
+function getProjectNodeMixedChildren(
+    nodeWrapper
+) {
+
+    const children =
+        nodeWrapper?.querySelector(
+            ":scope > .project-node-children"
+        );
+
+    return Array.from(
+        children?.children || []
+    )
+        .map(element => {
+
+            if (
+                element.classList.contains(
+                    "project-node-wrapper"
+                )
+            ) {
+
+                return {
+                    type: "node",
+                    id:
+                        element.querySelector(
+                            ":scope > .project-node"
+                        )?.dataset.id
+                };
+
+            }
+
+            if (
+                element.classList.contains(
+                    "node-article"
+                )
+            ) {
+
+                return {
+                    type: "article",
+                    id: element.dataset.id
+                };
+
+            }
+
+            return null;
+
+        })
+        .filter(item => item?.id);
 
 }
 
@@ -7906,20 +8735,22 @@ async function saveProjectNodePosition(
             nodeWrapper
         );
 
-    const siblings =
-        Array.from(
-            nodeWrapper.parentElement.querySelectorAll(
-                ":scope > .project-node-wrapper"
-            )
-        ).map(wrapper =>
-            wrapper.querySelector(
-                ":scope > .project-node"
-            ).dataset.id
+    const items =
+        getProjectNodeMixedChildren(
+            nodeWrapper
         );
+    const siblings =
+        items
+            .filter(item => item.type === "node")
+            .map(item => item.id);
 
     const sortOrder =
-        siblings.indexOf(
-            node.dataset.id
+        items.findIndex(item =>
+            item.type === "node"
+            &&
+            String(item.id)
+            ===
+            String(node.dataset.id)
         );
 
     const currentNode =
@@ -7939,13 +8770,35 @@ async function saveProjectNodePosition(
 
     }
 
-    siblings.forEach((siblingId, index) => {
+    items.forEach((mixedItem, index) => {
+
+        if (mixedItem.type === "article") {
+
+            const nodeArticle =
+                currentNodeArticles.find(article =>
+                    String(article.id)
+                    ===
+                    String(mixedItem.id)
+                );
+
+            if (nodeArticle) {
+
+                nodeArticle.projectNodeId =
+                    parentId;
+                nodeArticle.sortOrder =
+                    index;
+
+            }
+
+            return;
+
+        }
 
         const sibling =
             currentNodes.find(item =>
                 String(item.id)
                 ===
-                String(siblingId)
+                String(mixedItem.id)
             );
 
         if (sibling) {
@@ -7983,7 +8836,8 @@ async function saveProjectNodePosition(
                     body: JSON.stringify({
                         parentId,
                         sortOrder,
-                        siblings
+                        siblings,
+                        items
                     })
 
                 }
@@ -8109,6 +8963,50 @@ function registerProjectNodeMenus(
 
                     const action =
                         actionButton.dataset.action;
+
+                    if (action === "add-node") {
+
+                        const nodeType =
+                            actionButton.dataset.nodeType;
+                        const defaults =
+                            getNodeCreationDefaults(nodeType);
+
+                        if (!defaults.name) {
+
+                            return;
+
+                        }
+
+                        const name =
+                            await openProjectModal({
+                                title: defaults.label,
+                                label: i18n.t("project.positionName"),
+                                value: defaults.name
+                            });
+
+                        if (name === null) {
+
+                            return;
+
+                        }
+
+                        await createProjectNode({
+                            projectId,
+                            parentId: nodeId,
+                            type: nodeType,
+                            name:
+                                name.trim()
+                                ||
+                                defaults.name
+                        });
+
+                        await refreshProjectTree(
+                            projectId
+                        );
+
+                        return;
+
+                    }
 
                     if (action === "properties") {
 
@@ -9656,7 +10554,7 @@ function registerNodeArticleDropTargets(
 
     document
         .querySelectorAll(
-            ".project-node[data-type=\"meter\"], .project-node[data-type=\"generalPosition\"]"
+            ".project-node"
         )
         .forEach(node => {
 
@@ -10030,6 +10928,35 @@ function moveNodeArticleElementToArticle(
     );
 }
 
+function moveNodeArticleBeforeNode(
+    article,
+    parentNode,
+    targetWrapper,
+    targetNode,
+    event
+) {
+
+    const targetRect =
+        targetNode.getBoundingClientRect();
+    const insertAfter =
+        event.clientY
+        >
+        targetRect.top
+        +
+        targetRect.height / 2;
+
+    article.dataset.nodeId =
+        parentNode.dataset.id;
+
+    targetWrapper.parentElement.insertBefore(
+        article,
+        insertAfter
+            ? targetWrapper.nextSibling
+            : targetWrapper
+    );
+
+}
+
 async function moveNodeArticleToNodeAndSave(
     article,
     targetNodeId,
@@ -10087,6 +11014,65 @@ async function moveNodeArticleToNodeAndSave(
     await refreshProjectTree(
         projectId
     );
+
+}
+
+async function moveNodeArticleToMixedPositionAndSave(
+    article,
+    targetNode,
+    projectId
+) {
+
+    article.dataset.dropHandled =
+        "true";
+
+    await waitForPendingNodeArticleQuantities();
+
+    const originalNodeId =
+        article.dataset.originalNodeId
+        ||
+        article.dataset.nodeId;
+    const targetNodeId =
+        targetNode.dataset.id;
+
+    article.dataset.nodeId =
+        targetNodeId;
+
+    await updateNodeArticlePosition(
+        article.dataset.id,
+        {
+            projectNodeId:
+                targetNodeId,
+            sortOrder:
+                getNodeArticleIndex(
+                    article
+                )
+        }
+    );
+
+    await Promise.all([
+        saveNodeArticleOrder(
+            originalNodeId
+        ),
+        ...(String(originalNodeId) === String(targetNodeId)
+            ? []
+            : [saveNodeArticleOrder(targetNodeId)])
+    ]);
+
+    updateProjectNodeTotals();
+    syncArticleListHeight();
+
+    if (
+        String(originalNodeId)
+        !==
+        String(targetNodeId)
+    ) {
+
+        await refreshProjectTree(
+            projectId
+        );
+
+    }
 
 }
 
@@ -10426,53 +11412,72 @@ function saveNodeArticleOrder(
     nodeId
 ) {
 
-    const orderedArticles =
-        Array.from(
-            document.querySelectorAll(
-                `.node-article[data-node-id="${nodeId}"]`
-            )
+    const nodeElement =
+        document.querySelector(
+            `.project-node[data-id="${nodeId}"]`
+        );
+    const nodeWrapper =
+        nodeElement?.closest(
+            ".project-node-wrapper"
         );
 
-    const positions =
-        orderedArticles.map((article, index) => ({
+    if (!nodeWrapper) {
 
-            id:
-                article.dataset.id,
+        return Promise.resolve();
 
-            sortOrder:
-                index
+    }
 
-        }));
+    const items =
+        getProjectNodeMixedChildren(
+            nodeWrapper
+        );
 
-    currentNodeArticles =
-        currentNodeArticles.map(nodeArticle => {
+    items.forEach((item, index) => {
 
-            const position =
-                positions.find(
-                    item =>
-                        String(item.id)
-                        ===
-                        String(nodeArticle.id)
+        if (item.type === "article") {
+
+            const nodeArticle =
+                currentNodeArticles.find(article =>
+                    String(article.id)
+                    ===
+                    String(item.id)
                 );
 
-            if (!position) {
+            if (nodeArticle) {
 
-                return nodeArticle;
+                nodeArticle.projectNodeId =
+                    nodeId;
+                nodeArticle.sortOrder =
+                    index;
 
             }
 
-            return {
-                ...nodeArticle,
-                sortOrder:
-                    position.sortOrder
-            };
+            return;
 
-        });
+        }
+
+        const childNode =
+            currentNodes.find(node =>
+                String(node.id)
+                ===
+                String(item.id)
+            );
+
+        if (childNode) {
+
+            childNode.parentId =
+                nodeId;
+            childNode.sortOrder =
+                index;
+
+        }
+
+    });
 
     const request =
         fetch(
 
-            `/api/projectNodeArticles/reorder/${nodeId}`,
+            `/api/projectNodes/${nodeId}/move`,
 
             {
 
@@ -10486,7 +11491,8 @@ function saveNodeArticleOrder(
                 },
 
                 body: JSON.stringify({
-                    positions
+                    parentId: nodeId,
+                    items
                 })
 
             }
@@ -10497,7 +11503,7 @@ function saveNodeArticleOrder(
                 if (!response.ok) {
 
                     throw new Error(
-                        "Artikelreihenfolge konnte nicht gespeichert werden."
+                        "Strukturreihenfolge konnte nicht gespeichert werden."
                     );
 
                 }

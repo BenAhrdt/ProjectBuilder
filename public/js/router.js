@@ -63,7 +63,9 @@ function navigate(path) {
 async function renderRoute(path) {
     const sequence = ++renderSequence;
 
-    await customer.flushPendingSave();
+    if (customer.hasPendingSave()) {
+        customer.flushPendingSave({ wait: false });
+    }
     if (sequence !== renderSequence) return;
 
     // Kunde

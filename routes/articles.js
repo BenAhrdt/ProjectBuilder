@@ -389,6 +389,53 @@ router.get("/", (req, res) => {
     const search =
         req.query.search ?? "";
 
+    const hasPagination =
+        req.query.limit !== undefined
+        || req.query.offset !== undefined;
+
+    const requestedLimit =
+        Number.parseInt(req.query.limit, 10);
+
+    const limit =
+        hasPagination
+            ? Math.min(Math.max(Number.isFinite(requestedLimit) ? requestedLimit : 100, 1), 500)
+            : null;
+
+    const requestedOffset =
+        Number.parseInt(req.query.offset, 10);
+
+    const offset =
+        hasPagination
+            ? Math.max(Number.isFinite(requestedOffset) ? requestedOffset : 0, 0)
+            : null;
+
+    const whereClause = `
+        WHERE
+            articleNumber LIKE @search
+            OR ean LIKE @search
+            OR manufacturerType LIKE @search
+            OR manufacturerName LIKE @search
+            OR originCountry LIKE @search
+            OR originRegion LIKE @search
+            OR intrastatNumber LIKE @search
+            OR quantity LIKE @search
+            OR quantityUnit LIKE @search
+            OR listPrice LIKE @search
+            OR listPriceCurrency LIKE @search
+            OR discountGroup LIKE @search
+            OR description LIKE @search
+    `;
+
+    if (hasPagination) {
+        const total = database.articles.prepare(`
+            SELECT COUNT(*) AS count
+            FROM articles
+            ${whereClause}
+        `).get({ search: `%${search}%` }).count;
+
+        res.setHeader("X-Total-Count", String(total));
+    }
+
     const articles =
         database.articles.prepare(`
 
@@ -420,34 +467,14 @@ router.get("/", (req, res) => {
 
             FROM articles
 
-            WHERE
+            ${whereClause}
 
-                articleNumber LIKE @search
-                OR ean LIKE @search
-
-                OR manufacturerType LIKE @search
-                OR manufacturerName LIKE @search
-
-                OR originCountry LIKE @search
-                OR originRegion LIKE @search
-
-                OR intrastatNumber LIKE @search
-
-                OR quantity LIKE @search
-                OR quantityUnit LIKE @search
-
-                OR listPrice LIKE @search
-                OR listPriceCurrency LIKE @search
-
-                OR discountGroup LIKE @search
-
-                OR description LIKE @search
+            ORDER BY articleNumber
+            ${hasPagination ? "LIMIT @limit OFFSET @offset" : ""}
 
         `).all({
-
-            search:
-                `%${search}%`
-
+            search: `%${search}%`,
+            ...(hasPagination ? { limit, offset } : {})
         });
 
     res.json(articles.map(article => ({

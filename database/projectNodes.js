@@ -1,12 +1,13 @@
-import Database from "better-sqlite3";
-import { getDatabasePath } from "./config.js";
+import {
+    getDatabaseProxy,
+    registerDatabaseInitializer
+} from "./config.js";
 
-const projectNodes =
-    new Database(
-        getDatabasePath()
-    );
+const projectNodes = getDatabaseProxy();
 
-projectNodes.prepare(`
+function initializeProjectNodes(database) {
+
+database.prepare(`
 
     CREATE TABLE IF NOT EXISTS projectNodes (
 
@@ -27,7 +28,7 @@ projectNodes.prepare(`
 `).run();
 
 const projectNodeColumns = new Set(
-    projectNodes.prepare(`PRAGMA table_info(projectNodes)`).all()
+    database.prepare(`PRAGMA table_info(projectNodes)`).all()
         .map(column => column.name)
 );
 
@@ -43,7 +44,7 @@ const projectNodeColumns = new Set(
 
     if (!projectNodeColumns.has(name)) {
 
-        projectNodes.exec(`
+        database.exec(`
             ALTER TABLE projectNodes
             ADD COLUMN ${name} ${definition}
         `);
@@ -51,6 +52,10 @@ const projectNodeColumns = new Set(
     }
 
 });
+}
+
+registerDatabaseInitializer(initializeProjectNodes);
+initializeProjectNodes(projectNodes);
 
 export {
     projectNodes

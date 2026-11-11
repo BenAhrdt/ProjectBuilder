@@ -2,6 +2,36 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.48 - 2026-11-12
+
+### Added
+
+- Multiple separate database profiles can be created, switched, duplicated,
+  and deleted, except for the standard and active profile. Project files and
+  automatic backups are kept separate per profile.
+- Customer and project lists can be cleared completely. Clearing customers
+  removes the customer records and unassigns existing projects; clearing
+  projects also removes their structure, Salesforce links, and project files.
+
+### Improved
+
+- The article list now loads 100 articles per page, keeping large price lists
+  responsive. Customer and project pages no longer load the complete article
+  catalog during normal navigation.
+- Customer autosaves continue in the background during navigation.
+- Salesforce actions and the price-list import share a loading overlay with
+  the Janitza logo, “We love UMG”, and “Coming soon”.
+- Position levels, articles, and measuring points can be created directly on
+  permitted project-structure levels and sorted by drag and drop. The overview
+  plan includes additional distribution overviews.
+
+### Note
+
+- Project files export article numbers and position data, but not complete
+  article master data. Articles must therefore exist in the active database
+  profile before import; missing article numbers are shown and the import is
+  stopped.
+
 ## 1.5.47 - 2026-11-10
 
 ### Improved

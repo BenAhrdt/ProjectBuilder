@@ -1,7 +1,11 @@
 import fs from "fs";
 import path from "path";
-import Database from "better-sqlite3";
-import { getDatabasePath } from "../database/config.js";
+import {
+    getDatabasePath,
+    getDatabaseProxy,
+    getActiveProfileId,
+    getDataDirectory
+} from "../database/config.js";
 
 const BACKUP_FORMAT = "projectbuilder-backup";
 const BACKUP_VERSION = 1;
@@ -41,7 +45,7 @@ const tableColumns = {
     ]
 };
 
-const backupDatabase = new Database(getDatabasePath());
+const backupDatabase = getDatabaseProxy();
 let scheduler = null;
 let automaticBackupRunning = false;
 
@@ -351,7 +355,10 @@ function setSetting(key, value) {
 }
 
 function getDefaultBackupDirectory() {
-    return path.join(path.dirname(getDatabasePath()), "backups");
+    const profileId = getActiveProfileId();
+    return profileId === "default"
+        ? path.join(getDataDirectory(), "backups")
+        : path.join(getDataDirectory(), "backups", profileId);
 }
 
 function getAutomaticBackupSettings() {

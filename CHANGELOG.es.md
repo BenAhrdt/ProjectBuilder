@@ -2,6 +2,40 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.48 - 12.11.2026
+
+### Nuevo
+
+- Se pueden crear, cambiar, duplicar y eliminar varios perfiles de base de
+  datos separados, excepto el perfil estándar y el activo. Los archivos de
+  proyecto y las copias automáticas se mantienen separados por perfil.
+- Las listas de clientes y proyectos se pueden vaciar por completo. Vaciar los
+  clientes elimina sus registros y deja los proyectos sin cliente asignado;
+  vaciar los proyectos elimina también su estructura, enlaces de Salesforce y
+  archivos de proyecto.
+
+### Mejorado
+
+- La lista de artículos carga ahora 100 artículos por página, por lo que las
+  listas de precios grandes siguen siendo rápidas. Las páginas de clientes y
+  proyectos ya no cargan todo el catálogo durante la navegación normal.
+- El guardado automático de clientes continúa en segundo plano al cambiar de
+  página.
+- Las acciones de Salesforce y la importación de listas de precios comparten
+  una pantalla de carga con el logotipo de Janitza, “We love UMG” y “Coming
+  soon”.
+- Los niveles de posición, artículos y puntos de medición se pueden crear
+  directamente en los niveles permitidos de la estructura y ordenar mediante
+  arrastrar y soltar. El plano general incluye vistas adicionales de las
+  distribuciones.
+
+### Nota
+
+- Los archivos de proyecto exportan números de artículo y datos de posición,
+  pero no los datos maestros completos de los artículos. Por eso, los artículos
+  deben existir en el perfil de base de datos activo antes de importar; los
+  números que faltan se muestran y la importación se detiene.
+
 ## 1.5.47 - 10.11.2026
 
 ### Mejorado

@@ -54,6 +54,47 @@ test("aggregates commercial positions at the selected project level", () => {
     assert.deepEqual(buildSalesforcePositions(nodes, articles, "commercial_panel").map(item => item.quantity), [2, 3]);
 });
 
+test("falls back to the nearest available commercial level", () => {
+    const nodes = [
+        { id: 1, parentId: null, type: "building", sortOrder: 1 },
+        { id: 2, parentId: 1, type: "panel", sortOrder: 1 },
+        { id: 3, parentId: 2, type: "generalPosition", sortOrder: 1 },
+        { id: 4, parentId: 2, type: "generalPosition", sortOrder: 2 },
+        { id: 5, parentId: 1, type: "panel", sortOrder: 2 },
+        { id: 6, parentId: 5, type: "field", sortOrder: 1 }
+    ];
+    const positions = [
+        { id: 1, projectNodeId: 3, articleNumber: "A", quantity: 2 },
+        { id: 2, projectNodeId: 4, articleNumber: "A", quantity: 3 },
+        { id: 3, projectNodeId: 6, articleNumber: "A", quantity: 4 }
+    ];
+
+    assert.deepEqual(
+        buildSalesforcePositions(nodes, positions, "commercial_field")
+            .map(item => item.quantity),
+        [5, 4]
+    );
+});
+
+test("falls back from measuring point to field and distribution", () => {
+    const nodes = [
+        { id: 1, parentId: null, type: "panel", sortOrder: 1 },
+        { id: 2, parentId: 1, type: "field", sortOrder: 1 },
+        { id: 3, parentId: 2, type: "generalPosition", sortOrder: 1 },
+        { id: 4, parentId: 1, type: "generalPosition", sortOrder: 2 }
+    ];
+    const positions = [
+        { id: 1, projectNodeId: 3, articleNumber: "A", quantity: 2 },
+        { id: 2, projectNodeId: 4, articleNumber: "A", quantity: 3 }
+    ];
+
+    assert.deepEqual(
+        buildSalesforcePositions(nodes, positions, "commercial_meter")
+            .map(item => item.quantity),
+        [2, 3]
+    );
+});
+
 test("keeps every position in project order when using as projected", () => {
     const nodes = [{ id: 1, parentId: null, type: "field", sortOrder: 1 }];
     const positions = buildSalesforcePositions(nodes, [

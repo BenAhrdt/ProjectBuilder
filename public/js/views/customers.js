@@ -2,7 +2,7 @@ import * as i18n from "../utils/i18n.js";
 await i18n.loadLanguage();
 
 import * as router from "../router.js";
-import { showAlert } from "../utils/modal.js";
+import { showAlert, showConfirm } from "../utils/modal.js";
 import { openSalesforceCustomerDialog } from "../utils/salesforceCustomers.js";
 import { offerSalesforceConnection } from "../utils/salesforceConnection.js";
 
@@ -83,6 +83,9 @@ async function renderView() {
                 </button>
                 <button id="add-customer-button" class="customers-action-button customers-action-primary">
                     + ${i18n.t("customers.addCustomer")}
+                </button>
+                <button id="clear-customers-button" class="customers-action-button customers-action-danger">
+                    ${i18n.t("customers.clearList")}
                 </button>
             </div>
 
@@ -270,6 +273,8 @@ function generateHandler() {
         }
     });
 
+    document.getElementById("clear-customers-button").addEventListener("click", clearCustomers);
+
 
     // Speicher Button
     const saveCustomerButton =
@@ -338,6 +343,27 @@ function generateHandler() {
 
     attachCustomerRowHandlers();
 
+}
+
+async function clearCustomers() {
+    const confirmed = await showConfirm(
+        i18n.t("customers.clearListConfirm"),
+        {
+            title: i18n.t("customers.clearList"),
+            confirmText: i18n.t("customers.clearList"),
+            danger: true
+        }
+    );
+    if (!confirmed) return;
+
+    const response = await fetch("/api/customers", { method: "DELETE" });
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+        await showAlert(result.error || i18n.t("customers.clearListFailed"));
+        return;
+    }
+
+    await renderView();
 }
 
 function attachCustomerRowHandlers() {

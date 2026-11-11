@@ -1,6 +1,7 @@
 import * as i18n from "../utils/i18n.js";
 import * as navigationHistory from "../utils/navigationHistory.js";
 import * as iconUtils from "../utils/icons.js";
+import { showConfirm } from "../utils/modal.js";
 await i18n.loadLanguage();
 
 const header = document.getElementById("header");
@@ -92,20 +93,36 @@ function updateHeaderNavigation(path = window.location.pathname) {
     });
 }
 
+function getSalesforcePlugMarkup(connected) {
+    return `<span class="salesforce-header-plug" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M9 7V3M15 7V3M6 8h12v2a6 6 0 0 1-12 0V8Z"></path>
+            <path d="M12 16v5"></path>
+            ${connected ? "<path d=\"M12 21h6\"></path>" : "<path d=\"m5 5 14 14\"></path>"}
+        </svg>
+    </span>`;
+}
+
 function renderSalesforceHeaderStatus(state) {
     if (!salesforceHeaderStatus || !salesforceHeaderLabel || !salesforceHeaderConnect) return;
 
     const checking = state === "checking";
     const connected = state === "connected";
+    const actionLabel = connected
+        ? i18n.t("salesforce.headerLogout")
+        : i18n.t("salesforce.headerConnect");
     salesforceHeaderStatus.dataset.state = state;
     salesforceHeaderLabel.textContent = checking
         ? i18n.t("salesforce.headerChecking")
         : `${i18n.t("salesforce.headerLabel")}: ${connected
             ? i18n.t("salesforce.headerConnected")
             : i18n.t("salesforce.headerDisconnected")}`;
-    salesforceHeaderConnect.hidden = connected || checking;
+    salesforceHeaderConnect.hidden = checking;
     salesforceHeaderConnect.disabled = checking;
-    salesforceHeaderConnect.textContent = i18n.t("salesforce.headerConnect");
+    salesforceHeaderConnect.dataset.state = state;
+    salesforceHeaderConnect.setAttribute("aria-label", actionLabel);
+    salesforceHeaderConnect.title = actionLabel;
+    salesforceHeaderConnect.innerHTML = `${getSalesforcePlugMarkup(connected)}<span>${actionLabel}</span>`;
 }
 
 async function refreshSalesforceHeaderStatus() {
@@ -132,14 +149,26 @@ headerPrimaryItems.forEach(item => {
 
 salesforceHeaderConnect?.addEventListener("click", async () => {
     if (!salesforceHeaderConnect) return;
+    const wasConnected = salesforceHeaderStatus?.dataset.state === "connected";
+    if (wasConnected) {
+        const confirmed = await showConfirm(i18n.t("salesforce.headerLogoutConfirm"), {
+            title: i18n.t("salesforce.headerLogoutTitle"),
+            confirmText: i18n.t("salesforce.headerLogout")
+        });
+        if (!confirmed) return;
+    }
+
     renderSalesforceHeaderStatus("checking");
     try {
-        const response = await fetch("/api/salesforce/login", { method: "POST" });
+        const response = await fetch(
+            wasConnected ? "/api/salesforce/logout" : "/api/salesforce/login",
+            { method: "POST" }
+        );
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || i18n.t("salesforce.error"));
-        renderSalesforceHeaderStatus("connected");
+        await refreshSalesforceHeaderStatus();
     } catch (error) {
-        renderSalesforceHeaderStatus("disconnected");
+        renderSalesforceHeaderStatus(wasConnected ? "connected" : "disconnected");
         salesforceHeaderStatus?.setAttribute("title", error.message || i18n.t("salesforce.error"));
     }
 });

@@ -1001,6 +1001,44 @@ router.delete("/:id/files/:fileId", (req, res) => {
     res.json({ ok: true });
 });
 
+router.delete("/", (_req, res) => {
+    const projectFiles = database.projects.prepare(
+        "SELECT storedName FROM projectFiles"
+    ).all();
+
+    const clearProjects = database.projects.transaction(() => {
+        const projectCount = database.projects.prepare(
+            "SELECT COUNT(*) AS count FROM projects"
+        ).get().count;
+
+        database.projects.prepare("DELETE FROM projectNodeArticles").run();
+        database.projects.prepare("DELETE FROM projectFiles").run();
+        database.projects.prepare("DELETE FROM projectSalesforceLinks").run();
+        database.projects.prepare("DELETE FROM projectNodes").run();
+        database.projects.prepare("DELETE FROM projects").run();
+
+        return Number(projectCount);
+    });
+
+    try {
+        const deletedProjects = clearProjects();
+        projectFiles.forEach(file => {
+            try {
+                removeProjectFile(file.storedName);
+            } catch {
+                // Die Datenbank ist bereits bereinigt; fehlende Blobs sind unkritisch.
+            }
+        });
+
+        res.json({ success: true, deletedProjects });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message || "Projekte konnten nicht gelöscht werden."
+        });
+    }
+});
+
 router.get(
     "/:id",
     (req, res) => {

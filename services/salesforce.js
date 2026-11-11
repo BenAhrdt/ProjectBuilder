@@ -8,7 +8,7 @@ import {
     buildAnnualOrderIntake,
     groupOrderItemNetAmounts
 } from "../utils/salesforceOrderIntake.js";
-import { AuthInfo, Connection, WebOAuthServer } from "@salesforce/core";
+import { AuthInfo, AuthRemover, Connection, WebOAuthServer } from "@salesforce/core";
 
 const API_VERSION = "v67.0";
 let cachedTokenConnection = null;
@@ -257,6 +257,29 @@ export function loginWithBrowser() {
         return { success: true };
     })();
     return loginPromise.finally(() => { loginPromise = null; });
+}
+
+export async function logout() {
+    if (process.env.SALESFORCE_INSTANCE_URL && process.env.SALESFORCE_ACCESS_TOKEN) {
+        throw new Error("Diese Salesforce-Anmeldung wird über Umgebungsvariablen bereitgestellt und kann nicht über die Anwendung abgemeldet werden.");
+    }
+
+    cachedCoreConnection = null;
+    cachedTokenConnection = null;
+    cachedQuoteDescription = null;
+
+    const remover = await AuthRemover.create({ skipCache: true });
+    try {
+        await remover.removeAuth(getAlias());
+    } catch (error) {
+        const name = String(error?.name ?? "");
+        const message = String(error?.message ?? error ?? "");
+        if (!/NamedOrgNotFoundError|TargetOrgNotSetError/i.test(name)
+            && !/not found|no authorization/i.test(message)) {
+            throw error;
+        }
+    }
+    return { success: true };
 }
 
 function escapeSoql(value) {

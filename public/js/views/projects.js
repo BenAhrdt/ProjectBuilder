@@ -97,6 +97,12 @@ async function renderView() {
 
             </button>
 
+            <button id="clear-projects-button" class="projects-action-danger">
+
+                ${i18n.t("projects.clearList")}
+
+            </button>
+
             <input
                 id="import-project-file"
                 type="file"
@@ -277,6 +283,8 @@ function generateHandler() {
         }
     );
 
+    document.getElementById("clear-projects-button").addEventListener("click", clearProjects);
+
     // --------------------------------------------------
     // Speichern
     // --------------------------------------------------
@@ -395,6 +403,27 @@ function generateHandler() {
 
     attachProjectRowHandlers();
 
+}
+
+async function clearProjects() {
+    const confirmed = await showConfirm(
+        i18n.t("projects.clearListConfirm"),
+        {
+            title: i18n.t("projects.clearList"),
+            confirmText: i18n.t("projects.clearList"),
+            danger: true
+        }
+    );
+    if (!confirmed) return;
+
+    const response = await fetch("/api/projects", { method: "DELETE" });
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+        await showAlert(result.error || i18n.t("projects.clearListFailed"));
+        return;
+    }
+
+    await renderView();
 }
 
 function attachProjectRowHandlers() {

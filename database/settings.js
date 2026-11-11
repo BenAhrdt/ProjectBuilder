@@ -1,13 +1,20 @@
-import Database from "better-sqlite3";
-import { getDatabasePath } from "./config.js";
+import {
+    getDatabaseProxy,
+    registerDatabaseInitializer
+} from "./config.js";
 
-const settings = new Database(getDatabasePath());
+const settings = getDatabaseProxy();
 
-settings.prepare(`
+function initializeSettings(database) {
+    database.prepare(`
     CREATE TABLE IF NOT EXISTS settings (
         key TEXT PRIMARY KEY,
         value TEXT NOT NULL
     )
-`).run();
+    `).run();
+}
+
+registerDatabaseInitializer(initializeSettings);
+initializeSettings(settings);
 
 export { settings };

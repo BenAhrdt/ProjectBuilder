@@ -10,9 +10,11 @@ import projectNodesRouter from "./routes/projectNodes.js";
 import projectNodeArticlesRouter from "./routes/projectNodeArticles.js";
 import settingsRouter from "./routes/settings.js";
 import backupsRouter from "./routes/backups.js";
+import databaseRouter from "./routes/database.js";
 import salesforceRouter from "./routes/salesforce.js";
 import { startAutomaticBackupScheduler } from "./utils/backup.js";
 import { warmConnection as warmSalesforceConnection } from "./services/salesforce.js";
+import { acquireDatabaseAccess } from "./database/config.js";
 
 const app = express()
 
@@ -51,6 +53,37 @@ app.use(express.static(path.join(__dirname, "public")))
 // --------------------------------------------------
 // API
 // --------------------------------------------------
+
+// Datenbankprofile dürfen den exklusiven Wechsel-Endpunkt direkt bedienen.
+// Alle anderen API-Anfragen erhalten einen kurzen Lese-/Schreibzugriffsschutz,
+// damit ein Wechsel erst nach laufenden Autosaves oder Imports erfolgt.
+app.use("/api/database", databaseRouter);
+
+app.use("/api", async (req, res, next) => {
+    let release;
+    try {
+        release = await acquireDatabaseAccess();
+    } catch (error) {
+        next(error);
+        return;
+    }
+
+    let released = false;
+    const releaseOnce = () => {
+        if (released) return;
+        released = true;
+        release();
+    };
+    res.once("finish", releaseOnce);
+    res.once("close", releaseOnce);
+
+    try {
+        next();
+    } catch (error) {
+        releaseOnce();
+        next(error);
+    }
+});
 
 app.get("/api", (req, res) => {
 

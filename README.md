@@ -14,6 +14,9 @@ ProjectBuilder ist eine Desktop-Anwendung zur Planung und Kalkulation von Janitz
 - Ausschreibungsexport als Word-Dokument und GAEB XML
 - GAEB-Austauschphasen X81, X82, X83 und X84
 - Lokale Datenspeicherung in SQLite
+- Mehrere getrennte Datenbankprofile mit Kopieren, Wechseln und Löschen
+- Kunden- und Projektlisten können vollständig geleert werden
+- Salesforce-Status, Anmeldung/Abmeldung und Fortschrittsanzeige für lange Aktionen
 - Windows-Desktopanwendung auf Basis von Electron
 
 ## Installation für die Entwicklung
@@ -73,6 +76,16 @@ X81 und X83 werden ohne Preise ausgegeben. X82 und X84 können Listenpreise oder
 ## Datenhaltung
 
 In der installierten Electron-Version wird die SQLite-Datenbank im benutzerspezifischen Anwendungsdatenverzeichnis gespeichert. Sie ist nicht Bestandteil eines Updates und wird bei der Deinstallation nicht automatisch gelöscht.
+
+ProjectBuilder kann mehrere getrennte Datenbankprofile verwalten. Kunden,
+Projekte, Artikel, Projektdateien und automatische Backups bleiben je Profil
+getrennt. Das Standardprofil verwendet weiterhin die bestehende lokale
+Datenbank.
+
+Projektdateien enthalten Artikelnummern und Positionsdaten, aber keine
+vollständigen Artikelstammdaten. Für einen Import müssen die Artikel deshalb im
+aktiven Datenbankprofil vorhanden sein; fehlende Artikelnummern werden beim
+Import gemeldet.
 
 ## Änderungen
 

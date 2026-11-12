@@ -2,6 +2,14 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.50 - 12.11.2026
+
+### Behoben
+
+- Beim Senden und Laden von Projekten mit Salesforce wird die gemeinsame
+  Ladeanzeige wieder zuverlässig mit Janitza-Logo, Fortschrittsanzeige und
+  Running-Gag eingeblendet.
+
 ## 1.5.49 - 12.11.2026
 
 ### Verbessert

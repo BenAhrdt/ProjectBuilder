@@ -2,6 +2,13 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.50 - 2026-11-12
+
+### Fixed
+
+- Sending and loading projects with Salesforce now reliably shows the shared
+  loading overlay with the Janitza logo, progress indicator, and running gag.
+
 ## 1.5.49 - 2026-11-12
 
 ### Improved

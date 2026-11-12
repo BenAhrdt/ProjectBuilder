@@ -2,6 +2,14 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.50 - 12.11.2026
+
+### Corregido
+
+- Al enviar y cargar proyectos con Salesforce, la pantalla de carga compartida
+  vuelve a mostrarse correctamente con el logotipo de Janitza, el indicador de
+  progreso y el mensaje recurrente.
+
 ## 1.5.49 - 12.11.2026
 
 ### Mejorado

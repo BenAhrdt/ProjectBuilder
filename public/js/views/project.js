@@ -31,6 +31,7 @@ let currentProjectCustomer = null;
 let currentStructurePriceMode = "discounted";
 let articleSwapMode = false;
 let draggedArticleNumber = null;
+let activeSalesforceProgress = null;
 const pendingNodeArticleOrderRequests =
     new Set();
 const pendingNodeArticleQuantityRequests =

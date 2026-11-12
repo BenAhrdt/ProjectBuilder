@@ -2,6 +2,21 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.49 - 2026-11-12
+
+### Improved
+
+- Drag and drop in the project structure now shows a green outline for placing
+  an item as a child and a blue line for inserting it before or after an item
+  on the same level.
+
+### Fixed
+
+- The order of position levels and other structure nodes now remains stable
+  after sorting and subsequent field changes.
+- Project images and files now open only in a new tab; the current tab remains
+  unchanged.
+
 ## 1.5.48 - 2026-11-12
 
 ### Added

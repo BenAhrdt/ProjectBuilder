@@ -850,6 +850,8 @@
 
     gap: 8px;
 
+    position: relative;
+
 }
 
 .project-node-main {
@@ -1948,12 +1950,51 @@ body.project-overview-open {
 
 }
 
-.project-node.node-drag-over {
+.project-node.node-drop-inside {
 
     outline:
-        1px dashed #4c8bf5;
+        2px solid #2f9e44;
 
     outline-offset: 2px;
+
+    background:
+        rgba(47, 158, 68, 0.08);
+
+}
+
+.project-node.node-drop-before::before,
+.project-node.node-drop-after::after {
+
+    content: "";
+
+    position: absolute;
+
+    left: 0;
+    right: 0;
+
+    height: 3px;
+
+    border-radius: 999px;
+
+    background: #2878d4;
+
+    box-shadow: 0 0 0 1px rgba(40, 120, 212, 0.14);
+
+    pointer-events: none;
+
+    z-index: 2;
+
+}
+
+.project-node.node-drop-before::before {
+
+    top: -5px;
+
+}
+
+.project-node.node-drop-after::after {
+
+    bottom: -5px;
 
 }
 

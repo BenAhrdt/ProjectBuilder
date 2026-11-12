@@ -2,6 +2,21 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.49 - 12.11.2026
+
+### Verbessert
+
+- Beim Drag & Drop in der Projektstruktur zeigt eine grüne Umrandung das
+  Einfügen als Unterebene. Ein blauer Strich markiert die Position davor oder
+  danach auf derselben Ebene.
+
+### Behoben
+
+- Die Reihenfolge von Positionsebenen und anderen Strukturknoten bleibt nach
+  dem Sortieren und anschließenden Änderungen an Feldern erhalten.
+- Projektbilder und -dateien werden beim Öffnen nur noch in einem neuen Tab
+  geöffnet; der aktuelle Tab bleibt unverändert.
+
 ## 1.5.48 - 12.11.2026
 
 ### Neu

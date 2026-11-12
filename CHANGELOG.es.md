@@ -2,6 +2,21 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.49 - 12.11.2026
+
+### Mejorado
+
+- El arrastrar y soltar en la estructura del proyecto muestra ahora un borde
+  verde para colocar un elemento como subnivel y una línea azul para insertarlo
+  antes o después en el mismo nivel.
+
+### Corregido
+
+- El orden de los niveles de posición y de los demás nodos de la estructura se
+  mantiene después de ordenar y realizar cambios posteriores en los campos.
+- Las imágenes y los archivos del proyecto se abren ahora únicamente en una
+  pestaña nueva; la pestaña actual permanece sin cambios.
+
 ## 1.5.48 - 12.11.2026
 
 ### Nuevo

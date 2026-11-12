@@ -1142,8 +1142,9 @@ function registerProjectFiles(projectId) {
         if (!file) return;
 
         if (actionElement.dataset.fileAction === "open") {
-            const opened = window.open(getProjectFileUrl(projectId, file), "_blank", "noopener,noreferrer");
-            if (!opened) window.location.href = getProjectFileUrl(projectId, file);
+            event.preventDefault();
+            event.stopPropagation();
+            window.open(getProjectFileUrl(projectId, file), "_blank", "noopener,noreferrer");
             return;
         }
 
@@ -7888,6 +7889,98 @@ function isRd96Article(
 
 }
 
+function clearProjectNodeDropIndicators() {
+
+    document
+        .querySelectorAll(
+            ".project-node.node-drag-over, .project-node.node-drop-inside, .project-node.node-drop-before, .project-node.node-drop-after"
+        )
+        .forEach(node => {
+
+            node.classList.remove(
+                "node-drag-over",
+                "node-drop-inside",
+                "node-drop-before",
+                "node-drop-after"
+            );
+
+        });
+
+}
+
+function getProjectNodeDropMode(
+    draggedNode,
+    targetNode,
+    event
+) {
+
+    const sameType =
+        draggedNode.dataset.type
+        ===
+        targetNode.dataset.type;
+
+    const canBecomeChild =
+        getValidParentTypes(
+            draggedNode.dataset.type
+        ).includes(
+            targetNode.dataset.type
+        );
+
+    const targetRect =
+        targetNode.getBoundingClientRect();
+
+    const edgeDrop =
+        event.clientY
+        <
+        targetRect.top
+        +
+        targetRect.height * 0.3
+        ||
+        event.clientY
+        >
+        targetRect.bottom
+        -
+        targetRect.height * 0.3;
+
+    if (
+        !sameType
+        &&
+        canBecomeChild
+        &&
+        !edgeDrop
+    ) {
+
+        return "inside";
+
+    }
+
+    return event.clientY
+        >
+        targetRect.top
+        +
+        targetRect.height / 2
+        ? "after"
+        : "before";
+
+}
+
+function markProjectNodeDropTarget(
+    targetNode,
+    mode
+) {
+
+    clearProjectNodeDropIndicators();
+
+    targetNode.classList.add(
+        mode === "inside"
+            ? "node-drop-inside"
+            : mode === "before"
+                ? "node-drop-before"
+                : "node-drop-after"
+    );
+
+}
+
 function registerProjectNodeDragAndDrop(
     projectId
 ) {
@@ -7996,13 +8089,16 @@ function registerProjectNodeDragAndDrop(
 
                     document
                         .querySelectorAll(
-                            ".project-node-wrapper.node-dragging, .project-node.node-drag-over, .node-drag-target, .project-node.article-mixed-drop-target"
+                            ".project-node-wrapper.node-dragging, .project-node.node-drag-over, .project-node.node-drop-inside, .project-node.node-drop-before, .project-node.node-drop-after, .node-drag-target, .project-node.article-mixed-drop-target"
                         )
                         .forEach(element => {
 
                             element.classList.remove(
                                 "node-dragging",
                                 "node-drag-over",
+                                "node-drop-inside",
+                                "node-drop-before",
+                                "node-drop-after",
                                 "node-drag-target",
                                 "article-mixed-drop-target"
                             );
@@ -8052,8 +8148,16 @@ function registerProjectNodeDragAndDrop(
 
                     event.preventDefault();
 
-                    node.classList.add(
-                        "node-drag-over"
+                    event.dataTransfer.dropEffect =
+                        "move";
+
+                    markProjectNodeDropTarget(
+                        node,
+                        getProjectNodeDropMode(
+                            draggedNode,
+                            node,
+                            event
+                        )
                     );
 
                 }
@@ -8061,11 +8165,19 @@ function registerProjectNodeDragAndDrop(
 
             node.addEventListener(
                 "dragleave",
-                () => {
+                event => {
 
-                    node.classList.remove(
-                        "node-drag-over"
-                    );
+                    if (
+                        node.contains(
+                            event.relatedTarget
+                        )
+                    ) {
+
+                        return;
+
+                    }
+
+                    clearProjectNodeDropIndicators();
 
                 }
             );
@@ -8113,9 +8225,7 @@ function registerProjectNodeDragAndDrop(
                     event.preventDefault();
                     event.stopPropagation();
 
-                    node.classList.remove(
-                        "node-drag-over"
-                    );
+                    clearProjectNodeDropIndicators();
 
                 }
             );
@@ -8481,43 +8591,19 @@ function moveProjectNodeInDom(
     event
 ) {
 
-    const sameParent =
-        String(draggedNode.dataset.parentId ?? "")
-        ===
-        String(targetNode.dataset.parentId ?? "");
-    const sameType =
-        draggedNode.dataset.type
-        ===
-        targetNode.dataset.type;
-    const canBecomeChild =
-        getValidParentTypes(
-            draggedNode.dataset.type
-        ).includes(
-            targetNode.dataset.type
+    const dropMode =
+        getProjectNodeDropMode(
+            draggedNode,
+            targetNode,
+            event
         );
-    const targetRect =
-        targetNode.getBoundingClientRect();
-    const edgeDrop =
-        event.clientY < targetRect.top + targetRect.height * 0.3
-        ||
-        event.clientY > targetRect.bottom - targetRect.height * 0.3;
 
     if (
-        sameType
-        ||
-        (
-            sameParent
-            &&
-            (!canBecomeChild || edgeDrop)
-        )
+        dropMode !== "inside"
     ) {
 
         const insertAfter =
-            event.clientY
-            >
-            targetRect.top
-            +
-            targetRect.height / 2;
+            dropMode === "after";
 
         targetWrapper.parentElement.insertBefore(
             draggedWrapper,
@@ -8648,16 +8734,19 @@ function getProjectNodePositionSignature(
 
     }
 
+    const siblingContainer =
+        nodeWrapper.parentElement;
+
     const parentId =
-        getProjectNodeParentIdFromDom(
-            nodeWrapper
+        getProjectNodeParentIdFromContainer(
+            siblingContainer
         )
         ??
         "";
 
     const items =
-        getProjectNodeMixedChildren(
-            nodeWrapper
+        getProjectNodeMixedChildrenFromContainer(
+            siblingContainer
         ).map(item => ({
             type: item.type,
             id: item.id
@@ -8674,13 +8763,29 @@ function getProjectNodeMixedChildren(
     nodeWrapper
 ) {
 
-    const children =
+    return getProjectNodeMixedChildrenFromContainer(
         nodeWrapper?.querySelector(
             ":scope > .project-node-children"
-        );
+        )
+    );
+
+}
+
+function getProjectNodeMixedChildrenFromContainer(
+    container
+) {
+
+    const children =
+        container;
+
+    if (!children) {
+
+        return [];
+
+    }
 
     return Array.from(
-        children?.children || []
+        children.children || []
     )
         .map(element => {
 
@@ -8720,6 +8825,29 @@ function getProjectNodeMixedChildren(
 
 }
 
+function getProjectNodeParentIdFromContainer(
+    container
+) {
+
+    if (!container || container.id === "project-tree") {
+
+        return null;
+
+    }
+
+    return container
+        .closest(
+            ".project-node-wrapper"
+        )
+        ?.querySelector(
+            ":scope > .project-node"
+        )
+        ?.dataset.id
+        ??
+        null;
+
+}
+
 async function saveProjectNodePosition(
     nodeWrapper,
     projectId
@@ -8730,14 +8858,17 @@ async function saveProjectNodePosition(
             ":scope > .project-node"
         );
 
+    const siblingContainer =
+        nodeWrapper.parentElement;
+
     const parentId =
-        getProjectNodeParentIdFromDom(
-            nodeWrapper
+        getProjectNodeParentIdFromContainer(
+            siblingContainer
         );
 
     const items =
-        getProjectNodeMixedChildren(
-            nodeWrapper
+        getProjectNodeMixedChildrenFromContainer(
+            siblingContainer
         );
     const siblings =
         items

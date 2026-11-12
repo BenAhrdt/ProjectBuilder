@@ -7,7 +7,9 @@ ProjectBuilder ist eine Desktop-Anwendung zur Planung und Kalkulation von Janitz
 - Kunden- und Projektverwaltung mit kundenspezifischen Rabattgruppen
 - Import von Janitza-Preislisten inklusive technischer Ausschreibungstexte
 - Hierarchische Projektstruktur und grafischer Übersichtsplan
+- Drag-&-Drop-Hinweise: grün für Unterebenen und blau für die Einfügeposition
 - Projektbezogen anpassbare Breite von Projektstruktur und Artikelliste
+- Projektdateien und Bilder mit Vorschau; das Öffnen erfolgt in einem neuen Tab
 - Kennzeichnung optionaler und alternativer Positionen
 - Kalkulation mit Listenpreisen oder rabattierten Preisen
 - Excel-Projektexport und Datenerfassungsplan

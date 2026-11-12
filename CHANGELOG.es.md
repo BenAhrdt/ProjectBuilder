@@ -2,6 +2,13 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.52 - 12.11.2026
+
+### Corregido
+
+- Los módulos CON y de comunicación, como `Modul 800-CON-RJ45`, ya no se
+  cuentan incorrectamente como puestas en marcha necesarias de tipo 2.
+
 ## 1.5.51 - 12.11.2026
 
 ### Nuevo

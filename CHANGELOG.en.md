@@ -2,6 +2,13 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.52 - 2026-11-12
+
+### Fixed
+
+- CON and communication modules, such as `Modul 800-CON-RJ45`, are no longer
+  incorrectly counted as required type 2 commissioning services.
+
 ## 1.5.51 - 2026-11-12
 
 ### Added

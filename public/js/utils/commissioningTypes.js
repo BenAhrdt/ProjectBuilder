@@ -50,6 +50,17 @@ export function getCommissioningType(article = {}) {
     if (identityText.includes("umg20cm")) return 3;
     if (identityText.includes("prodata2")) return 4;
 
+    // CON-/Kommunikationsmodule werden nicht in Betrieb genommen. Diese
+    // Ausnahme muss vor der allgemeinen Modulregel greifen.
+    if (
+        /(?:modul|module)(?:800)?con/.test(identityText)
+        || identityText.includes("conmodul")
+        || identityText.includes("communicationmodule")
+        || identityText.includes("kommunikationsmodul")
+    ) {
+        return null;
+    }
+
     // UMG 800 is a type 1 device. Its description contains the word
     // "modular", which must not make the device look like a type 2 module.
     if (

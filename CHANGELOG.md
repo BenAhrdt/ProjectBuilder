@@ -2,6 +2,13 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.52 - 12.11.2026
+
+### Behoben
+
+- CON- und Kommunikationsmodule, zum Beispiel `Modul 800-CON-RJ45`, werden
+  nicht mehr fälschlich als benötigte Inbetriebnahme Typ 2 gezählt.
+
 ## 1.5.51 - 12.11.2026
 
 ### Neu

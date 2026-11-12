@@ -41,6 +41,12 @@ test("assigns the configured commissioning types to device families", () => {
         2
     );
     assert.equal(
+        getCommissioningType({
+            manufacturerType: "Modul 800-CON-RJ45 Standard"
+        }),
+        null
+    );
+    assert.equal(
         getCommissioningType({ manufacturerType: "ProData 2" }),
         4
     );

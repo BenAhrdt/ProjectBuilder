@@ -2,6 +2,15 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.51 - 2026-11-12
+
+### Added
+
+- Project structure articles now show the assigned commissioning type next to
+  the GridVis item badge. UMG 800 is classified as type 1 and modules as type 2.
+- The project header now presents the required commissioning counts clearly,
+  separated into types 1 through 5.
+
 ## 1.5.50 - 2026-11-12
 
 ### Fixed

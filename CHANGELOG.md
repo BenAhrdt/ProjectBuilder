@@ -2,6 +2,16 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.51 - 12.11.2026
+
+### Neu
+
+- Artikel in der Projektstruktur zeigen neben den GridVis-Items jetzt den
+  zugeordneten Inbetriebnahmetyp als Badge. UMG 800 wird als Typ 1 und Module
+  als Typ 2 erkannt.
+- Die Projektkopfzeile zeigt die benötigten Inbetriebnahmen übersichtlich
+  getrennt nach Typ 1 bis Typ 5 an.
+
 ## 1.5.50 - 12.11.2026
 
 ### Behoben

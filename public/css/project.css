@@ -878,13 +878,9 @@
 
 .project-price-summary {
 
-    display: grid;
+    display: flex;
 
-    grid-template-columns:
-        repeat(
-            7,
-            minmax(108px, 1fr)
-        );
+    flex-direction: column;
 
     gap: 0;
 
@@ -920,6 +916,148 @@
     color: #526173;
 
     font-size: 13px;
+
+}
+
+.project-price-summary-row {
+
+    display: grid;
+
+    min-width: 0;
+
+}
+
+.project-price-summary-money-row {
+
+    grid-template-columns:
+        repeat(
+            6,
+            minmax(0, 1fr)
+        );
+
+}
+
+.project-price-summary-money-row .project-price-summary-item {
+
+    flex-direction: row;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    min-width: 0;
+
+    gap: 8px;
+
+}
+
+.project-price-summary-money-row .project-price-summary-item > span {
+
+    min-width: 0;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+
+    white-space: nowrap;
+
+}
+
+.project-price-summary-requirements-row {
+
+    grid-template-columns:
+        repeat(
+            2,
+            minmax(0, 1fr)
+        );
+
+    margin-top: 5px;
+
+    padding-top: 5px;
+
+    border-top: 1px solid #d9e1ec;
+
+}
+
+.project-price-summary-requirements-row .project-price-summary-item {
+
+    flex-direction: row;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    min-height: 23px;
+
+}
+
+.project-commissioning-summary {
+
+    gap: 10px;
+
+}
+
+.project-commissioning-counts {
+
+    display: grid;
+
+    flex: 1 1 auto;
+
+    grid-template-columns:
+        repeat(
+            5,
+            minmax(42px, 1fr)
+        );
+
+    gap: 4px;
+
+    min-width: 0;
+
+}
+
+.project-commissioning-count {
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    justify-content: center;
+
+    min-width: 0;
+
+    min-height: 24px;
+
+    padding: 2px 4px;
+
+    border: 1px solid #cbd8e7;
+
+    border-radius: 4px;
+
+    background: rgba(255, 255, 255, 0.75);
+
+    line-height: 1.05;
+
+}
+
+.project-commissioning-count-label {
+
+    color: #526173;
+
+    font-size: 10px;
+
+    white-space: nowrap;
+
+}
+
+.project-commissioning-count strong {
+
+    color: #1f3552;
+
+    font-size: 12px;
+
+    line-height: 1.05;
 
 }
 
@@ -1817,6 +1955,63 @@ body.project-overview-open {
     white-space: nowrap;
 }
 
+@media (max-width: 850px) {
+
+    .project-price-summary-money-row {
+
+        grid-template-columns:
+            repeat(
+                3,
+                minmax(0, 1fr)
+            );
+
+        row-gap: 4px;
+
+    }
+
+    .project-price-summary-money-row .project-price-summary-item:nth-child(4) {
+
+        border-left: 0;
+
+    }
+
+}
+
+@media (max-width: 560px) {
+
+    .project-price-summary-money-row {
+
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            );
+
+    }
+
+    .project-price-summary-money-row .project-price-summary-item:nth-child(3n + 1),
+    .project-price-summary-money-row .project-price-summary-item:nth-child(4) {
+
+        border-left: 0;
+
+    }
+
+    .project-price-summary-requirements-row {
+
+        grid-template-columns: 1fr;
+
+        row-gap: 4px;
+
+    }
+
+    .project-price-summary-requirements-row .project-price-summary-item + .project-price-summary-item {
+
+        border-left: 0;
+
+    }
+
+}
+
 @media (max-width: 1250px) {
 
     .project-view-header {
@@ -2416,6 +2611,66 @@ body.project-overview-open {
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     line-height: 1;
+
+}
+
+.node-article-requirement-badges {
+
+    display: inline-flex;
+
+    flex: 0 0 auto;
+
+    align-self: center;
+
+    align-items: center;
+
+    gap: 8px;
+
+}
+
+.node-article-commissioning-badge {
+
+    display: inline-flex;
+
+    flex: 0 0 auto;
+
+    align-items: center;
+
+    justify-content: center;
+
+    width: 23px;
+
+    height: 23px;
+
+    box-sizing: border-box;
+
+    border: 1px solid rgba(151, 106, 28, 0.35);
+
+    border-radius: 4px;
+
+    background: linear-gradient(145deg, #fffdf4 0%, #f5e4a6 100%);
+
+    box-shadow: 0 1px 3px rgba(139, 101, 22, 0.18);
+
+    color: #8a5d00;
+
+    font-size: 10px;
+
+    font-weight: 700;
+
+    font-variant-numeric: tabular-nums;
+
+    line-height: 1;
+
+    transform: rotate(45deg);
+
+}
+
+.node-article-commissioning-badge > span {
+
+    display: inline-flex;
+
+    transform: rotate(-45deg);
 
 }
 

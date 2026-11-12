@@ -11,6 +11,8 @@ ProjectBuilder ist eine Desktop-Anwendung zur Planung und Kalkulation von Janitz
 - Projektbezogen anpassbare Breite von Projektstruktur und Artikelliste
 - Projektdateien und Bilder mit Vorschau; das Öffnen erfolgt in einem neuen Tab
 - Kennzeichnung optionaler und alternativer Positionen
+- Anzeige des zugeordneten Inbetriebnahmetyps neben dem GridVis-Item-Badge und
+  Aufschlüsselung der benötigten Inbetriebnahmen nach Typ 1 bis Typ 5
 - Kalkulation mit Listenpreisen oder rabattierten Preisen
 - Excel-Projektexport und Datenerfassungsplan
 - Ausschreibungsexport als Word-Dokument und GAEB XML

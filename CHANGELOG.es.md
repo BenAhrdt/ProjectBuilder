@@ -2,6 +2,16 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.51 - 12.11.2026
+
+### Nuevo
+
+- Los artículos de la estructura del proyecto muestran ahora el tipo de puesta
+  en marcha asignado junto al indicador de ítems de GridVis. UMG 800 se clasifica
+  como tipo 1 y los módulos como tipo 2.
+- La cabecera del proyecto muestra claramente las cantidades necesarias,
+  separadas por los tipos 1 a 5.
+
 ## 1.5.50 - 12.11.2026
 
 ### Corregido

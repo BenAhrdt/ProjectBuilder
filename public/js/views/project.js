@@ -12,6 +12,9 @@ import {
     calculateStructureUnitPrice
 } from "./projectPricing.js";
 import {
+    getCommissioningType
+} from "../utils/commissioningTypes.js";
+import {
     showAlert,
     showConfirm,
     showChoice,
@@ -2705,7 +2708,7 @@ function renderNodeArticle(
 
             </div>
 
-            ${renderNodeGridVisBadge(fullArticle, quantity, nodeArticle)}
+            ${renderNodeRequirementBadges(fullArticle, quantity, nodeArticle)}
 
             <div class="node-article-menu">
 
@@ -2788,6 +2791,59 @@ function renderNodeGridVisBadge(
             aria-label="${label}"
             title="${label}"
         >${count}</span>
+    `;
+
+}
+
+function renderNodeCommissioningBadge(
+    article,
+    quantity,
+    nodeArticle
+) {
+
+    if (nodeArticle.isOptional || nodeArticle.isAlternative) return "";
+
+    const commissioningType =
+        getCommissioningType(
+            article
+        );
+
+    if (commissioningType === null) return "";
+
+    const label =
+        `${i18n.t("project.commissioningType")} ${commissioningType}: `
+        + `${formatQuantity(quantity)} ${i18n.t("project.commissioning")}`;
+
+    return `
+        <span
+            class="node-article-commissioning-badge"
+            role="img"
+            aria-label="${label}"
+            title="${label}"
+        ><span>${commissioningType}</span></span>
+    `;
+
+}
+
+function renderNodeRequirementBadges(
+    article,
+    quantity,
+    nodeArticle
+) {
+
+    const badges = [
+        renderNodeGridVisBadge(article, quantity, nodeArticle),
+        renderNodeCommissioningBadge(article, quantity, nodeArticle)
+    ]
+        .filter(Boolean)
+        .join("");
+
+    if (!badges) return "";
+
+    return `
+        <div class="node-article-requirement-badges">
+            ${badges}
+        </div>
     `;
 
 }
@@ -3032,6 +3088,16 @@ function calculateProjectTotals(
 
                     }
 
+                    const commissioningType =
+                        getCommissioningType(
+                            article
+                        );
+
+                    if (commissioningType !== null) {
+                        totals.commissioningCount += quantity;
+                        totals.commissioningCounts[commissioningType] += quantity;
+                    }
+
                     if (
                         article?.gridVisItems === null
                         || article?.gridVisItems === undefined
@@ -3070,7 +3136,15 @@ function calculateProjectTotals(
                     alternativeProjectDiscountableTotal: 0,
                     projectDiscountablePrice: 0,
                     gridVisItems: 0,
-                    gridVisUncheckedPositions: 0
+                    gridVisUncheckedPositions: 0,
+                    commissioningCount: 0,
+                    commissioningCounts: {
+                        1: 0,
+                        2: 0,
+                        3: 0,
+                        4: 0,
+                        5: 0
+                    }
                 }
             );
 
@@ -3116,93 +3190,127 @@ function renderProjectPriceSummary(
         ? totals.alternativeDiscountedTotal
         : totals.alternativeListTotal;
 
+    const commissioningTypes = [1, 2, 3, 4, 5];
+
     return `
 
-        <div class="project-price-summary-item">
+        <div class="project-price-summary-row project-price-summary-money-row">
 
-            <span>
-                ${i18n.t("project.listPrice")}
-            </span>
+            <div class="project-price-summary-item">
 
-            <strong>
-                ${formatCurrency(totals.listPrice)}
-            </strong>
+                <span>
+                    ${i18n.t("project.listPrice")}
+                </span>
+
+                <strong>
+                    ${formatCurrency(totals.listPrice)}
+                </strong>
+
+            </div>
+
+            <div class="project-price-summary-item">
+
+                <span>
+                    ${i18n.t("project.discount")}
+                </span>
+
+                <strong>
+                    ${formatCurrency(totals.discount)}
+                </strong>
+
+            </div>
+
+            <div class="project-price-summary-item">
+
+                <span>
+                    ${i18n.t("project.projectDiscount")}
+                </span>
+
+                <strong>
+                    ${formatCurrency(totals.projectDiscount ?? 0)}
+                </strong>
+
+            </div>
+
+            <div class="project-price-summary-item project-price-summary-total">
+
+                <span>
+                    ${i18n.t("project.discountedPrice")}
+                </span>
+
+                <strong>
+                    ${formatCurrency(totals.discountedPrice)}
+                </strong>
+
+            </div>
+
+            <div class="project-price-summary-item project-price-summary-special">
+
+                <span>
+                    ${i18n.t("project.optionalTotal")}
+                </span>
+
+                <strong>
+                    ${formatCurrency(optionalTotal ?? 0)}
+                </strong>
+
+            </div>
+
+            <div class="project-price-summary-item project-price-summary-special">
+
+                <span>
+                    ${i18n.t("project.alternativeTotal")}
+                </span>
+
+                <strong>
+                    ${formatCurrency(alternativeTotal ?? 0)}
+                </strong>
+
+            </div>
 
         </div>
 
-        <div class="project-price-summary-item">
+        <div class="project-price-summary-row project-price-summary-requirements-row">
 
-            <span>
-                ${i18n.t("project.discount")}
-            </span>
+            <div class="project-price-summary-item project-price-summary-special project-gridvis-summary">
 
-            <strong>
-                ${formatCurrency(totals.discount)}
-            </strong>
+                <span class="project-gridvis-summary-label">
+                    <span>${i18n.t("project.required")}</span>
+                    <span>${i18n.t("project.gridVisItems")}</span>
+                </span>
 
-        </div>
+                <strong>
+                    ${formatQuantity(totals.gridVisItems ?? 0)}
+                    ${totals.gridVisUncheckedPositions
+                        ? ` + ${totals.gridVisUncheckedPositions} ${i18n.t("project.gridVisUnchecked")}`
+                        : ""}
+                </strong>
 
-        <div class="project-price-summary-item">
+            </div>
 
-            <span>
-                ${i18n.t("project.projectDiscount")}
-            </span>
+            <div class="project-price-summary-item project-price-summary-special project-commissioning-summary">
 
-            <strong>
-                ${formatCurrency(totals.projectDiscount ?? 0)}
-            </strong>
+                <span class="project-gridvis-summary-label">
+                    <span>${i18n.t("project.required")}</span>
+                    <span>${i18n.t("project.commissioning")}</span>
+                </span>
 
-        </div>
+                <div class="project-commissioning-counts">
+                    ${commissioningTypes
+                        .map(type => `
+                            <span class="project-commissioning-count">
+                                <span class="project-commissioning-count-label">
+                                    ${i18n.t("project.type")} ${type}
+                                </span>
+                                <strong>
+                                    ${formatQuantity(totals.commissioningCounts?.[type] ?? 0)}
+                                </strong>
+                            </span>
+                        `)
+                        .join("")}
+                </div>
 
-        <div class="project-price-summary-item project-price-summary-total">
-
-            <span>
-                ${i18n.t("project.discountedPrice")}
-            </span>
-
-            <strong>
-                ${formatCurrency(totals.discountedPrice)}
-            </strong>
-
-        </div>
-
-        <div class="project-price-summary-item project-price-summary-special project-gridvis-summary">
-
-            <span class="project-gridvis-summary-label">
-                <span>${i18n.t("project.required")}</span>
-                <span>${i18n.t("project.gridVisItems")}</span>
-            </span>
-
-            <strong>
-                ${formatQuantity(totals.gridVisItems ?? 0)}
-                ${totals.gridVisUncheckedPositions
-                    ? ` + ${totals.gridVisUncheckedPositions} ${i18n.t("project.gridVisUnchecked")}`
-                    : ""}
-            </strong>
-
-        </div>
-
-        <div class="project-price-summary-item project-price-summary-special">
-
-            <span>
-                ${i18n.t("project.optionalTotal")}
-            </span>
-
-            <strong>
-                ${formatCurrency(optionalTotal ?? 0)}
-            </strong>
-
-        </div>
-
-        <div class="project-price-summary-item project-price-summary-special">
-
-            <span>
-                ${i18n.t("project.alternativeTotal")}
-            </span>
-
-            <strong>
-                ${formatCurrency(alternativeTotal ?? 0)}
-            </strong>
+            </div>
 
         </div>
 

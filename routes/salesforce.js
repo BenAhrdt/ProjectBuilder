@@ -103,6 +103,80 @@ function overviewLabels() {
     };
 }
 
+function buildEffectiveProjectNodeLabels(nodes = [], labels = [], settings = [], hiddenLabels = []) {
+    const nodeIds = new Set(nodes.map(node => String(node.id)));
+    const labelsByNodeId = new Map();
+    labels.forEach(label => {
+        const nodeId = String(label.projectNodeId);
+        if (!labelsByNodeId.has(nodeId)) {
+            labelsByNodeId.set(nodeId, []);
+        }
+        labelsByNodeId.get(nodeId).push(label);
+    });
+    const settingsByNodeId = new Map(
+        settings.map(item => [String(item.projectNodeId), item])
+    );
+    const hiddenByNodeId = new Map();
+    hiddenLabels.forEach(item => {
+        const nodeId = String(item.projectNodeId);
+        if (!hiddenByNodeId.has(nodeId)) {
+            hiddenByNodeId.set(nodeId, new Set());
+        }
+        hiddenByNodeId.get(nodeId).add(String(item.sourceProjectNodeLabelId));
+    });
+    const childrenByParentId = new Map();
+    nodes.forEach(node => {
+        const parentId = node.parentId != null && nodeIds.has(String(node.parentId))
+            ? String(node.parentId)
+            : "root";
+        if (!childrenByParentId.has(parentId)) {
+            childrenByParentId.set(parentId, []);
+        }
+        childrenByParentId.get(parentId).push(node);
+    });
+    childrenByParentId.forEach(children => children.sort((first, second) => {
+        const firstOrder = Number.isFinite(Number(first.sortOrder)) ? Number(first.sortOrder) : Number(first.id);
+        const secondOrder = Number.isFinite(Number(second.sortOrder)) ? Number(second.sortOrder) : Number(second.id);
+        return firstOrder - secondOrder || Number(first.id) - Number(second.id);
+    }));
+
+    const effectiveLabels = [];
+    const visit = (node, incomingLabels = []) => {
+        const nodeId = String(node.id);
+        const nodeSettings = settingsByNodeId.get(nodeId) ?? {
+            inheritToChildren: 1,
+            inheritFromParent: 1
+        };
+        const inheritedLabels = node.parentId == null || nodeSettings.inheritFromParent !== 0
+            ? incomingLabels
+            : [];
+        const hiddenIds = hiddenByNodeId.get(nodeId) ?? new Set();
+        const visibleInheritedLabels = inheritedLabels
+            .filter(label => !hiddenIds.has(String(label.sourceProjectNodeLabelId)))
+            .map(label => ({
+                ...label,
+                projectNodeId: node.id,
+                isInherited: true
+            }));
+        const ownLabels = (labelsByNodeId.get(nodeId) ?? []).map(label => ({
+            ...label,
+            projectNodeId: node.id,
+            isInherited: false,
+            sourceProjectNodeId: node.id,
+            sourceProjectNodeLabelId: label.id
+        }));
+        const nodeEffectiveLabels = [...visibleInheritedLabels, ...ownLabels];
+        effectiveLabels.push(...nodeEffectiveLabels);
+        const labelsForChildren = nodeSettings.inheritToChildren === 0
+            ? []
+            : nodeEffectiveLabels;
+        (childrenByParentId.get(nodeId) ?? []).forEach(child => visit(child, labelsForChildren));
+    };
+
+    (childrenByParentId.get("root") ?? []).forEach(node => visit(node));
+    return effectiveLabels;
+}
+
 function buildOverviewPdf(documents, project) {
     const pages = [
         { title: "Gesamtübersicht", breadcrumb: project.name ?? "", diagram: documents.overviewDiagram },
@@ -138,12 +212,51 @@ function buildOverviewPdf(documents, project) {
 
 async function synchronizeProjectDocuments(opportunityId, project, nodes, nodeArticles, selected) {
     const exportData = buildProjectExportData(project, nodes, nodeArticles);
+    const nodeIds = nodes.map(node => node.id);
+    const articleIds = nodeArticles.map(nodeArticle => nodeArticle.id);
+    const nodeLabels = nodeIds.length === 0 ? [] : database.projectNodeLabels.prepare(`
+        SELECT * FROM projectNodeLabels
+        WHERE projectNodeId IN (${nodeIds.map(() => "?").join(",")})
+        ORDER BY projectNodeId, side, sortOrder, id
+    `).all(...nodeIds);
+    const nodeLabelSettings = nodeIds.length === 0 ? [] : database.projectNodeLabelSettings.prepare(`
+        SELECT * FROM projectNodeLabelSettings
+        WHERE projectNodeId IN (${nodeIds.map(() => "?").join(",")})
+    `).all(...nodeIds);
+    const nodeLabelHidden = nodeIds.length === 0 ? [] : database.projectNodeLabelHidden.prepare(`
+        SELECT * FROM projectNodeLabelHidden
+        WHERE projectNodeId IN (${nodeIds.map(() => "?").join(",")})
+    `).all(...nodeIds);
+    const effectiveNodeLabels = buildEffectiveProjectNodeLabels(
+        nodes,
+        nodeLabels,
+        nodeLabelSettings,
+        nodeLabelHidden
+    );
+    const articleLabels = articleIds.length === 0 ? [] : database.projectArticleLabels.prepare(`
+        SELECT * FROM projectArticleLabels
+        WHERE projectNodeArticleId IN (${articleIds.map(() => "?").join(",")})
+        ORDER BY projectNodeArticleId, side, sortOrder, id
+    `).all(...articleIds);
+    const articleLabelSettings = articleIds.length === 0 ? [] : database.projectArticleLabelSettings.prepare(`
+        SELECT * FROM projectArticleLabelSettings
+        WHERE projectNodeArticleId IN (${articleIds.map(() => "?").join(",")})
+    `).all(...articleIds);
+    const articleLabelHidden = articleIds.length === 0 ? [] : database.projectArticleLabelHidden.prepare(`
+        SELECT * FROM projectArticleLabelHidden
+        WHERE projectNodeArticleId IN (${articleIds.map(() => "?").join(",")})
+    `).all(...articleIds);
     const baseName = String(project.name || "Projekt").replace(/[\\/:*?"<>|]/g, "_").slice(0, 100);
     const generators = {
         overview: async () => {
             const documents = buildOverviewDocuments({
                 project, customer: { name: project.customerName }, nodes, nodeArticles,
                 articles: nodeArticles, labels: overviewLabels(), showPrices: true,
+                nodeLabels: effectiveNodeLabels,
+                nodeLabelSettings,
+                articleLabels,
+                articleLabelSettings,
+                articleLabelHidden,
                 priceMode: "discounted",
                 getArticleIcon: getExportArticleIconDataUri,
                 getArticleDiscountPercent: article => {

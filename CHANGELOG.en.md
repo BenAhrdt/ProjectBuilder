@@ -2,6 +2,25 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.53 - 2026-11-12
+
+### Added
+
+- Structure nodes can now have multiple colored labels. Reusable label
+  templates can be created, replaced, deleted and applied directly from the
+  three-dot menu.
+- Labels can be inherited by child structure nodes and articles. Inheritance
+  can be disabled per level, and individual inherited labels can be hidden.
+  Articles do not inherit further.
+- Article labels are shown in the project tree, overview plan and detail pages.
+  Inheritance rules are also preserved in project files, duplicates and
+  server-generated Salesforce documents.
+
+### Improved
+
+- Inherited labels are visually distinguished from local labels in the project
+  tree and overview plan.
+
 ## 1.5.52 - 2026-11-12
 
 ### Fixed

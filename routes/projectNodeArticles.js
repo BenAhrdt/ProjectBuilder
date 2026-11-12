@@ -507,6 +507,19 @@ router.delete(
     "/:id",
     (req, res) => {
 
+        database.projectArticleLabelHidden.prepare(`
+            DELETE FROM projectArticleLabelHidden
+            WHERE projectNodeArticleId = ?
+        `).run(req.params.id);
+        database.projectArticleLabelSettings.prepare(`
+            DELETE FROM projectArticleLabelSettings
+            WHERE projectNodeArticleId = ?
+        `).run(req.params.id);
+        database.projectArticleLabels.prepare(`
+            DELETE FROM projectArticleLabels
+            WHERE projectNodeArticleId = ?
+        `).run(req.params.id);
+
         database.projectNodeArticles.prepare(`
 
             DELETE FROM projectNodeArticles
@@ -534,6 +547,25 @@ router.delete(
             projectNodeId,
             articleNumber
         } = req.params;
+
+        const article = database.projectNodeArticles.prepare(`
+            SELECT id FROM projectNodeArticles
+            WHERE projectNodeId = ? AND articleNumber = ?
+        `).get(projectNodeId, articleNumber);
+        if (article) {
+            database.projectArticleLabelHidden.prepare(`
+                DELETE FROM projectArticleLabelHidden
+                WHERE projectNodeArticleId = ?
+            `).run(article.id);
+            database.projectArticleLabelSettings.prepare(`
+                DELETE FROM projectArticleLabelSettings
+                WHERE projectNodeArticleId = ?
+            `).run(article.id);
+            database.projectArticleLabels.prepare(`
+                DELETE FROM projectArticleLabels
+                WHERE projectNodeArticleId = ?
+            `).run(article.id);
+        }
 
         database.projectNodeArticles.prepare(`
 

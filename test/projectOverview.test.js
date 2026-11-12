@@ -84,6 +84,14 @@ test(
                 ],
                 getArticleIcon: () =>
                     "/icons/umg800.png",
+                articleLabels: [
+                    {
+                        projectNodeArticleId: 1,
+                        text: "Artikel",
+                        color: "#2f6fb4",
+                        side: "left"
+                    }
+                ],
                 labels
             });
 
@@ -108,12 +116,108 @@ test(
         );
         assert.match(
             diagram.svg,
+            /Artikel/
+        );
+        assert.match(
+            diagram.svg,
             /project-overview-connectors/
         );
         assert.doesNotMatch(
             diagram.svg,
             /unrelated/
         );
+    }
+);
+
+test(
+    "inherits effective node labels to articles without propagating from articles",
+    () => {
+        const diagram = buildOverviewDiagram({
+            project: { name: "Labelprojekt" },
+            nodes: [
+                {
+                    id: 1,
+                    parentId: null,
+                    type: "meter",
+                    name: "Messgruppe"
+                }
+            ],
+            nodeArticles: [
+                {
+                    id: 1,
+                    projectNodeId: 1,
+                    articleNumber: "5238002",
+                    quantity: 1
+                }
+            ],
+            articles: [
+                {
+                    articleNumber: "5238002",
+                    manufacturerType: "UMG 800"
+                }
+            ],
+            getArticleIcon: () => "/icons/umg800.png",
+            nodeLabels: [
+                {
+                    projectNodeId: 1,
+                    text: "AV",
+                    color: "#2f6fb4",
+                    side: "left"
+                }
+            ],
+            labels
+        });
+
+        assert.ok((diagram.svg.match(/>AV</g) ?? []).length >= 2);
+    }
+);
+
+test(
+    "does not pass node labels to articles when child inheritance is disabled",
+    () => {
+        const diagram = buildOverviewDiagram({
+            project: { name: "Labelprojekt" },
+            nodes: [
+                {
+                    id: 1,
+                    parentId: null,
+                    type: "meter",
+                    name: "Messgruppe"
+                }
+            ],
+            nodeArticles: [
+                {
+                    id: 1,
+                    projectNodeId: 1,
+                    articleNumber: "5238002",
+                    quantity: 1
+                }
+            ],
+            articles: [
+                {
+                    articleNumber: "5238002",
+                    manufacturerType: "UMG 800"
+                }
+            ],
+            getArticleIcon: () => "/icons/umg800.png",
+            nodeLabels: [
+                {
+                    projectNodeId: 1,
+                    text: "AV",
+                    color: "#2f6fb4",
+                    side: "left"
+                }
+            ],
+            nodeLabelSettings: [
+                {
+                    projectNodeId: 1,
+                    inheritToChildren: false
+                }
+            ],
+            labels
+        });
+
+        assert.equal((diagram.svg.match(/>AV</g) ?? []).length, 2);
     }
 );
 

@@ -8,6 +8,8 @@ import customersRouter from "./routes/customers.js";
 import projectsRouter from "./routes/projects.js";
 import projectNodesRouter from "./routes/projectNodes.js";
 import projectNodeArticlesRouter from "./routes/projectNodeArticles.js";
+import projectLabelsRouter from "./routes/projectLabels.js";
+import projectArticleLabelsRouter from "./routes/projectArticleLabels.js";
 import settingsRouter from "./routes/settings.js";
 import backupsRouter from "./routes/backups.js";
 import databaseRouter from "./routes/database.js";
@@ -148,6 +150,15 @@ app.use(
 app.use(
     "/api/projectNodeArticles",
     projectNodeArticlesRouter
+);
+
+app.use(
+    "/api/projectNodeLabels",
+    projectLabelsRouter
+);
+app.use(
+    "/api/projectArticleLabels",
+    projectArticleLabelsRouter
 );
 
 app.use("/api/settings", settingsRouter);

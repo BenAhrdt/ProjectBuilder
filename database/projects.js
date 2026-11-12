@@ -59,7 +59,8 @@ for (const [name, definition] of [
     ["salesforceShowAdditionalDiscount", "INTEGER DEFAULT 0"],
     ["salesforceShowAdditionalDiscountConfigured", "INTEGER DEFAULT 0"],
     ["salesforceExportQuote", "INTEGER"],
-    ["salesforceUploadProjectFile", "INTEGER DEFAULT 1"]
+    ["salesforceUploadProjectFile", "INTEGER DEFAULT 1"],
+    ["overviewColors", "TEXT DEFAULT '{}'"]
 ]) {
     if (!columns.includes(name)) {
         database.exec(`ALTER TABLE projects ADD COLUMN ${name} ${definition}`);

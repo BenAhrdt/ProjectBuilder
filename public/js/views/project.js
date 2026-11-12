@@ -31,6 +31,13 @@ let currentArticles = [];
 let currentNodeArticles = [];
 let currentProject = null;
 let currentProjectCustomer = null;
+let currentProjectNodeLabels = [];
+let currentProjectNodeLabelSettings = [];
+let currentProjectNodeLabelHidden = [];
+let currentProjectArticleLabels = [];
+let currentProjectArticleLabelSettings = [];
+let currentProjectArticleLabelHidden = [];
+let currentProjectLabelTemplates = [];
 let currentStructurePriceMode = "discounted";
 let articleSwapMode = false;
 let draggedArticleNumber = null;
@@ -427,22 +434,35 @@ async function renderView(
         customerResponse,
         nodesResponse,
         nodeArticlesResponse,
+        nodeLabelsResponse,
+        articleLabelsResponse,
+        labelTemplatesResponse,
         projectCustomer
     ] = await Promise.all([
         fetch("/api/articles"),
         fetch("/api/customers"),
         fetch(`/api/projectNodes/${projectId}`),
         fetch(`/api/projectNodeArticles?projectId=${encodeURIComponent(projectId)}`),
+        fetch(`/api/projectNodeLabels?projectId=${encodeURIComponent(projectId)}`),
+        fetch(`/api/projectArticleLabels?projectId=${encodeURIComponent(projectId)}`),
+        fetch("/api/projectNodeLabels/templates"),
         loadProjectCustomer(project.customerId)
     ]);
 
-    const [articles, customers, nodes, nodeArticles] =
+    const [articles, customers, nodes, nodeArticles, nodeLabelData, articleLabelData, labelTemplates] =
         await Promise.all([
             articleResponse.json(),
             customerResponse.json(),
             nodesResponse.json(),
-            nodeArticlesResponse.json()
+            nodeArticlesResponse.json(),
+            nodeLabelsResponse.json(),
+            articleLabelsResponse.json(),
+            labelTemplatesResponse.json()
         ]);
+
+    const nodeLabels = Array.isArray(nodeLabelData)
+        ? nodeLabelData
+        : Array.isArray(nodeLabelData?.labels) ? nodeLabelData.labels : [];
 
     currentArticles =
         articles;
@@ -465,6 +485,23 @@ async function renderView(
 
     currentNodeArticles =
         nodeArticles;
+    currentProjectNodeLabels =
+        Array.isArray(nodeLabels) ? nodeLabels : [];
+    currentProjectNodeLabelSettings =
+        Array.isArray(nodeLabelData?.settings) ? nodeLabelData.settings : [];
+    currentProjectNodeLabelHidden =
+        Array.isArray(nodeLabelData?.hiddenLabelIds) ? nodeLabelData.hiddenLabelIds : [];
+    const articleLabels = Array.isArray(articleLabelData)
+        ? articleLabelData
+        : Array.isArray(articleLabelData?.labels) ? articleLabelData.labels : [];
+    currentProjectArticleLabels =
+        Array.isArray(articleLabels) ? articleLabels : [];
+    currentProjectArticleLabelSettings =
+        Array.isArray(articleLabelData?.settings) ? articleLabelData.settings : [];
+    currentProjectArticleLabelHidden =
+        Array.isArray(articleLabelData?.hiddenLabelIds) ? articleLabelData.hiddenLabelIds : [];
+    currentProjectLabelTemplates =
+        Array.isArray(labelTemplates) ? labelTemplates : [];
 
     const nodeTotals =
         calculateNodeTotals(
@@ -726,7 +763,7 @@ async function renderView(
 
                     <div id="project-tree">
 
-                        ${renderNodes(nodes, nodeArticles, articles, nodeTotals)}
+                        ${renderNodes(nodes, nodeArticles, articles, nodeTotals, getEffectiveProjectNodeLabels(nodes), getEffectiveProjectArticleLabels(nodeArticles, nodes))}
 
                     </div>
 
@@ -1648,23 +1685,34 @@ async function refreshProjectTree(
 
     await waitForPendingNodeArticleQuantities();
 
-    const nodesResponse =
-        await fetch(
+    const [nodesResponse, nodeArticlesResponse, nodeLabelsResponse, articleLabelsResponse] =
+        await Promise.all([
+            fetch(`/api/projectNodes/${projectId}`),
+            fetch("/api/projectNodeArticles"),
+            fetch(`/api/projectNodeLabels?projectId=${encodeURIComponent(projectId)}`),
+            fetch(`/api/projectArticleLabels?projectId=${encodeURIComponent(projectId)}`)
+        ]);
 
-            `/api/projectNodes/${projectId}`
-
-        );
-
-    currentNodes =
-        await nodesResponse.json();
-
-    const nodeArticlesResponse =
-        await fetch(
-            "/api/projectNodeArticles"
-        );
-
-    currentNodeArticles =
-        await nodeArticlesResponse.json();
+    currentNodes = await nodesResponse.json();
+    currentNodeArticles = await nodeArticlesResponse.json();
+    const nodeLabelData = await nodeLabelsResponse.json();
+    const nodeLabels = Array.isArray(nodeLabelData)
+        ? nodeLabelData
+        : Array.isArray(nodeLabelData?.labels) ? nodeLabelData.labels : [];
+    currentProjectNodeLabels = nodeLabels;
+    currentProjectNodeLabelSettings =
+        Array.isArray(nodeLabelData?.settings) ? nodeLabelData.settings : [];
+    currentProjectNodeLabelHidden =
+        Array.isArray(nodeLabelData?.hiddenLabelIds) ? nodeLabelData.hiddenLabelIds : [];
+    const articleLabelData = await articleLabelsResponse.json();
+    const articleLabels = Array.isArray(articleLabelData)
+        ? articleLabelData
+        : Array.isArray(articleLabelData?.labels) ? articleLabelData.labels : [];
+    currentProjectArticleLabels = Array.isArray(articleLabels) ? articleLabels : [];
+    currentProjectArticleLabelSettings =
+        Array.isArray(articleLabelData?.settings) ? articleLabelData.settings : [];
+    currentProjectArticleLabelHidden =
+        Array.isArray(articleLabelData?.hiddenLabelIds) ? articleLabelData.hiddenLabelIds : [];
 
     currentProjectCustomer =
         await loadSelectedProjectCustomer();
@@ -1692,7 +1740,9 @@ async function refreshProjectTree(
             currentNodes,
             currentNodeArticles,
             currentArticles,
-            nodeTotals
+            nodeTotals,
+            getEffectiveProjectNodeLabels(currentNodes),
+            getEffectiveProjectArticleLabels(currentNodeArticles, currentNodes)
         );
 
     registerNodeButtons(
@@ -2316,12 +2366,197 @@ function registerProjectArticleSwapMode() {
     updateButton();
 }
 
-// Render Nodes
-function renderNodes(nodes, nodeArticles, articles, nodeTotals) {
-    return renderChildNodes(nodes, nodeArticles, articles, nodeTotals, null);
+function getProjectNodeLabelSettings(nodeId) {
+
+    const settings = currentProjectNodeLabelSettings.find(item =>
+        String(item.projectNodeId) === String(nodeId)
+    );
+
+    return {
+        projectNodeId: Number(nodeId),
+        inheritToChildren: settings == null
+            || (settings.inheritToChildren !== 0 && settings.inheritToChildren !== false),
+        inheritFromParent: settings == null
+            || (settings.inheritFromParent !== 0 && settings.inheritFromParent !== false)
+    };
+
 }
 
-function renderChildNodes(nodes, nodeArticles, articles, nodeTotals, parentId) {
+function getProjectNodeLabelState(nodes = currentNodes) {
+
+    const localLabelsByNodeId = new Map();
+    currentProjectNodeLabels.forEach(label => {
+        const nodeId = String(label.projectNodeId);
+        if (!localLabelsByNodeId.has(nodeId)) {
+            localLabelsByNodeId.set(nodeId, []);
+        }
+        localLabelsByNodeId.get(nodeId).push(label);
+    });
+
+    const hiddenByNodeId = new Map();
+    currentProjectNodeLabelHidden.forEach(item => {
+        const nodeId = String(item.projectNodeId);
+        if (!hiddenByNodeId.has(nodeId)) {
+            hiddenByNodeId.set(nodeId, new Set());
+        }
+        hiddenByNodeId.get(nodeId).add(String(item.sourceProjectNodeLabelId ?? item));
+    });
+
+    const nodesByParentId = new Map();
+    const nodeIds = new Set(nodes.map(node => String(node.id)));
+    nodes.forEach(node => {
+        const parentId = node.parentId != null && nodeIds.has(String(node.parentId))
+            ? String(node.parentId)
+            : "root";
+        if (!nodesByParentId.has(parentId)) {
+            nodesByParentId.set(parentId, []);
+        }
+        nodesByParentId.get(parentId).push(node);
+    });
+    nodesByParentId.forEach(children => children.sort((first, second) =>
+        Number(first.sortOrder || first.id) - Number(second.sortOrder || second.id)
+    ));
+
+    const effectiveLabelsByNodeId = new Map();
+    const inheritedLabelsByNodeId = new Map();
+    const visit = (node, incomingLabels = []) => {
+        const nodeId = String(node.id);
+        const settings = getProjectNodeLabelSettings(node.id);
+        const inheritedLabels = node.parentId == null || settings.inheritFromParent
+            ? incomingLabels
+            : [];
+        inheritedLabelsByNodeId.set(nodeId, inheritedLabels);
+
+        const hiddenIds = hiddenByNodeId.get(nodeId) ?? new Set();
+        const visibleInheritedLabels = inheritedLabels
+            .filter(label => !hiddenIds.has(String(label.sourceProjectNodeLabelId)))
+            .map(label => ({
+                ...label,
+                projectNodeId: node.id,
+                isInherited: true
+            }));
+        const ownLabels = (localLabelsByNodeId.get(nodeId) ?? [])
+            .map(label => ({
+                ...label,
+                projectNodeId: node.id,
+                isInherited: false,
+                sourceProjectNodeId: node.id,
+                sourceProjectNodeLabelId: label.id
+            }));
+        const effectiveLabels = [...visibleInheritedLabels, ...ownLabels];
+        effectiveLabelsByNodeId.set(nodeId, effectiveLabels);
+
+        const labelsForChildren = settings.inheritToChildren
+            ? effectiveLabels
+            : [];
+        (nodesByParentId.get(nodeId) ?? []).forEach(child =>
+            visit(child, labelsForChildren)
+        );
+    };
+
+    (nodesByParentId.get("root") ?? []).forEach(node => visit(node));
+
+    return {
+        effectiveLabelsByNodeId,
+        inheritedLabelsByNodeId
+    };
+
+}
+
+function getEffectiveProjectNodeLabels(nodes = currentNodes) {
+
+    const state = getProjectNodeLabelState(nodes);
+    return Array.from(state.effectiveLabelsByNodeId.values()).flat();
+
+}
+
+function getProjectNodeInheritedLabels(nodeId, nodes = currentNodes) {
+
+    return getProjectNodeLabelState(nodes)
+        .inheritedLabelsByNodeId
+        .get(String(nodeId))
+        ?? [];
+
+}
+
+function getProjectArticleLabelSettings(articleId) {
+
+    const settings = currentProjectArticleLabelSettings.find(item =>
+        String(item.projectNodeArticleId) === String(articleId)
+    );
+
+    return {
+        projectNodeArticleId: Number(articleId),
+        inheritFromParent: settings == null
+            || (settings.inheritFromParent !== 0 && settings.inheritFromParent !== false)
+    };
+
+}
+
+function getProjectArticleInheritedLabels(article, nodes = currentNodes, effectiveNodeLabels = null) {
+
+    if (!getProjectArticleLabelSettings(article.id).inheritFromParent) {
+        return [];
+    }
+    if (!getProjectNodeLabelSettings(article.projectNodeId).inheritToChildren) {
+        return [];
+    }
+
+    const hiddenIds = new Set(
+        currentProjectArticleLabelHidden
+            .filter(item => String(item.projectNodeArticleId) === String(article.id))
+            .map(item => String(item.sourceProjectNodeLabelId ?? item))
+    );
+
+    return (effectiveNodeLabels ?? getEffectiveProjectNodeLabels(nodes))
+        .filter(label => String(label.projectNodeId) === String(article.projectNodeId))
+        .filter(label => !hiddenIds.has(String(label.sourceProjectNodeLabelId)))
+        .map(label => ({
+            ...label,
+            projectNodeArticleId: article.id,
+            isInherited: true
+        }));
+
+}
+
+function getEffectiveProjectArticleLabels(articles = currentNodeArticles, nodes = currentNodes) {
+
+    const effectiveNodeLabels = getEffectiveProjectNodeLabels(nodes);
+
+    return articles.flatMap(article => [
+        ...getProjectArticleInheritedLabels(article, nodes, effectiveNodeLabels),
+        ...currentProjectArticleLabels
+            .filter(label => String(label.projectNodeArticleId) === String(article.id))
+            .map(label => ({
+                ...label,
+                isInherited: false,
+                sourceProjectNodeArticleLabelId: label.id
+            }))
+    ]);
+
+}
+
+// Render Nodes
+function renderNodes(nodes, nodeArticles, articles, nodeTotals, nodeLabels = [], articleLabels = []) {
+    return renderChildNodes(nodes, nodeArticles, articles, nodeTotals, null, nodeLabels, articleLabels);
+}
+
+function renderChildNodes(nodes, nodeArticles, articles, nodeTotals, parentId, nodeLabels = [], articleLabels = []) {
+
+    const labelsByNodeId = new Map();
+    nodeLabels.forEach(label => {
+        const key = String(label.projectNodeId ?? label.nodeId ?? "");
+        if (!key) return;
+        if (!labelsByNodeId.has(key)) labelsByNodeId.set(key, []);
+        labelsByNodeId.get(key).push(label);
+    });
+    const articleLabelsById = new Map();
+    articleLabels.forEach(label => {
+        const key = String(label.projectNodeArticleId ?? label.articleId ?? "");
+        if (!key) return;
+        if (!articleLabelsById.has(key)) articleLabelsById.set(key, []);
+        articleLabelsById.get(key).push(label);
+    });
 
     const getArticlesForNode =
         nodeId =>
@@ -2380,7 +2615,8 @@ function renderChildNodes(nodes, nodeArticles, articles, nodeTotals, parentId) {
                     parentId,
                     item.article.articleNumber,
                     fullArticle,
-                    item.article
+                    item.article,
+                    articleLabelsById.get(String(item.article.id)) ?? []
                 );
 
             }
@@ -2435,6 +2671,8 @@ function renderChildNodes(nodes, nodeArticles, articles, nodeTotals, parentId) {
                             (${formatCurrency(nodeTotals.get(String(node.id)) ?? 0)})
                         </span>
 
+                        ${renderProjectNodeLabels(labelsByNodeId.get(String(node.id)) ?? [])}
+
                     </span>
 
                     ${nextNodeType ? `
@@ -2488,6 +2726,15 @@ function renderChildNodes(nodes, nodeArticles, articles, nodeTotals, parentId) {
 
                             <button
                                 type="button"
+                                data-action="labels"
+                            >
+                                ${i18n.t("project.editLabels")}
+                            </button>
+
+                            ${renderProjectLabelTemplateSubmenu()}
+
+                            <button
+                                type="button"
                                 data-action="position-name"
                             >
                                 ${i18n.t("project.positionName")}
@@ -2529,7 +2776,9 @@ function renderChildNodes(nodes, nodeArticles, articles, nodeTotals, parentId) {
                         nodeArticles,
                         articles,
                         nodeTotals,
-                        node.id
+                        node.id,
+                        nodeLabels,
+                        articleLabels
                     )}
 
                 </div>
@@ -2540,6 +2789,586 @@ function renderChildNodes(nodes, nodeArticles, articles, nodeTotals, parentId) {
 
         }).join("");
 
+}
+
+function renderProjectNodeLabels(labels = [], extraClass = "") {
+    if (!labels.length) {
+        return "";
+    }
+    return `
+        <span class="project-node-labels ${escapeAttribute(extraClass)}" aria-label="${escapeAttribute(i18n.t("project.labels"))}">
+            ${labels
+                .slice()
+                .sort((first, second) => Number(first.sortOrder || 0) - Number(second.sortOrder || 0))
+                .map(label => `
+                    <span
+                        class="project-node-label${label.isInherited ? " project-node-label-inherited" : ""}"
+                        style="--project-label-color:${escapeAttribute(label.color || "#2f6fb4")}"
+                        title="${escapeAttribute(label.isInherited ? `${label.text} (${i18n.t("project.inheritedLabel")})` : label.text)}"
+                    >${escapeHtml(label.text)}</span>
+                `).join("")}
+        </span>
+    `;
+}
+
+function getProjectLabelTemplateLabels(template) {
+
+    if (Array.isArray(template?.labels) && template.labels.length > 0) {
+        return template.labels.map(label => ({ ...label }));
+    }
+
+    return template?.text
+        ? [{
+            text: template.text,
+            color: template.color,
+            side: template.side,
+            sortOrder: template.sortOrder
+        }]
+        : [];
+
+}
+
+function renderProjectLabelTemplateSubmenu() {
+
+    const templateButtons = currentProjectLabelTemplates.length > 0
+        ? currentProjectLabelTemplates.map(template => `
+            <button
+                type="button"
+                data-action="apply-label-template"
+                data-template-id="${escapeAttribute(template.id)}"
+            >${escapeHtml(template.name)}</button>
+        `).join("")
+        : `<span class="project-menu-submenu-empty">${escapeHtml(i18n.t("project.noLabelTemplates"))}</span>`;
+
+    return `
+        <div class="project-menu-submenu">
+            <button
+                type="button"
+                class="project-menu-submenu-button"
+                data-action="label-template-menu"
+                aria-haspopup="true"
+            >
+                ${i18n.t("project.labelTemplate")}
+                <span aria-hidden="true">›</span>
+            </button>
+            <div class="project-menu-submenu-options">
+                ${templateButtons}
+                <button
+                    type="button"
+                    data-action="create-label-template"
+                >${i18n.t("project.createLabelTemplate")}</button>
+            </div>
+        </div>
+    `;
+
+}
+
+async function applyProjectLabelTemplate({
+    templateId,
+    existingLabels,
+    saveUrl,
+    onSaved = () => {}
+}) {
+
+    const template = currentProjectLabelTemplates.find(item =>
+        String(item.id) === String(templateId)
+    );
+
+    if (!template) {
+        return false;
+    }
+
+    const labels = [
+        ...existingLabels,
+        ...getProjectLabelTemplateLabels(template)
+    ]
+        .filter(label => String(label.text ?? "").trim())
+        .map((label, index) => ({
+            ...label,
+            sortOrder: index
+        }));
+
+    const response = await fetch(saveUrl, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ labels })
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+        await showAlert(
+            result.error || i18n.t("project.labelsSaveFailed"),
+            { title: i18n.t("project.labelTemplate") }
+        );
+        return false;
+    }
+
+    onSaved(result.labels ?? []);
+    return true;
+
+}
+
+function openProjectLabelTemplateEditor({ template = null, initialLabels = [] } = {}) {
+
+    return new Promise(resolve => {
+        const startingLabels = getProjectLabelTemplateLabels(template);
+        const rows = (startingLabels.length > 0 ? startingLabels : initialLabels)
+            .map(label => ({ ...label }));
+        if (rows.length === 0) {
+            rows.push({ text: "", color: "#2f6fb4", side: "left", sortOrder: 0 });
+        }
+
+        const backdrop = document.createElement("div");
+        backdrop.className = "project-modal-backdrop";
+        backdrop.innerHTML = `
+            <form class="project-modal project-labels-modal">
+                <h3>${escapeHtml(template ? i18n.t("project.replaceLabelTemplate") : i18n.t("project.createLabelTemplate"))}</h3>
+                <p class="project-properties-hint">${escapeHtml(i18n.t("project.labelTemplateHint"))}</p>
+                <input
+                    type="text"
+                    data-role="template-name"
+                    maxlength="80"
+                    value="${escapeAttribute(template?.name ?? "")}"
+                    placeholder="${escapeAttribute(i18n.t("project.templateName"))}"
+                    required
+                >
+                <div class="project-label-rows" data-role="label-rows"></div>
+                <button type="button" data-action="add-label">${escapeHtml(i18n.t("project.addLabel"))}</button>
+                <div class="project-modal-actions">
+                    <button type="button" data-action="cancel">${escapeHtml(i18n.t("project.cancel"))}</button>
+                    <button type="submit">${escapeHtml(i18n.t("project.save"))}</button>
+                </div>
+            </form>
+        `;
+
+        const rowsContainer = backdrop.querySelector("[data-role=label-rows]");
+        const renderRows = () => {
+            rowsContainer.innerHTML = rows.map((label, index) => `
+                <div class="project-label-row" data-label-index="${index}">
+                    <input type="text" data-field="text" maxlength="80" value="${escapeAttribute(label.text ?? "")}" placeholder="${escapeAttribute(i18n.t("project.labelText"))}">
+                    <input type="color" data-field="color" value="${/^#[0-9a-f]{6}$/i.test(label.color) ? label.color : "#2f6fb4"}" title="${escapeAttribute(i18n.t("project.labelColor"))}">
+                    <select data-field="side">
+                        <option value="left" ${label.side !== "right" ? "selected" : ""}>${escapeHtml(i18n.t("project.labelLeft"))}</option>
+                        <option value="right" ${label.side === "right" ? "selected" : ""}>${escapeHtml(i18n.t("project.labelRight"))}</option>
+                    </select>
+                    <button type="button" data-action="remove-label">${escapeHtml(i18n.t("project.removeLabel"))}</button>
+                </div>
+            `).join("");
+        };
+        const close = result => {
+            backdrop.remove();
+            resolve(result);
+        };
+
+        renderRows();
+        backdrop.addEventListener("click", async event => {
+            if (event.target === backdrop || event.target.closest("[data-action=cancel]")) {
+                close(null);
+                return;
+            }
+            const actionButton = event.target.closest("[data-action]");
+            if (!actionButton) return;
+            const action = actionButton.dataset.action;
+            if (action === "add-label") {
+                rows.push({ text: "", color: "#2f6fb4", side: "left", sortOrder: rows.length });
+                renderRows();
+            } else if (action === "remove-label") {
+                rows.splice(Number(actionButton.closest("[data-label-index]")?.dataset.labelIndex), 1);
+                if (!rows.length) rows.push({ text: "", color: "#2f6fb4", side: "left", sortOrder: 0 });
+                renderRows();
+            }
+        });
+        backdrop.addEventListener("input", event => {
+            const field = event.target.closest("[data-field]");
+            if (!field) return;
+            const row = rows[Number(field.closest("[data-label-index]")?.dataset.labelIndex)];
+            if (row) row[field.dataset.field] = field.value;
+        });
+        backdrop.addEventListener("change", event => {
+            const field = event.target.closest("[data-field]");
+            if (!field) return;
+            const row = rows[Number(field.closest("[data-label-index]")?.dataset.labelIndex)];
+            if (row) row[field.dataset.field] = field.value;
+        });
+        backdrop.querySelector("form").addEventListener("submit", async event => {
+            event.preventDefault();
+            const name = backdrop.querySelector("[data-role=template-name]").value.trim();
+            const labels = rows
+                .filter(label => String(label.text ?? "").trim())
+                .map((label, index) => ({ ...label, sortOrder: index }));
+            if (!name || labels.length === 0) {
+                await showAlert(i18n.t("project.templateRequired"), { title: i18n.t("project.labelTemplate") });
+                return;
+            }
+            const response = await fetch(
+                template
+                    ? `/api/projectNodeLabels/templates/${template.id}`
+                    : "/api/projectNodeLabels/templates",
+                {
+                    method: template ? "PUT" : "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name, labels })
+                }
+            );
+            const result = await response.json();
+            if (!response.ok) {
+                await showAlert(result.error || i18n.t("project.templateSaveFailed"), { title: i18n.t("project.labelTemplate") });
+                return;
+            }
+            currentProjectLabelTemplates = template
+                ? currentProjectLabelTemplates.map(item => String(item.id) === String(result.id) ? result : item)
+                : [...currentProjectLabelTemplates, result];
+            close(result);
+        });
+
+        document.body.appendChild(backdrop);
+    });
+
+}
+
+async function deleteProjectLabelTemplate(templateId) {
+
+    const template = currentProjectLabelTemplates.find(item =>
+        String(item.id) === String(templateId)
+    );
+    if (!template) {
+        return false;
+    }
+
+    const confirmed = await showConfirm(
+        i18n.t("project.labelTemplateDeleteConfirm").replace("{name}", template.name),
+        { title: i18n.t("project.deleteLabelTemplate") }
+    );
+    if (!confirmed) {
+        return false;
+    }
+
+    const response = await fetch(`/api/projectNodeLabels/templates/${template.id}`, {
+        method: "DELETE"
+    });
+    const result = await response.json();
+    if (!response.ok) {
+        await showAlert(result.error || i18n.t("project.templateDeleteFailed"), {
+            title: i18n.t("project.deleteLabelTemplate")
+        });
+        return false;
+    }
+
+    currentProjectLabelTemplates = currentProjectLabelTemplates.filter(item =>
+        String(item.id) !== String(template.id)
+    );
+    return true;
+
+}
+
+function openProjectNodeLabelsModal({ projectId, node }) {
+    const settings = getProjectNodeLabelSettings(node.id);
+    const inheritedLabels = getProjectNodeInheritedLabels(node.id);
+    const hiddenLabelIds = currentProjectNodeLabelHidden
+        .filter(item => String(item.projectNodeId) === String(node.id))
+        .map(item => item.sourceProjectNodeLabelId);
+    return openProjectLabelsModal({
+        targetType: "node",
+        targetId: node.id,
+        projectId,
+        title: `${i18n.t("project.editLabels")}: ${node.name}`,
+        existingLabels: currentProjectNodeLabels.filter(label =>
+            String(label.projectNodeId) === String(node.id)
+        ),
+        nodeInheritance: {
+            ...settings,
+            isRoot: node.parentId == null
+        },
+        inheritedLabels,
+        hiddenLabelIds,
+        saveUrl: `/api/projectNodeLabels/node/${node.id}`,
+        onSaved: result => {
+            const labels = result.labels ?? [];
+            currentProjectNodeLabels = currentProjectNodeLabels
+                .filter(label => String(label.projectNodeId) !== String(node.id))
+                .concat(labels);
+            currentProjectNodeLabelSettings = currentProjectNodeLabelSettings
+                .filter(item => String(item.projectNodeId) !== String(node.id))
+                .concat(result.settings ?? settings);
+            currentProjectNodeLabelHidden = currentProjectNodeLabelHidden
+                .filter(item => String(item.projectNodeId) !== String(node.id))
+                .concat((result.hiddenLabelIds ?? []).map(sourceProjectNodeLabelId => ({
+                    projectNodeId: node.id,
+                    sourceProjectNodeLabelId
+                })));
+        }
+    });
+}
+
+function openProjectArticleLabelsModal({ projectId, article }) {
+    const articleName = article.positionName || article.articleNumber || i18n.t("project.article");
+    const articleSettings = getProjectArticleLabelSettings(article.id);
+    const inheritedLabels = getProjectArticleInheritedLabels(article);
+    const hiddenLabelIds = currentProjectArticleLabelHidden
+        .filter(item => String(item.projectNodeArticleId) === String(article.id))
+        .map(item => item.sourceProjectNodeLabelId);
+    return openProjectLabelsModal({
+        targetType: "article",
+        targetId: article.id,
+        projectId,
+        title: `${i18n.t("project.editLabels")}: ${articleName}`,
+        existingLabels: currentProjectArticleLabels.filter(label =>
+            String(label.projectNodeArticleId) === String(article.id)
+        ),
+        articleInheritance: articleSettings,
+        inheritedLabels,
+        hiddenLabelIds,
+        saveUrl: `/api/projectArticleLabels/article/${article.id}`,
+        onSaved: result => {
+            const labels = result.labels ?? [];
+            currentProjectArticleLabels = currentProjectArticleLabels
+                .filter(label => String(label.projectNodeArticleId) !== String(article.id))
+                .concat(labels);
+            currentProjectArticleLabelSettings = currentProjectArticleLabelSettings
+                .filter(item => String(item.projectNodeArticleId) !== String(article.id))
+                .concat(result.settings ?? articleSettings);
+            currentProjectArticleLabelHidden = currentProjectArticleLabelHidden
+                .filter(item => String(item.projectNodeArticleId) !== String(article.id))
+                .concat((result.hiddenLabelIds ?? []).map(sourceProjectNodeLabelId => ({
+                    projectNodeArticleId: article.id,
+                    sourceProjectNodeLabelId
+                })));
+        }
+    });
+}
+
+function openProjectLabelsModal({
+    targetType,
+    targetId,
+    projectId,
+    title,
+    existingLabels,
+    nodeInheritance = null,
+    articleInheritance = null,
+    inheritedLabels = [],
+    hiddenLabelIds = [],
+    saveUrl,
+    onSaved = () => {}
+}) {
+    return new Promise(resolve => {
+    const existing = existingLabels
+        .slice()
+        .sort((first, second) => Number(first.sortOrder || 0) - Number(second.sortOrder || 0));
+    const backdrop = document.createElement("div");
+    backdrop.className = "project-modal-backdrop";
+    const hiddenInheritedLabelIds = new Set(hiddenLabelIds.map(value => String(value)));
+    backdrop.innerHTML = `
+        <form class="project-modal project-labels-modal">
+            <h3>${escapeHtml(title)}</h3>
+            <p class="project-properties-hint">${escapeHtml(i18n.t("project.labelsHint"))}</p>
+            <div class="project-label-template-toolbar" data-role="template-toolbar">
+                <select data-role="template-select">
+                    <option value="">${escapeHtml(i18n.t("project.noTemplate"))}</option>
+                    ${currentProjectLabelTemplates.map(template => `
+                        <option value="${template.id}">${escapeHtml(template.name)}</option>
+                    `).join("")}
+                </select>
+                <button type="button" data-action="use-template">${escapeHtml(i18n.t("project.useTemplate"))}</button>
+                <button type="button" data-action="create-label-template">${escapeHtml(i18n.t("project.createLabelTemplate"))}</button>
+                <button type="button" data-action="edit-label-template">${escapeHtml(i18n.t("project.replaceLabelTemplate"))}</button>
+                <button type="button" data-action="delete-label-template">${escapeHtml(i18n.t("project.deleteLabelTemplate"))}</button>
+            </div>
+            ${nodeInheritance || articleInheritance || inheritedLabels.length > 0 ? `
+                <fieldset class="project-label-inheritance">
+                    <legend>${escapeHtml(i18n.t("project.labelInheritance"))}</legend>
+                    ${nodeInheritance ? `
+                        <label>
+                            <input type="checkbox" data-role="inherit-to-children" ${nodeInheritance.inheritToChildren ? "checked" : ""}>
+                            ${escapeHtml(i18n.t("project.inheritToChildren"))}
+                        </label>
+                        ${nodeInheritance.isRoot ? "" : `
+                            <label>
+                                <input type="checkbox" data-role="inherit-from-parent" ${nodeInheritance.inheritFromParent ? "checked" : ""}>
+                                ${escapeHtml(i18n.t("project.inheritFromParent"))}
+                            </label>
+                        `}
+                    ` : articleInheritance ? `
+                        <label>
+                            <input type="checkbox" data-role="inherit-from-parent" ${articleInheritance.inheritFromParent ? "checked" : ""}>
+                            ${escapeHtml(i18n.t("project.inheritFromParent"))}
+                        </label>
+                    ` : ""}
+                </fieldset>
+                <div class="project-inherited-labels" data-role="inherited-labels"></div>
+            ` : ""}
+            <div class="project-label-rows" data-role="label-rows"></div>
+            <button type="button" data-action="add-label">${escapeHtml(i18n.t("project.addLabel"))}</button>
+            <div class="project-modal-actions">
+                <button type="button" data-action="cancel">${escapeHtml(i18n.t("project.cancel"))}</button>
+                <button type="submit">${escapeHtml(i18n.t("project.save"))}</button>
+            </div>
+        </form>
+    `;
+
+    const rowsContainer = backdrop.querySelector("[data-role=label-rows]");
+    let rows = existing.length > 0
+        ? existing.map(label => ({ ...label }))
+        : [{ text: "", color: "#2f6fb4", side: "left", sortOrder: 0 }];
+    const renderRows = () => {
+        rowsContainer.innerHTML = rows.map((label, index) => `
+            <div class="project-label-row" data-label-index="${index}">
+                <input type="text" data-field="text" maxlength="80" value="${escapeAttribute(label.text)}" placeholder="${escapeAttribute(i18n.t("project.labelText"))}">
+                <input type="color" data-field="color" value="${/^#[0-9a-f]{6}$/i.test(label.color) ? label.color : "#2f6fb4"}" title="${escapeAttribute(i18n.t("project.labelColor"))}">
+                <select data-field="side">
+                    <option value="left" ${label.side !== "right" ? "selected" : ""}>${escapeHtml(i18n.t("project.labelLeft"))}</option>
+                    <option value="right" ${label.side === "right" ? "selected" : ""}>${escapeHtml(i18n.t("project.labelRight"))}</option>
+                </select>
+                <button type="button" data-action="remove-label">${escapeHtml(i18n.t("project.removeLabel"))}</button>
+            </div>
+        `).join("");
+    };
+    const inheritedLabelsContainer = backdrop.querySelector("[data-role=inherited-labels]");
+    const renderInheritedLabels = () => {
+        if (!inheritedLabelsContainer) return;
+        inheritedLabelsContainer.innerHTML = inheritedLabels.length === 0
+            ? `<p class="project-properties-hint">${escapeHtml(i18n.t("project.noInheritedLabels"))}</p>`
+            : `
+                <div class="project-inherited-labels-title">${escapeHtml(i18n.t("project.inheritedLabels"))}</div>
+                ${inheritedLabels.map(label => {
+                    const sourceId = String(label.sourceProjectNodeLabelId);
+                    const hidden = hiddenInheritedLabelIds.has(sourceId);
+                    return `
+                        <div class="project-inherited-label-row">
+                            <span
+                                class="project-node-label${hidden ? " project-node-label-inherited-hidden" : " project-node-label-inherited"}"
+                                style="--project-label-color:${escapeAttribute(label.color || "#2f6fb4")}"
+                            >${escapeHtml(label.text)}</span>
+                            ${nodeInheritance || articleInheritance ? `
+                                <label>
+                                    <input type="checkbox" data-action="toggle-inherited-label" data-source-label-id="${escapeAttribute(sourceId)}" ${hidden ? "checked" : ""}>
+                                    ${escapeHtml(i18n.t("project.hideInheritedLabel"))}
+                                </label>
+                            ` : `<span class="project-properties-hint">${escapeHtml(i18n.t("project.inheritedLabel"))}</span>`}
+                        </div>
+                    `;
+                }).join("")}
+            `;
+    };
+    const refreshLabelTemplateSelect = () => {
+        const select = backdrop.querySelector("[data-role=template-select]");
+        if (!select) return;
+        const selectedValue = select.value;
+        select.innerHTML = `
+            <option value="">${escapeHtml(i18n.t("project.noTemplate"))}</option>
+            ${currentProjectLabelTemplates.map(template => `
+                <option value="${template.id}">${escapeHtml(template.name)}</option>
+            `).join("")}
+        `;
+        select.value = selectedValue;
+    };
+    const close = result => {
+        backdrop.remove();
+        resolve(result);
+    };
+    renderRows();
+    renderInheritedLabels();
+
+    backdrop.addEventListener("click", async event => {
+        if (event.target === backdrop || event.target.closest("[data-action=cancel]")) {
+            close(null);
+            return;
+        }
+        const actionButton = event.target.closest("[data-action]");
+        if (!actionButton) return;
+        const action = actionButton.dataset.action;
+        if (action === "add-label") {
+            rows.push({ text: "", color: "#2f6fb4", side: "left", sortOrder: rows.length });
+            renderRows();
+        } else if (action === "remove-label") {
+            const row = actionButton.closest("[data-label-index]");
+            rows.splice(Number(row?.dataset.labelIndex), 1);
+            if (!rows.length) rows.push({ text: "", color: "#2f6fb4", side: "left", sortOrder: 0 });
+            renderRows();
+        } else if (action === "use-template") {
+            const templateId = backdrop.querySelector("[data-role=template-select]").value;
+            const template = currentProjectLabelTemplates.find(item => String(item.id) === String(templateId));
+            if (template) {
+                rows.push(...getProjectLabelTemplateLabels(template).map(label => ({
+                    ...label,
+                    sortOrder: rows.length
+                })));
+                renderRows();
+            }
+        } else if (action === "create-label-template") {
+            await openProjectLabelTemplateEditor({ initialLabels: rows });
+            refreshLabelTemplateSelect();
+        } else if (action === "edit-label-template") {
+            const templateId = backdrop.querySelector("[data-role=template-select]").value;
+            const template = currentProjectLabelTemplates.find(item => String(item.id) === String(templateId));
+            if (!template) {
+                await showAlert(i18n.t("project.noTemplateSelected"), { title: i18n.t("project.labelTemplate") });
+                return;
+            }
+            const updated = await openProjectLabelTemplateEditor({ template });
+            if (updated) {
+                refreshLabelTemplateSelect();
+                backdrop.querySelector("[data-role=template-select]").value = String(updated.id);
+            }
+        } else if (action === "delete-label-template") {
+            const templateId = backdrop.querySelector("[data-role=template-select]").value;
+            if (await deleteProjectLabelTemplate(templateId)) {
+                refreshLabelTemplateSelect();
+            }
+        } else if (action === "toggle-inherited-label") {
+            const sourceId = String(actionButton.dataset.sourceLabelId);
+            if (actionButton.checked) {
+                hiddenInheritedLabelIds.add(sourceId);
+            } else {
+                hiddenInheritedLabelIds.delete(sourceId);
+            }
+            renderInheritedLabels();
+        }
+    });
+
+    backdrop.addEventListener("input", event => {
+        const field = event.target.closest("[data-field]");
+        if (!field) return;
+        const row = rows[Number(field.closest("[data-label-index]")?.dataset.labelIndex)];
+        if (row) row[field.dataset.field] = field.value;
+    });
+    backdrop.addEventListener("change", event => {
+        const field = event.target.closest("[data-field]");
+        if (!field) return;
+        const row = rows[Number(field.closest("[data-label-index]")?.dataset.labelIndex)];
+        if (row) row[field.dataset.field] = field.value;
+    });
+    backdrop.querySelector("form").addEventListener("submit", async event => {
+        event.preventDefault();
+        const payload = {
+            labels: rows
+                .filter(label => String(label.text ?? "").trim())
+                .map((label, index) => ({ ...label, sortOrder: index }))
+        };
+        if (nodeInheritance || articleInheritance) {
+            if (nodeInheritance) {
+                payload.inheritToChildren = backdrop.querySelector("[data-role=inherit-to-children]")?.checked !== false;
+            }
+            payload.inheritFromParent = nodeInheritance?.isRoot
+                ? true
+                : backdrop.querySelector("[data-role=inherit-from-parent]")?.checked !== false;
+            payload.hiddenLabelIds = [...hiddenInheritedLabelIds].map(value => Number(value));
+        }
+        const response = await fetch(saveUrl, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            await showAlert(result.error || i18n.t("project.labelsSaveFailed"), { title: i18n.t("project.editLabels") });
+            return;
+        }
+        onSaved(result);
+        close(result);
+    });
+
+    document.body.appendChild(backdrop);
+    });
 }
 
 function compareProjectNodeOrder(
@@ -2612,7 +3441,8 @@ function renderNodeArticle(
     nodeId,
     articleNumber,
     fullArticle,
-    nodeArticle = {}
+    nodeArticle = {},
+    articleLabels = []
 ) {
 
     const quantity =
@@ -2706,6 +3536,8 @@ function renderNodeArticle(
 
                 </div>
 
+                ${renderProjectNodeLabels(articleLabels, "node-article-labels")}
+
             </div>
 
             ${renderNodeRequirementBadges(fullArticle, quantity, nodeArticle)}
@@ -2729,6 +3561,15 @@ function renderNodeArticle(
                     >
                         ${i18n.t("project.properties")}
                     </button>
+
+                    <button
+                        type="button"
+                        data-action="labels"
+                    >
+                        ${i18n.t("project.editLabels")}
+                    </button>
+
+                    ${renderProjectLabelTemplateSubmenu()}
 
                     <button
                         type="button"
@@ -2766,6 +3607,12 @@ function renderNodeArticle(
 
     `;
 
+}
+
+function getProjectArticleLabels(articleId) {
+    return currentProjectArticleLabels.filter(label =>
+        String(label.projectNodeArticleId) === String(articleId)
+    );
 }
 
 function renderNodeGridVisBadge(
@@ -5321,6 +6168,26 @@ function registerProjectOverview(
                     currentArticles,
                 getArticleIcon,
                 getArticleDiscountPercent,
+                nodeLabels: getEffectiveProjectNodeLabels(),
+                nodeLabelSettings: currentProjectNodeLabelSettings,
+                articleLabels: currentProjectArticleLabels,
+                articleLabelSettings: currentProjectArticleLabelSettings,
+                articleLabelHidden: currentProjectArticleLabelHidden,
+                onSaveOverviewColors: async colors => {
+                    const response = await fetch(`/api/projects/${projectId}`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            ...getProjectFormData(),
+                            overviewColors: colors
+                        })
+                    });
+                    if (!response.ok) {
+                        const result = await response.json().catch(() => ({}));
+                        throw new Error(result.error || i18n.t("project.colorsSaveFailed"));
+                    }
+                    currentProject.overviewColors = JSON.stringify(colors);
+                },
                 labels: {
                     title:
                         i18n.t("project.overviewTitle"),
@@ -5372,6 +6239,18 @@ function registerProjectOverview(
                         i18n.t("project.structureListPrices"),
                     discountedPrices:
                         i18n.t("project.structureDiscountedPrices"),
+                    levelColors:
+                        i18n.t("project.levelColors"),
+                    levelColorsHint:
+                        i18n.t("project.levelColorsHint"),
+                    colorHeader:
+                        i18n.t("project.colorHeader"),
+                    colorFill:
+                        i18n.t("project.colorFill"),
+                    saveColors:
+                        i18n.t("project.saveColors"),
+                    resetColors:
+                        i18n.t("project.resetColors"),
                     nodeTypes: {
                         building:
                             i18n.t("project.overviewBuilding"),
@@ -7590,7 +8469,8 @@ async function addArticleToNode(
                 nodeId,
                 articleNumber,
                 fullArticle,
-                nodeArticle
+                nodeArticle,
+                getProjectArticleLabels(nodeArticle.id)
             )
         );
 
@@ -7627,7 +8507,8 @@ async function addArticleToNode(
                 nodeId,
                 articleNumber,
                 fullArticle,
-                nodeArticle
+                nodeArticle,
+                getProjectArticleLabels(nodeArticle.id)
             )
         );
 
@@ -7641,7 +8522,8 @@ async function addArticleToNode(
                 nodeId,
                 articleNumber,
                 fullArticle,
-                nodeArticle
+                nodeArticle,
+                getProjectArticleLabels(nodeArticle.id)
             )
         );
 
@@ -9194,6 +10076,19 @@ function registerProjectNodeMenus(
 
                     }
 
+                    const action =
+                        actionButton.dataset.action;
+
+                    if (action === "label-template-menu") {
+                        menuOptions
+                            .querySelectorAll(".project-menu-submenu.open")
+                            .forEach(submenu => submenu.classList.remove("open"));
+                        actionButton
+                            .closest(".project-menu-submenu")
+                            ?.classList.add("open");
+                        return;
+                    }
+
                     menuOptions.classList.remove(
                         "open"
                     );
@@ -9201,8 +10096,36 @@ function registerProjectNodeMenus(
                     const nodeId =
                         node.dataset.id;
 
-                    const action =
-                        actionButton.dataset.action;
+                    if (action === "create-label-template") {
+                        const created = await openProjectLabelTemplateEditor({
+                            initialLabels: currentProjectNodeLabels.filter(label =>
+                                String(label.projectNodeId) === String(nodeId)
+                            )
+                        });
+                        if (created) {
+                            await refreshProjectTree(projectId);
+                        }
+                        return;
+                    }
+
+                    if (action === "apply-label-template") {
+                        const applied = await applyProjectLabelTemplate({
+                            templateId: actionButton.dataset.templateId,
+                            existingLabels: currentProjectNodeLabels.filter(label =>
+                                String(label.projectNodeId) === String(nodeId)
+                            ),
+                            saveUrl: `/api/projectNodeLabels/node/${nodeId}`,
+                            onSaved: labels => {
+                                currentProjectNodeLabels = currentProjectNodeLabels
+                                    .filter(label => String(label.projectNodeId) !== String(nodeId))
+                                    .concat(labels);
+                            }
+                        });
+                        if (applied) {
+                            await refreshProjectTree(projectId);
+                        }
+                        return;
+                    }
 
                     if (action === "add-node") {
 
@@ -9246,6 +10169,21 @@ function registerProjectNodeMenus(
 
                         return;
 
+                    }
+
+                    if (action === "labels") {
+                        const currentNode = currentNodes.find(item =>
+                            String(item.id) === String(nodeId)
+                        );
+                        if (!currentNode) {
+                            return;
+                        }
+                        await openProjectNodeLabelsModal({
+                            projectId,
+                            node: currentNode
+                        });
+                        await refreshProjectTree(projectId);
+                        return;
                     }
 
                     if (action === "properties") {
@@ -9399,7 +10337,7 @@ function closeProjectMenus(
 
     document
         .querySelectorAll(
-            ".node-article-menu-options.open, .project-node-menu-options.open"
+            ".node-article-menu-options.open, .project-node-menu-options.open, .project-menu-submenu.open"
         )
         .forEach(openMenu => {
 
@@ -9492,6 +10430,19 @@ function registerNodeArticleMenus(
 
                     }
 
+                    const action =
+                        actionButton.dataset.action;
+
+                    if (action === "label-template-menu") {
+                        menuOptions
+                            .querySelectorAll(".project-menu-submenu.open")
+                            .forEach(submenu => submenu.classList.remove("open"));
+                        actionButton
+                            .closest(".project-menu-submenu")
+                            ?.classList.add("open");
+                        return;
+                    }
+
                     menuOptions.classList.remove(
                         "open"
                     );
@@ -9505,8 +10456,49 @@ function registerNodeArticleMenus(
 
                     }
 
-                    const action =
-                        actionButton.dataset.action;
+                    if (action === "create-label-template") {
+                        const created = await openProjectLabelTemplateEditor({
+                            initialLabels: currentProjectArticleLabels.filter(label =>
+                                String(label.projectNodeArticleId) === String(positionId)
+                            )
+                        });
+                        if (created) {
+                            await refreshProjectTree(projectId);
+                        }
+                        return;
+                    }
+
+                    if (action === "apply-label-template") {
+                        const applied = await applyProjectLabelTemplate({
+                            templateId: actionButton.dataset.templateId,
+                            existingLabels: currentProjectArticleLabels.filter(label =>
+                                String(label.projectNodeArticleId) === String(positionId)
+                            ),
+                            saveUrl: `/api/projectArticleLabels/article/${positionId}`,
+                            onSaved: labels => {
+                                currentProjectArticleLabels = currentProjectArticleLabels
+                                    .filter(label => String(label.projectNodeArticleId) !== String(positionId))
+                                    .concat(labels);
+                            }
+                        });
+                        if (applied) {
+                            await refreshProjectTree(projectId);
+                        }
+                        return;
+                    }
+
+                    if (action === "labels") {
+                        const currentPosition =
+                            currentNodeArticles.find(item =>
+                                String(item.id) === String(positionId)
+                            ) ?? {};
+                        await openProjectArticleLabelsModal({
+                            projectId,
+                            article: currentPosition
+                        });
+                        await refreshProjectTree(projectId);
+                        return;
+                    }
 
                     if (action === "properties") {
 
@@ -11985,6 +12977,46 @@ async function duplicateNodeArticle(
         duplicatedNodeArticle
     );
 
+    const sourceLabels = getProjectArticleLabels(sourceNodeArticle.id);
+    const sourceArticleSettings = getProjectArticleLabelSettings(sourceNodeArticle.id);
+    const sourceHiddenArticleLabelIds = currentProjectArticleLabelHidden
+        .filter(item => String(item.projectNodeArticleId) === String(sourceNodeArticle.id))
+        .map(item => item.sourceProjectNodeLabelId);
+    if (
+        sourceLabels.length > 0
+        || !sourceArticleSettings.inheritFromParent
+        || sourceHiddenArticleLabelIds.length > 0
+    ) {
+        const labelResponse = await fetch(
+            `/api/projectArticleLabels/article/${duplicatedNodeArticle.id}`,
+            {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    labels: sourceLabels.map(label => ({
+                        text: label.text,
+                        color: label.color,
+                        side: label.side,
+                        sortOrder: label.sortOrder
+                    })),
+                    inheritFromParent: sourceArticleSettings.inheritFromParent,
+                    hiddenLabelIds: sourceHiddenArticleLabelIds
+                })
+            }
+        );
+        const labelResult = await labelResponse.json();
+        if (labelResponse.ok) {
+            currentProjectArticleLabels = currentProjectArticleLabels.concat(labelResult.labels ?? []);
+            currentProjectArticleLabelSettings = currentProjectArticleLabelSettings.concat(labelResult.settings ?? []);
+            currentProjectArticleLabelHidden = currentProjectArticleLabelHidden.concat(
+                (labelResult.hiddenLabelIds ?? []).map(sourceProjectNodeLabelId => ({
+                    projectNodeArticleId: duplicatedNodeArticle.id,
+                    sourceProjectNodeLabelId
+                }))
+            );
+        }
+    }
+
     const fullArticle =
         getCurrentArticleByNumber(
             duplicatedNodeArticle.articleNumber
@@ -11998,7 +13030,11 @@ async function duplicateNodeArticle(
             duplicatedNodeArticle.projectNodeId,
             duplicatedNodeArticle.articleNumber,
             fullArticle,
-            duplicatedNodeArticle
+            duplicatedNodeArticle,
+            [
+                ...getProjectArticleInheritedLabels(duplicatedNodeArticle),
+                ...getProjectArticleLabels(duplicatedNodeArticle.id)
+            ]
         )
 
     );
@@ -12041,7 +13077,8 @@ function updateNodeArticleElement(
             nodeArticle.projectNodeId,
             nodeArticle.articleNumber,
             fullArticle,
-            nodeArticle
+            nodeArticle,
+            getProjectArticleLabels(nodeArticle.id)
         );
 
     const updatedArticleElement =

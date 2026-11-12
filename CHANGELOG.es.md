@@ -2,6 +2,24 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.53 - 12.11.2026
+
+### Nuevo
+
+- Los nodos de la estructura pueden tener varias etiquetas de colores. Las
+  plantillas reutilizables se pueden crear, reemplazar, eliminar y aplicar
+  directamente desde el menu de tres puntos.
+- Las etiquetas se pueden heredar a los nodos inferiores y a los articulos.
+  La herencia se puede desactivar por nivel y se pueden ocultar etiquetas
+  heredadas individuales. Los articulos no continuan la herencia.
+- Las etiquetas de articulo aparecen en el arbol del proyecto, el plano de
+  resumen y las paginas de detalle. Las reglas tambien se conservan en archivos
+  de proyecto, duplicados y documentos Salesforce generados en el servidor.
+
+### Mejorado
+
+- Las etiquetas heredadas se distinguen visualmente de las etiquetas locales.
+
 ## 1.5.52 - 12.11.2026
 
 ### Corregido

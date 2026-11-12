@@ -1,7 +1,17 @@
 export const projectFileFormat = "projectbuilder-project";
 export const projectFileSchemaVersion = 1;
 
-export function buildProjectFilePayload({ project, nodes, positions }) {
+export function buildProjectFilePayload({
+    project,
+    nodes,
+    positions,
+    nodeLabels = [],
+    articleLabels = [],
+    nodeLabelSettings = [],
+    nodeLabelHidden = [],
+    articleLabelSettings = [],
+    articleLabelHidden = []
+}) {
     return {
         format: projectFileFormat,
         schemaVersion: projectFileSchemaVersion,
@@ -12,6 +22,7 @@ export function buildProjectFilePayload({ project, nodes, positions }) {
             customerSalesforceId: project.customerSalesforceId ?? null,
             name: project.name ?? "", description: project.description ?? "",
             projectDiscount: project.projectDiscount ?? 0,
+            overviewColors: project.overviewColors ?? "{}",
             salesforceOpportunityId: project.salesforceOpportunityId ?? null,
             salesforceQuoteId: project.salesforceQuoteId ?? null
         },
@@ -29,6 +40,39 @@ export function buildProjectFilePayload({ project, nodes, positions }) {
             isOptional: Boolean(position.isOptional), isAlternative: Boolean(position.isAlternative),
             specialDiscount: position.specialDiscount ?? null,
             specialPrice: position.specialPrice ?? null
+        })),
+        labels: nodeLabels.map(label => ({
+            id: label.id,
+            nodeId: label.nodeId ?? label.projectNodeId,
+            text: label.text ?? "",
+            color: label.color ?? "#2f6fb4",
+            side: label.side === "right" ? "right" : "left",
+            sortOrder: Number(label.sortOrder) || 0
+        })),
+        articleLabels: articleLabels.map(label => ({
+            id: label.id,
+            articleId: label.articleId ?? label.projectNodeArticleId,
+            text: label.text ?? "",
+            color: label.color ?? "#2f6fb4",
+            side: label.side === "right" ? "right" : "left",
+            sortOrder: Number(label.sortOrder) || 0
+        })),
+        nodeLabelSettings: nodeLabelSettings.map(setting => ({
+            nodeId: setting.nodeId ?? setting.projectNodeId,
+            inheritToChildren: setting.inheritToChildren !== 0,
+            inheritFromParent: setting.inheritFromParent !== 0
+        })),
+        nodeLabelHidden: nodeLabelHidden.map(item => ({
+            nodeId: item.nodeId ?? item.projectNodeId,
+            sourceLabelId: item.sourceLabelId ?? item.sourceProjectNodeLabelId
+        })),
+        articleLabelSettings: articleLabelSettings.map(setting => ({
+            articleId: setting.articleId ?? setting.projectNodeArticleId,
+            inheritFromParent: setting.inheritFromParent !== 0
+        })),
+        articleLabelHidden: articleLabelHidden.map(item => ({
+            articleId: item.articleId ?? item.projectNodeArticleId,
+            sourceLabelId: item.sourceLabelId ?? item.sourceProjectNodeLabelId
         }))
     };
 }

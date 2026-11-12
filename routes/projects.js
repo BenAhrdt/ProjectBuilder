@@ -106,7 +106,44 @@ function getProjectExportData(projectId) {
         ORDER BY projectNodeArticles.projectNodeId,
             COALESCE(projectNodeArticles.sortOrder, projectNodeArticles.id), projectNodeArticles.id
     `).all(...nodeIds);
-    return buildProjectExportData(project, nodes, positions);
+    const nodeLabels = nodeIds.length === 0 ? [] : database.projectNodeLabels.prepare(`
+        SELECT * FROM projectNodeLabels
+        WHERE projectNodeId IN (${nodeIds.map(() => "?").join(",")})
+        ORDER BY projectNodeId, side, sortOrder, id
+    `).all(...nodeIds);
+    const nodeLabelSettings = nodeIds.length === 0 ? [] : database.projectNodeLabelSettings.prepare(`
+        SELECT * FROM projectNodeLabelSettings
+        WHERE projectNodeId IN (${nodeIds.map(() => "?").join(",")})
+    `).all(...nodeIds);
+    const nodeLabelHidden = nodeIds.length === 0 ? [] : database.projectNodeLabelHidden.prepare(`
+        SELECT * FROM projectNodeLabelHidden
+        WHERE projectNodeId IN (${nodeIds.map(() => "?").join(",")})
+    `).all(...nodeIds);
+    const positionIds = positions.map(position => position.id);
+    const articleLabels = positionIds.length === 0 ? [] : database.projectArticleLabels.prepare(`
+        SELECT * FROM projectArticleLabels
+        WHERE projectNodeArticleId IN (${positionIds.map(() => "?").join(",")})
+        ORDER BY projectNodeArticleId, side, sortOrder, id
+    `).all(...positionIds);
+    const articleLabelSettings = positionIds.length === 0 ? [] : database.projectArticleLabelSettings.prepare(`
+        SELECT * FROM projectArticleLabelSettings
+        WHERE projectNodeArticleId IN (${positionIds.map(() => "?").join(",")})
+    `).all(...positionIds);
+    const articleLabelHidden = positionIds.length === 0 ? [] : database.projectArticleLabelHidden.prepare(`
+        SELECT * FROM projectArticleLabelHidden
+        WHERE projectNodeArticleId IN (${positionIds.map(() => "?").join(",")})
+    `).all(...positionIds);
+    return buildProjectExportData(
+        project,
+        nodes,
+        positions,
+        nodeLabels,
+        articleLabels,
+        nodeLabelSettings,
+        nodeLabelHidden,
+        articleLabelSettings,
+        articleLabelHidden
+    );
 }
 
 const projectNodeTypeLabels = {
@@ -1011,6 +1048,12 @@ router.delete("/", (_req, res) => {
             "SELECT COUNT(*) AS count FROM projects"
         ).get().count;
 
+        database.projects.prepare("DELETE FROM projectNodeLabels").run();
+        database.projects.prepare("DELETE FROM projectNodeLabelHidden").run();
+        database.projects.prepare("DELETE FROM projectNodeLabelSettings").run();
+        database.projects.prepare("DELETE FROM projectArticleLabels").run();
+        database.projects.prepare("DELETE FROM projectArticleLabelHidden").run();
+        database.projects.prepare("DELETE FROM projectArticleLabelSettings").run();
         database.projects.prepare("DELETE FROM projectNodeArticles").run();
         database.projects.prepare("DELETE FROM projectFiles").run();
         database.projects.prepare("DELETE FROM projectSalesforceLinks").run();
@@ -1231,13 +1274,127 @@ router.post("/:id/duplicate", (req, res) => {
         const nodes = database.projects.prepare("SELECT * FROM projectNodes WHERE projectId = ? ORDER BY id").all(source.id);
         const insertNode = database.projects.prepare(`INSERT INTO projectNodes (projectId, parentId, ${nodeColumns.join(", ")}) VALUES (@projectId, @parentId, ${nodeColumns.map(column => `@${column}`).join(", ")})`);
         const insertArticle = database.projects.prepare(`INSERT INTO projectNodeArticles (projectNodeId, ${articleColumns.join(", ")}) VALUES (@projectNodeId, ${articleColumns.map(column => `@${column}`).join(", ")})`);
+        const insertArticleLabelSettings = database.projects.prepare(`
+            INSERT INTO projectArticleLabelSettings
+                (projectNodeArticleId, inheritFromParent)
+            VALUES (?, ?)
+        `);
+        const getArticleLabelSettings = database.projects.prepare(`
+            SELECT inheritFromParent
+            FROM projectArticleLabelSettings
+            WHERE projectNodeArticleId = ?
+        `);
+        const getArticleLabels = database.projects.prepare(`
+            SELECT text, color, side, sortOrder
+            FROM projectArticleLabels
+            WHERE projectNodeArticleId = ?
+            ORDER BY sortOrder, id
+        `);
+        const insertArticleLabel = database.projects.prepare(`
+            INSERT INTO projectArticleLabels
+                (projectNodeArticleId, text, color, side, sortOrder)
+            VALUES (?, ?, ?, ?, ?)
+        `);
+        const getNodeLabelSettings = database.projects.prepare(`
+            SELECT inheritToChildren, inheritFromParent
+            FROM projectNodeLabelSettings
+            WHERE projectNodeId = ?
+        `);
+        const insertNodeLabelSettings = database.projects.prepare(`
+            INSERT INTO projectNodeLabelSettings
+                (projectNodeId, inheritToChildren, inheritFromParent)
+            VALUES (?, ?, ?)
+        `);
         const nodeIdMap = new Map();
+        const articleIdMap = new Map();
         for (const node of nodes) {
             const result = insertNode.run({ ...node, projectId, parentId: node.parentId == null ? null : nodeIdMap.get(Number(node.parentId)) ?? null });
             const newNodeId = Number(result.lastInsertRowid);
             nodeIdMap.set(Number(node.id), newNodeId);
+            const nodeSettings = getNodeLabelSettings.get(node.id);
+            if (nodeSettings) {
+                insertNodeLabelSettings.run(
+                    newNodeId,
+                    nodeSettings.inheritToChildren,
+                    nodeSettings.inheritFromParent
+                );
+            }
             const articles = database.projects.prepare("SELECT * FROM projectNodeArticles WHERE projectNodeId = ? ORDER BY id").all(node.id);
-            for (const article of articles) insertArticle.run({ ...article, projectNodeId: newNodeId });
+            for (const article of articles) {
+                const articleResult = insertArticle.run({ ...article, projectNodeId: newNodeId });
+                articleIdMap.set(Number(article.id), Number(articleResult.lastInsertRowid));
+                const articleSettings = getArticleLabelSettings.get(article.id);
+                if (articleSettings) {
+                    insertArticleLabelSettings.run(
+                        articleResult.lastInsertRowid,
+                        articleSettings.inheritFromParent
+                    );
+                }
+                for (const label of getArticleLabels.all(article.id)) {
+                    insertArticleLabel.run(
+                        articleResult.lastInsertRowid,
+                        label.text,
+                        label.color,
+                        label.side,
+                        label.sortOrder
+                    );
+                }
+            }
+        }
+        const sourceNodeIds = nodes.map(node => node.id);
+        const sourceLabels = sourceNodeIds.length === 0 ? [] : database.projects.prepare(`
+            SELECT * FROM projectNodeLabels
+            WHERE projectNodeId IN (${sourceNodeIds.map(() => "?").join(",")})
+            ORDER BY projectNodeId, sortOrder, id
+        `).all(...sourceNodeIds);
+        const insertLabel = database.projects.prepare(`
+            INSERT INTO projectNodeLabels (projectNodeId, text, color, side, sortOrder)
+            VALUES (?, ?, ?, ?, ?)
+        `);
+        const labelIdMap = new Map();
+        for (const label of sourceLabels) {
+            const newNodeId = nodeIdMap.get(Number(label.projectNodeId));
+            if (newNodeId) {
+                const result = insertLabel.run(newNodeId, label.text, label.color, label.side, label.sortOrder);
+                labelIdMap.set(Number(label.id), Number(result.lastInsertRowid));
+            }
+        }
+        const sourceHiddenLabels = sourceNodeIds.length === 0 ? [] : database.projects.prepare(`
+            SELECT projectNodeId, sourceProjectNodeLabelId
+            FROM projectNodeLabelHidden
+            WHERE projectNodeId IN (${sourceNodeIds.map(() => "?").join(",")})
+        `).all(...sourceNodeIds);
+        const insertHiddenLabel = database.projects.prepare(`
+            INSERT OR IGNORE INTO projectNodeLabelHidden
+                (projectNodeId, sourceProjectNodeLabelId)
+            VALUES (?, ?)
+        `);
+        sourceHiddenLabels.forEach(item => {
+            const newNodeId = nodeIdMap.get(Number(item.projectNodeId));
+            const newSourceLabelId = labelIdMap.get(Number(item.sourceProjectNodeLabelId));
+            if (newNodeId && newSourceLabelId) {
+                insertHiddenLabel.run(newNodeId, newSourceLabelId);
+            }
+        });
+        const sourceArticleIds = [...articleIdMap.keys()];
+        if (sourceArticleIds.length > 0) {
+            const sourceHiddenArticleLabels = database.projects.prepare(`
+                SELECT projectNodeArticleId, sourceProjectNodeLabelId
+                FROM projectArticleLabelHidden
+                WHERE projectNodeArticleId IN (${sourceArticleIds.map(() => "?").join(",")})
+            `).all(...sourceArticleIds);
+            const insertHiddenArticleLabel = database.projects.prepare(`
+                INSERT OR IGNORE INTO projectArticleLabelHidden
+                    (projectNodeArticleId, sourceProjectNodeLabelId)
+                VALUES (?, ?)
+            `);
+            sourceHiddenArticleLabels.forEach(item => {
+                const newArticleId = articleIdMap.get(Number(item.projectNodeArticleId));
+                const newSourceLabelId = labelIdMap.get(Number(item.sourceProjectNodeLabelId));
+                if (newArticleId && newSourceLabelId) {
+                    insertHiddenArticleLabel.run(newArticleId, newSourceLabelId);
+                }
+            });
         }
         return { id: projectId, name };
     });
@@ -1261,7 +1418,9 @@ router.put(
 
                 description = @description,
 
-                projectDiscount = @projectDiscount
+                projectDiscount = @projectDiscount,
+
+                overviewColors = COALESCE(@overviewColors, overviewColors)
 
             WHERE id = @id
 
@@ -1280,7 +1439,14 @@ router.put(
                 req.body.description,
 
             projectDiscount:
-                req.body.projectDiscount ?? 0
+                req.body.projectDiscount ?? 0,
+
+            overviewColors:
+                req.body.overviewColors === undefined
+                    ? null
+                    : typeof req.body.overviewColors === "string"
+                        ? req.body.overviewColors
+                        : JSON.stringify(req.body.overviewColors ?? {})
 
         });
 
@@ -1335,6 +1501,37 @@ router.delete(
 
                 database.projects.prepare(`
 
+                    DELETE FROM projectArticleLabels
+
+                    WHERE projectNodeArticleId IN (
+                        SELECT projectNodeArticles.id
+                        FROM projectNodeArticles
+                        INNER JOIN projectNodes ON projectNodes.id = projectNodeArticles.projectNodeId
+                        WHERE projectNodes.projectId = ?
+                    )
+
+                `).run(projectId);
+                database.projects.prepare(`
+                    DELETE FROM projectArticleLabelHidden
+                    WHERE projectNodeArticleId IN (
+                        SELECT projectNodeArticles.id
+                        FROM projectNodeArticles
+                        INNER JOIN projectNodes ON projectNodes.id = projectNodeArticles.projectNodeId
+                        WHERE projectNodes.projectId = ?
+                    )
+                `).run(projectId);
+                database.projects.prepare(`
+                    DELETE FROM projectArticleLabelSettings
+                    WHERE projectNodeArticleId IN (
+                        SELECT projectNodeArticles.id
+                        FROM projectNodeArticles
+                        INNER JOIN projectNodes ON projectNodes.id = projectNodeArticles.projectNodeId
+                        WHERE projectNodes.projectId = ?
+                    )
+                `).run(projectId);
+
+                database.projects.prepare(`
+
                     DELETE FROM projectNodeArticles
 
                     WHERE projectNodeId IN (
@@ -1350,6 +1547,26 @@ router.delete(
                 `).run(
                     projectId
                 );
+
+                database.projectNodeLabels.prepare(`
+                    DELETE FROM projectNodeLabels
+                    WHERE projectNodeId IN (
+                        SELECT id FROM projectNodes WHERE projectId = ?
+                    )
+                `).run(projectId);
+
+                database.projectNodeLabelHidden.prepare(`
+                    DELETE FROM projectNodeLabelHidden
+                    WHERE projectNodeId IN (
+                        SELECT id FROM projectNodes WHERE projectId = ?
+                    )
+                `).run(projectId);
+                database.projectNodeLabelSettings.prepare(`
+                    DELETE FROM projectNodeLabelSettings
+                    WHERE projectNodeId IN (
+                        SELECT id FROM projectNodes WHERE projectId = ?
+                    )
+                `).run(projectId);
 
                 database.projects.prepare(`
                     DELETE FROM projectSalesforceLinks
@@ -1412,7 +1629,13 @@ router.delete(
 export function buildProjectExportData(
     project,
     nodes,
-    nodeArticles
+    nodeArticles,
+    nodeLabels = [],
+    articleLabels = [],
+    nodeLabelSettings = [],
+    nodeLabelHidden = [],
+    articleLabelSettings = [],
+    articleLabelHidden = []
 ) {
 
     const nodesById =
@@ -1795,6 +2018,12 @@ export function buildProjectExportData(
         nodesById,
         orderedNodes,
         positions,
+        nodeLabels,
+        articleLabels,
+        nodeLabelSettings,
+        nodeLabelHidden,
+        articleLabelSettings,
+        articleLabelHidden,
         nodeTotals,
         totals
     };
@@ -1861,6 +2090,55 @@ function validateProjectImportPayload(
 
     }
 
+    const labels = payload.labels ?? payload.nodeLabels ?? [];
+    if (!Array.isArray(labels)) {
+        throw new Error("Die Labels der Projektdatei sind ungültig.");
+    }
+    if (labels.some(label => !label || !nodeIds.has(String(label.nodeId ?? label.projectNodeId)))) {
+        throw new Error("Mindestens ein Label verweist auf eine fehlende Strukturposition.");
+    }
+    const nodeLabelSettings = payload.nodeLabelSettings ?? [];
+    if (!Array.isArray(nodeLabelSettings)) {
+        throw new Error("Die Vererbungseinstellungen der Projektdatei sind ungültig.");
+    }
+    if (nodeLabelSettings.some(setting => !setting || !nodeIds.has(String(setting.nodeId ?? setting.projectNodeId)))) {
+        throw new Error("Mindestens eine Vererbungseinstellung verweist auf eine fehlende Strukturposition.");
+    }
+    const nodeLabelIds = new Set(labels.map(label => String(label.id)).filter(Boolean));
+    const nodeLabelHidden = payload.nodeLabelHidden ?? [];
+    if (!Array.isArray(nodeLabelHidden)) {
+        throw new Error("Die ausgeblendeten Labels der Projektdatei sind ungültig.");
+    }
+    if (nodeLabelHidden.some(item => !item
+        || !nodeIds.has(String(item.nodeId ?? item.projectNodeId))
+        || !nodeLabelIds.has(String(item.sourceLabelId ?? item.sourceProjectNodeLabelId)))) {
+        throw new Error("Mindestens eine Label-Ausnahme verweist auf eine fehlende Position.");
+    }
+    const articleLabels = payload.articleLabels ?? [];
+    if (!Array.isArray(articleLabels)) {
+        throw new Error("Die Artikel-Labels der Projektdatei sind ungültig.");
+    }
+    const articleIds = new Set(payload.positions.map(position => String(position.id)));
+    if (articleLabels.some(label => !label || !articleIds.has(String(label.articleId ?? label.projectNodeArticleId)))) {
+        throw new Error("Mindestens ein Artikel-Label verweist auf eine fehlende Artikelposition.");
+    }
+    const articleLabelSettings = payload.articleLabelSettings ?? [];
+    if (!Array.isArray(articleLabelSettings)) {
+        throw new Error("Die Artikel-Vererbungseinstellungen der Projektdatei sind ungÃ¼ltig.");
+    }
+    if (articleLabelSettings.some(setting => !setting || !articleIds.has(String(setting.articleId ?? setting.projectNodeArticleId)))) {
+        throw new Error("Mindestens eine Artikel-Vererbungseinstellung verweist auf eine fehlende Artikelposition.");
+    }
+    const articleLabelHidden = payload.articleLabelHidden ?? [];
+    if (!Array.isArray(articleLabelHidden)) {
+        throw new Error("Die ausgeblendeten Artikel-Labels der Projektdatei sind ungÃ¼ltig.");
+    }
+    if (articleLabelHidden.some(item => !item
+        || !articleIds.has(String(item.articleId ?? item.projectNodeArticleId))
+        || !nodeLabelIds.has(String(item.sourceLabelId ?? item.sourceProjectNodeLabelId)))) {
+        throw new Error("Mindestens eine Artikel-Label-Ausnahme verweist auf eine ungÃ¼ltige Position.");
+    }
+
     const articleNumbers =
         Array.from(
             new Set(
@@ -1911,6 +2189,7 @@ function importProjectPayload(payload, options = {}) {
                         name,
                         description,
                         projectDiscount,
+                        overviewColors,
                         salesforceOpportunityId,
                         salesforceQuoteId,
                         salesforceSyncedAt
@@ -1921,6 +2200,7 @@ function importProjectPayload(payload, options = {}) {
                         @name,
                         @description,
                         @projectDiscount,
+                        @overviewColors,
                         @salesforceOpportunityId,
                         @salesforceQuoteId,
                         @salesforceSyncedAt
@@ -2002,6 +2282,10 @@ function importProjectPayload(payload, options = {}) {
                         payload.project.description ?? "",
                     projectDiscount:
                         payload.project.projectDiscount ?? 0,
+                    overviewColors:
+                        typeof payload.project.overviewColors === "string"
+                            ? payload.project.overviewColors
+                            : JSON.stringify(payload.project.overviewColors ?? {}),
                     salesforceOpportunityId: options.preserveSalesforceLinks
                         ? options.opportunityId ?? payload.project.salesforceOpportunityId ?? null : null,
                     salesforceQuoteId: options.preserveSalesforceLinks
@@ -2013,6 +2297,8 @@ function importProjectPayload(payload, options = {}) {
                 projectResult.lastInsertRowid;
 
             const oldToNewNodeId =
+                new Map();
+            const oldToNewArticleId =
                 new Map();
 
             getNodesInImportOrder(
@@ -2079,7 +2365,7 @@ function importProjectPayload(payload, options = {}) {
 
                     }
 
-                    insertPosition.run({
+                    const positionResult = insertPosition.run({
                         projectNodeId:
                             newNodeId,
                         articleNumber:
@@ -2100,8 +2386,111 @@ function importProjectPayload(payload, options = {}) {
                         specialPrice:
                             position.specialPrice ?? null
                     });
+                    oldToNewArticleId.set(
+                        String(position.id),
+                        positionResult.lastInsertRowid
+                    );
 
                 });
+
+            const insertLabel = database.projects.prepare(`
+                INSERT INTO projectNodeLabels (projectNodeId, text, color, side, sortOrder)
+                VALUES (@projectNodeId, @text, @color, @side, @sortOrder)
+            `);
+            const oldToNewNodeLabelId = new Map();
+
+            (payload.labels ?? payload.nodeLabels ?? []).forEach((label, index) => {
+                const projectNodeId = oldToNewNodeId.get(String(label.nodeId ?? label.projectNodeId));
+                if (!projectNodeId || !String(label.text ?? "").trim()) {
+                    return;
+                }
+                const labelResult = insertLabel.run({
+                    projectNodeId,
+                    text: String(label.text).trim().slice(0, 80),
+                    color: /^#[0-9a-f]{6}$/i.test(String(label.color ?? "")) ? String(label.color).toLowerCase() : "#2f6fb4",
+                    side: label.side === "right" ? "right" : "left",
+                    sortOrder: Number.isFinite(Number(label.sortOrder)) ? Math.max(0, Number(label.sortOrder)) : index
+                });
+                if (label.id != null) {
+                    oldToNewNodeLabelId.set(String(label.id), labelResult.lastInsertRowid);
+                }
+            });
+
+            const insertLabelSetting = database.projects.prepare(`
+                INSERT INTO projectNodeLabelSettings
+                    (projectNodeId, inheritToChildren, inheritFromParent)
+                VALUES (?, ?, ?)
+                ON CONFLICT(projectNodeId) DO UPDATE SET
+                    inheritToChildren = excluded.inheritToChildren,
+                    inheritFromParent = excluded.inheritFromParent
+            `);
+            (payload.nodeLabelSettings ?? []).forEach(setting => {
+                const projectNodeId = oldToNewNodeId.get(String(setting.nodeId ?? setting.projectNodeId));
+                if (projectNodeId) {
+                    insertLabelSetting.run(
+                        projectNodeId,
+                        setting.inheritToChildren === false ? 0 : 1,
+                        setting.inheritFromParent === false ? 0 : 1
+                    );
+                }
+            });
+            const insertHiddenLabel = database.projects.prepare(`
+                INSERT OR IGNORE INTO projectNodeLabelHidden
+                    (projectNodeId, sourceProjectNodeLabelId)
+                VALUES (?, ?)
+            `);
+            (payload.nodeLabelHidden ?? []).forEach(item => {
+                const projectNodeId = oldToNewNodeId.get(String(item.nodeId ?? item.projectNodeId));
+                const sourceLabelId = oldToNewNodeLabelId.get(String(item.sourceLabelId ?? item.sourceProjectNodeLabelId));
+                if (projectNodeId && sourceLabelId) {
+                    insertHiddenLabel.run(projectNodeId, sourceLabelId);
+                }
+            });
+
+            const insertArticleLabel = database.projects.prepare(`
+                INSERT INTO projectArticleLabels
+                    (projectNodeArticleId, text, color, side, sortOrder)
+                VALUES (@projectNodeArticleId, @text, @color, @side, @sortOrder)
+            `);
+            (payload.articleLabels ?? []).forEach((label, index) => {
+                const projectNodeArticleId = oldToNewArticleId.get(String(label.articleId ?? label.projectNodeArticleId));
+                if (!projectNodeArticleId || !String(label.text ?? "").trim()) return;
+                insertArticleLabel.run({
+                    projectNodeArticleId,
+                    text: String(label.text).trim().slice(0, 80),
+                    color: /^#[0-9a-f]{6}$/i.test(String(label.color ?? "")) ? String(label.color).toLowerCase() : "#2f6fb4",
+                    side: label.side === "right" ? "right" : "left",
+                    sortOrder: Number.isFinite(Number(label.sortOrder)) ? Math.max(0, Number(label.sortOrder)) : index
+                });
+            });
+            const insertArticleLabelSetting = database.projects.prepare(`
+                INSERT INTO projectArticleLabelSettings
+                    (projectNodeArticleId, inheritFromParent)
+                VALUES (?, ?)
+                ON CONFLICT(projectNodeArticleId) DO UPDATE SET
+                    inheritFromParent = excluded.inheritFromParent
+            `);
+            (payload.articleLabelSettings ?? []).forEach(setting => {
+                const projectNodeArticleId = oldToNewArticleId.get(String(setting.articleId ?? setting.projectNodeArticleId));
+                if (projectNodeArticleId) {
+                    insertArticleLabelSetting.run(
+                        projectNodeArticleId,
+                        setting.inheritFromParent === false ? 0 : 1
+                    );
+                }
+            });
+            const insertHiddenArticleLabel = database.projects.prepare(`
+                INSERT OR IGNORE INTO projectArticleLabelHidden
+                    (projectNodeArticleId, sourceProjectNodeLabelId)
+                VALUES (?, ?)
+            `);
+            (payload.articleLabelHidden ?? []).forEach(item => {
+                const projectNodeArticleId = oldToNewArticleId.get(String(item.articleId ?? item.projectNodeArticleId));
+                const sourceLabelId = oldToNewNodeLabelId.get(String(item.sourceLabelId ?? item.sourceProjectNodeLabelId));
+                if (projectNodeArticleId && sourceLabelId) {
+                    insertHiddenArticleLabel.run(projectNodeArticleId, sourceLabelId);
+                }
+            });
 
             return database.projects.prepare(`
 
@@ -6769,6 +7158,39 @@ function replaceProjectPayload(projectId, payload, options = {}) {
         ).all(projectId).map(node => node.id);
         if (oldNodeIds.length > 0) {
             database.projects.prepare(`
+                DELETE FROM projectNodeLabels
+                WHERE projectNodeId IN (${oldNodeIds.map(() => "?").join(",")})
+            `).run(...oldNodeIds);
+            database.projects.prepare(`
+                DELETE FROM projectNodeLabelHidden
+                WHERE projectNodeId IN (${oldNodeIds.map(() => "?").join(",")})
+            `).run(...oldNodeIds);
+            database.projects.prepare(`
+                DELETE FROM projectNodeLabelSettings
+                WHERE projectNodeId IN (${oldNodeIds.map(() => "?").join(",")})
+            `).run(...oldNodeIds);
+            database.projects.prepare(`
+                DELETE FROM projectArticleLabels
+                WHERE projectNodeArticleId IN (
+                    SELECT id FROM projectNodeArticles
+                    WHERE projectNodeId IN (${oldNodeIds.map(() => "?").join(",")})
+                )
+            `).run(...oldNodeIds);
+            database.projects.prepare(`
+                DELETE FROM projectArticleLabelHidden
+                WHERE projectNodeArticleId IN (
+                    SELECT id FROM projectNodeArticles
+                    WHERE projectNodeId IN (${oldNodeIds.map(() => "?").join(",")})
+                )
+            `).run(...oldNodeIds);
+            database.projects.prepare(`
+                DELETE FROM projectArticleLabelSettings
+                WHERE projectNodeArticleId IN (
+                    SELECT id FROM projectNodeArticles
+                    WHERE projectNodeId IN (${oldNodeIds.map(() => "?").join(",")})
+                )
+            `).run(...oldNodeIds);
+            database.projects.prepare(`
                 DELETE FROM projectNodeArticles
                 WHERE projectNodeId IN (${oldNodeIds.map(() => "?").join(",")})
             `).run(...oldNodeIds);
@@ -6777,7 +7199,7 @@ function replaceProjectPayload(projectId, payload, options = {}) {
 
         const customerId = getImportCustomerId(payload.project);
         database.projects.prepare(`
-            UPDATE projects SET customerId = ?, name = ?, description = ?, projectDiscount = ?,
+            UPDATE projects SET customerId = ?, name = ?, description = ?, projectDiscount = ?, overviewColors = ?,
                 salesforceOpportunityId = ?, salesforceQuoteId = ?, salesforceSyncedAt = ?
             WHERE id = ?
         `).run(
@@ -6785,6 +7207,9 @@ function replaceProjectPayload(projectId, payload, options = {}) {
             payload.project.name ?? "Importiertes Projekt",
             payload.project.description ?? "",
             payload.project.projectDiscount ?? 0,
+            typeof payload.project.overviewColors === "string"
+                ? payload.project.overviewColors
+                : JSON.stringify(payload.project.overviewColors ?? {}),
             options.opportunityId ?? payload.project.salesforceOpportunityId ?? existing.salesforceOpportunityId,
             payload.project.salesforceQuoteId ?? existing.salesforceQuoteId,
             new Date().toISOString(),
@@ -6805,6 +7230,7 @@ function replaceProjectPayload(projectId, payload, options = {}) {
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         const oldToNewNodeId = new Map();
+        const oldToNewArticleId = new Map();
         for (const node of getNodesInImportOrder(payload.nodes)) {
             const parentId = node.parentId == null ? null : oldToNewNodeId.get(String(node.parentId)) ?? null;
             const result = insertNode.run(
@@ -6816,17 +7242,111 @@ function replaceProjectPayload(projectId, payload, options = {}) {
             );
             oldToNewNodeId.set(String(node.id), result.lastInsertRowid);
         }
+        const insertLabel = database.projects.prepare(`
+            INSERT INTO projectNodeLabels (projectNodeId, text, color, side, sortOrder)
+            VALUES (?, ?, ?, ?, ?)
+        `);
+        const oldToNewNodeLabelId = new Map();
+        for (const [index, label] of (payload.labels ?? payload.nodeLabels ?? []).entries()) {
+            const nodeId = oldToNewNodeId.get(String(label.nodeId ?? label.projectNodeId));
+            if (!nodeId || !String(label.text ?? "").trim()) continue;
+            const labelResult = insertLabel.run(
+                nodeId,
+                String(label.text).trim().slice(0, 80),
+                /^#[0-9a-f]{6}$/i.test(String(label.color ?? "")) ? String(label.color).toLowerCase() : "#2f6fb4",
+                label.side === "right" ? "right" : "left",
+                Number.isFinite(Number(label.sortOrder)) ? Math.max(0, Number(label.sortOrder)) : index
+            );
+            if (label.id != null) {
+                oldToNewNodeLabelId.set(String(label.id), labelResult.lastInsertRowid);
+            }
+        }
+        const insertLabelSetting = database.projects.prepare(`
+            INSERT INTO projectNodeLabelSettings
+                (projectNodeId, inheritToChildren, inheritFromParent)
+            VALUES (?, ?, ?)
+            ON CONFLICT(projectNodeId) DO UPDATE SET
+                inheritToChildren = excluded.inheritToChildren,
+                inheritFromParent = excluded.inheritFromParent
+        `);
+        (payload.nodeLabelSettings ?? []).forEach(setting => {
+            const nodeId = oldToNewNodeId.get(String(setting.nodeId ?? setting.projectNodeId));
+            if (nodeId) {
+                insertLabelSetting.run(
+                    nodeId,
+                    setting.inheritToChildren === false ? 0 : 1,
+                    setting.inheritFromParent === false ? 0 : 1
+                );
+            }
+        });
+        const insertHiddenLabel = database.projects.prepare(`
+            INSERT OR IGNORE INTO projectNodeLabelHidden
+                (projectNodeId, sourceProjectNodeLabelId)
+            VALUES (?, ?)
+        `);
+        (payload.nodeLabelHidden ?? []).forEach(item => {
+            const nodeId = oldToNewNodeId.get(String(item.nodeId ?? item.projectNodeId));
+            const sourceLabelId = oldToNewNodeLabelId.get(String(item.sourceLabelId ?? item.sourceProjectNodeLabelId));
+            if (nodeId && sourceLabelId) {
+                insertHiddenLabel.run(nodeId, sourceLabelId);
+            }
+        });
         for (const position of payload.positions.slice().sort(compareSortOrder)) {
             const nodeId = oldToNewNodeId.get(String(position.nodeId));
             if (!nodeId) throw new Error("Position konnte keiner importierten Strukturposition zugeordnet werden.");
-            insertPosition.run(
+            const result = insertPosition.run(
                 nodeId, String(position.articleNumber ?? "").trim(), Number(position.quantity) || 1,
                 position.positionName || null, Number(position.sortOrder) || 0,
                 position.isOptional ? 1 : 0, position.isAlternative ? 1 : 0,
                 position.specialDiscount ?? null,
                 position.specialPrice ?? null
             );
+            oldToNewArticleId.set(String(position.id), result.lastInsertRowid);
         }
+        const insertArticleLabel = database.projects.prepare(`
+            INSERT INTO projectArticleLabels
+                (projectNodeArticleId, text, color, side, sortOrder)
+            VALUES (?, ?, ?, ?, ?)
+        `);
+        for (const [index, label] of (payload.articleLabels ?? []).entries()) {
+            const articleId = oldToNewArticleId.get(String(label.articleId ?? label.projectNodeArticleId));
+            if (!articleId || !String(label.text ?? "").trim()) continue;
+            insertArticleLabel.run(
+                articleId,
+                String(label.text).trim().slice(0, 80),
+                /^#[0-9a-f]{6}$/i.test(String(label.color ?? "")) ? String(label.color).toLowerCase() : "#2f6fb4",
+                label.side === "right" ? "right" : "left",
+                Number.isFinite(Number(label.sortOrder)) ? Math.max(0, Number(label.sortOrder)) : index
+            );
+        }
+        const insertArticleLabelSetting = database.projects.prepare(`
+            INSERT INTO projectArticleLabelSettings
+                (projectNodeArticleId, inheritFromParent)
+            VALUES (?, ?)
+            ON CONFLICT(projectNodeArticleId) DO UPDATE SET
+                inheritFromParent = excluded.inheritFromParent
+        `);
+        (payload.articleLabelSettings ?? []).forEach(setting => {
+            const articleId = oldToNewArticleId.get(String(setting.articleId ?? setting.projectNodeArticleId));
+            if (articleId) {
+                insertArticleLabelSetting.run(
+                    articleId,
+                    setting.inheritFromParent === false ? 0 : 1
+                );
+            }
+        });
+        const insertHiddenArticleLabel = database.projects.prepare(`
+            INSERT OR IGNORE INTO projectArticleLabelHidden
+                (projectNodeArticleId, sourceProjectNodeLabelId)
+            VALUES (?, ?)
+        `);
+        (payload.articleLabelHidden ?? []).forEach(item => {
+            const articleId = oldToNewArticleId.get(String(item.articleId ?? item.projectNodeArticleId));
+            const sourceLabelId = oldToNewNodeLabelId.get(String(item.sourceLabelId ?? item.sourceProjectNodeLabelId));
+            if (articleId && sourceLabelId) {
+                insertHiddenArticleLabel.run(articleId, sourceLabelId);
+            }
+        });
 
         const customerSalesforceId = payload.project.customerSalesforceId;
         if (customerSalesforceId) {

@@ -2,6 +2,25 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.53 - 12.11.2026
+
+### Neu
+
+- Strukturknoten koennen mehrere farbige Labels erhalten. Wiederverwendbare
+  Labelvorlagen lassen sich erstellen, ersetzen, loeschen und direkt aus dem
+  Drei-Punkt-Menue anwenden.
+- Labels koennen an untergeordnete Strukturknoten und Artikel vererbt werden.
+  Die Vererbung kann je Ebene deaktiviert werden; einzelne geerbte Labels
+  koennen ausgeblendet werden. Artikel vererben nicht weiter.
+- Artikel-Labels werden im Projektbaum, im Uebersichtsplan und in den
+  Detailseiten angezeigt. Vererbungsregeln werden auch in Projektdateien,
+  Duplikaten und serverseitig erzeugten Salesforce-Dokumenten beruecksichtigt.
+
+### Verbessert
+
+- Geerbte Labels werden im Projektbaum und Uebersichtsplan optisch von lokalen
+  Labels unterschieden.
+
 ## 1.5.52 - 12.11.2026
 
 ### Behoben

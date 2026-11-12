@@ -59,6 +59,50 @@ const nodeColors = {
     }
 };
 
+const defaultOverviewColors = {
+    project: { fill: "#111827", header: "#111827", text: "#ffffff" },
+    building: { fill: "#eef5fb", header: "#d8e8f7", text: "#1f4f7d" },
+    generalPosition: { fill: "#f3f6fa", header: "#dfe8f2", text: "#526173" },
+    panel: { fill: "#e6f0fa", header: "#c9def1", text: "#1f5e8f" },
+    field: { fill: "#f1f7fc", header: "#dbeaf7", text: "#285d87" },
+    meter: { fill: "#f7fbfe", header: "#e8f2fa", text: "#35698f" },
+    empty: { fill: "#f8fafc", header: "#eef2f6", text: "#526173" }
+};
+
+function parseOverviewColors(value) {
+
+    let colors = value;
+
+    if (typeof value === "string") {
+        try {
+            colors = JSON.parse(value);
+        } catch {
+            colors = {};
+        }
+    }
+
+    const isColor = color =>
+        /^#[0-9a-f]{6}$/i.test(String(color ?? ""));
+
+    return Object.fromEntries(
+        Object.entries(defaultOverviewColors).map(([type, defaults]) => ({
+            [type]: {
+                ...defaults,
+                ...(isColor(colors?.[type]?.fill)
+                    ? { fill: colors[type].fill }
+                    : {}),
+                ...(isColor(colors?.[type]?.header)
+                    ? { header: colors[type].header }
+                    : {}),
+                ...(isColor(colors?.[type]?.text)
+                    ? { text: colors[type].text }
+                    : {})
+            }
+        }))
+    );
+
+}
+
 function buildOverviewDocuments({
     project,
     customer,
@@ -68,6 +112,12 @@ function buildOverviewDocuments({
     getArticleIcon = () => "",
     getArticleDiscountPercent = () => 0,
     labels,
+    nodeLabels = [],
+    nodeLabelSettings = [],
+    articleLabels = [],
+    articleLabelSettings = [],
+    articleLabelHidden = [],
+    overviewColors = {},
     showPrices = false,
     priceMode = "list"
 }) {
@@ -80,7 +130,12 @@ function buildOverviewDocuments({
             articles,
             getArticleIcon,
             getArticleDiscountPercent,
-            labels
+            labels,
+            nodeLabels,
+            nodeLabelSettings,
+            articleLabels,
+            articleLabelSettings,
+            articleLabelHidden
         });
     calculateTreePriceTotals(
         fullTree
@@ -98,7 +153,10 @@ function buildOverviewDocuments({
             ),
             labels,
             "vertical",
-            renderOptions
+            {
+                ...renderOptions,
+                overviewColors
+            }
         );
     const detailPages =
         buildDetailPageTrees(
@@ -111,7 +169,10 @@ function buildOverviewDocuments({
                     cloneTree(page.root),
                     labels,
                     "vertical",
-                    renderOptions
+                    {
+                        ...renderOptions,
+                        overviewColors
+                    }
                 )
         }));
 
@@ -123,7 +184,8 @@ function buildOverviewDocuments({
                 overviewDiagram,
                 detailPages,
                 project,
-                labels
+                labels,
+                overviewColors
             })
     };
 }
@@ -136,7 +198,13 @@ function openProjectOverview({
     articles,
     getArticleIcon,
     getArticleDiscountPercent,
-    labels
+    labels,
+    nodeLabels = [],
+    nodeLabelSettings = [],
+    articleLabels = [],
+    articleLabelSettings = [],
+    articleLabelHidden = [],
+    onSaveOverviewColors = async () => {}
 }) {
     document
         .querySelector(
@@ -162,8 +230,14 @@ function openProjectOverview({
                 getArticleIcon,
                 getArticleDiscountPercent,
                 labels,
+                nodeLabels,
+                nodeLabelSettings,
+                articleLabels,
+                articleLabelSettings,
+                articleLabelHidden,
                 showPrices,
-                priceMode
+                priceMode,
+                overviewColors: parseOverviewColors(project?.overviewColors)
             });
 
             return {
@@ -274,6 +348,9 @@ function openProjectOverview({
 
                     <button type="button" data-action="fit">
                         ${escapeXml(labels.fit)}
+                    </button>
+                    <button type="button" data-action="overview-colors">
+                        ${escapeXml(labels.levelColors)}
                     </button>
                     <button type="button" data-action="print" class="primary">
                         ${escapeXml(labels.print)}
@@ -495,7 +572,7 @@ function openProjectOverview({
 
     backdrop.addEventListener(
         "click",
-        event => {
+        async event => {
             const action =
                 event.target.closest(
                     "[data-action]"
@@ -509,6 +586,18 @@ function openProjectOverview({
                 applyScale(scale - 0.1);
             } else if (action === "fit") {
                 fitDiagram();
+            } else if (action === "overview-colors") {
+                const colors = await openOverviewColorsModal(
+                    parseOverviewColors(project?.overviewColors),
+                    labels
+                );
+                if (!colors) {
+                    return;
+                }
+                await onSaveOverviewColors(colors);
+                project.overviewColors = JSON.stringify(colors);
+                views = buildViews();
+                showView(backdrop.dataset.viewMode || "overview");
             } else if (action === "view-overview") {
                 showView("overview");
             } else if (action === "view-details") {
@@ -671,7 +760,13 @@ function buildOverviewDiagram({
     orientation = "vertical",
     showArticles = true,
     showPrices = false,
-    priceMode = "list"
+    priceMode = "list",
+    nodeLabels = [],
+    nodeLabelSettings = [],
+    articleLabels = [],
+    articleLabelSettings = [],
+    articleLabelHidden = [],
+    overviewColors = {}
 }) {
     const root =
         buildOverviewTree({
@@ -682,7 +777,12 @@ function buildOverviewDiagram({
             articles,
             getArticleIcon,
             getArticleDiscountPercent,
-            labels
+            labels,
+            nodeLabels,
+            nodeLabelSettings,
+            articleLabels,
+            articleLabelSettings,
+            articleLabelHidden
         });
     calculateTreePriceTotals(root);
 
@@ -693,7 +793,8 @@ function buildOverviewDiagram({
         {
             showArticles,
             showPrices,
-            priceMode
+            priceMode,
+            overviewColors
         }
     );
 }
@@ -706,7 +807,12 @@ function buildOverviewTree({
     articles,
     getArticleIcon,
     getArticleDiscountPercent,
-    labels
+    labels,
+    nodeLabels = [],
+    nodeLabelSettings = [],
+    articleLabels = [],
+    articleLabelSettings = [],
+    articleLabelHidden = []
 }) {
     const articleByNumber =
         new Map(
@@ -725,6 +831,77 @@ function buildOverviewTree({
         new Map();
     const childrenByParent =
         new Map();
+    const labelsByNodeId =
+        new Map();
+
+    nodeLabels.forEach(label => {
+        const nodeId = String(label.projectNodeId ?? label.nodeId ?? "");
+        if (!nodeId) {
+            return;
+        }
+        if (!labelsByNodeId.has(nodeId)) {
+            labelsByNodeId.set(nodeId, []);
+        }
+        labelsByNodeId.get(nodeId).push({
+            text: String(label.text ?? "").trim().slice(0, 24),
+            color: /^#[0-9a-f]{6}$/i.test(String(label.color ?? ""))
+                ? String(label.color).toLowerCase()
+                : "#2f6fb4",
+            side: label.side === "right" ? "right" : "left",
+            sortOrder: Number(label.sortOrder) || 0,
+            isInherited: Boolean(label.isInherited),
+            sourceProjectNodeLabelId: label.sourceProjectNodeLabelId ?? label.id
+        });
+    });
+    labelsByNodeId.forEach(items => items.sort(compareOrder));
+
+    const nodeLabelSettingsById = new Map(
+        nodeLabelSettings.map(setting => [
+            String(setting.projectNodeId ?? setting.nodeId),
+            setting
+        ])
+    );
+
+    const labelsByArticleId =
+        new Map();
+
+    articleLabels.forEach(label => {
+        const articleId = String(label.projectNodeArticleId ?? label.articleId ?? "");
+        if (!articleId) {
+            return;
+        }
+        if (!labelsByArticleId.has(articleId)) {
+            labelsByArticleId.set(articleId, []);
+        }
+        labelsByArticleId.get(articleId).push({
+            text: String(label.text ?? "").trim().slice(0, 24),
+            color: /^#[0-9a-f]{6}$/i.test(String(label.color ?? ""))
+                ? String(label.color).toLowerCase()
+                : "#2f6fb4",
+            side: label.side === "right" ? "right" : "left",
+            sortOrder: Number(label.sortOrder) || 0,
+            isInherited: Boolean(label.isInherited),
+            sourceProjectNodeLabelId: label.sourceProjectNodeLabelId
+        });
+    });
+    labelsByArticleId.forEach(items => items.sort(compareOrder));
+
+    const articleLabelSettingsById = new Map(
+        articleLabelSettings.map(setting => [
+            String(setting.projectNodeArticleId ?? setting.articleId),
+            setting
+        ])
+    );
+    const articleHiddenLabelsById = new Map();
+    articleLabelHidden.forEach(item => {
+        const articleId = String(item.projectNodeArticleId ?? item.articleId);
+        if (!articleHiddenLabelsById.has(articleId)) {
+            articleHiddenLabelsById.set(articleId, new Set());
+        }
+        articleHiddenLabelsById.get(articleId).add(
+            String(item.sourceProjectNodeLabelId ?? item.sourceLabelId)
+        );
+    });
 
     nodeArticles.forEach(nodeArticle => {
         const nodeId =
@@ -798,7 +975,26 @@ function buildOverviewTree({
             sortOrder:
                 nodeArticle.sortOrder,
             id:
-                nodeArticle.id
+                nodeArticle.id,
+            labels: (() => {
+                const articleId = String(nodeArticle.id);
+                const articleSettings = articleLabelSettingsById.get(articleId);
+                const inheritsFromParent = articleSettings == null
+                    || (articleSettings.inheritFromParent !== 0 && articleSettings.inheritFromParent !== false);
+                const hiddenIds = articleHiddenLabelsById.get(articleId) ?? new Set();
+                const nodeSettings = nodeLabelSettingsById.get(nodeId);
+                const nodeAllowsInheritance = nodeSettings == null
+                    || (nodeSettings.inheritToChildren !== 0 && nodeSettings.inheritToChildren !== false);
+                const inherited = inheritsFromParent && nodeAllowsInheritance
+                    ? (labelsByNodeId.get(nodeId) ?? [])
+                        .filter(label => !hiddenIds.has(String(label.sourceProjectNodeLabelId)))
+                        .map(label => ({ ...label, isInherited: true }))
+                    : [];
+                return [
+                    ...inherited,
+                    ...(labelsByArticleId.get(articleId) ?? [])
+                ];
+            })()
         });
     });
 
@@ -837,6 +1033,8 @@ function buildOverviewTree({
                 node.type,
             name: node.name ?? "",
             meta: "",
+            labels:
+                labelsByNodeId.get(String(node.id)) ?? [],
             articles:
                 articlesByNode.get(
                     String(node.id)
@@ -867,6 +1065,7 @@ function buildOverviewTree({
             typeLabel: labels.empty,
             name: labels.noStructure,
             meta: "",
+            labels: [],
             articles: [],
             children: []
         });
@@ -913,6 +1112,7 @@ function buildSummaryTree(
                             stats,
                             labels
                         ),
+                labels: node.labels ?? [],
                 articles: [],
                 listTotal: node.listTotal,
                 discountedTotal: node.discountedTotal,
@@ -1361,17 +1561,18 @@ function getCardHeight(
             (options.showPrices ? 24 : 0);
     }
 
-    return diagramLayout.nodeHeaderHeight
+    return getNodeHeaderHeight(node)
         +
         (node.meta ? 22 : 0)
         +
         (options.showPrices ? 24 : 0)
         +
         (options.showArticles
-            ? node.articles.length
+            ? node.articles.reduce(
+                (total, article) => total + getDiagramArticleHeight(article),
+                0
+            )
             : 0)
-        *
-        diagramLayout.articleHeight
         +
         (
             options.showArticles
@@ -1380,6 +1581,22 @@ function getCardHeight(
                 ? 8
                 : 0
         );
+}
+
+function getDiagramArticleHeight(article) {
+
+    return article.labels?.length > 0
+        ? 52
+        : diagramLayout.articleHeight;
+
+}
+
+function getNodeHeaderHeight(node) {
+
+    return diagramLayout.nodeHeaderHeight
+        +
+        (node.labels?.length > 0 ? 20 : 0);
+
 }
 
 function collectDiagramNodes(
@@ -1410,6 +1627,8 @@ function renderTreeDiagram(
             options.priceMode === "discounted"
                 ? "discounted"
                 : "list",
+        overviewColors:
+            parseOverviewColors(options.overviewColors),
         priceLabel:
             labels.price
     };
@@ -1985,7 +2204,17 @@ function renderDiagramCard(
     node,
     options
 ) {
+    const headerHeight =
+        getNodeHeaderHeight(node);
+    const hasLabels =
+        node.labels?.length > 0;
+    const typeTextOffset =
+        hasLabels ? 35 : 20;
+    const titleTextOffset =
+        hasLabels ? 60 : 45;
     const colors =
+        options.overviewColors?.[node.type]
+        ??
         nodeColors[node.type]
         ??
         nodeColors.empty;
@@ -2096,15 +2325,21 @@ function renderDiagramCard(
                 d="M ${node.x + 10} ${node.y}
                    H ${node.x + cardWidth - 10}
                    Q ${node.x + cardWidth} ${node.y} ${node.x + cardWidth} ${node.y + 10}
-                   V ${node.y + diagramLayout.nodeHeaderHeight}
+                   V ${node.y + headerHeight}
                    H ${node.x}
                    V ${node.y + 10}
                    Q ${node.x} ${node.y} ${node.x + 10} ${node.y} Z"
                 fill="${colors.header}"
             />
+            ${renderLabelChips(
+                node.labels,
+                node.x + 12,
+                node.x + cardWidth - 12,
+                node.y + 4
+            )}
             <text
                 x="${node.x + 14}"
-                y="${node.y + 20}"
+                y="${node.y + typeTextOffset}"
                 fill="${colors.text}"
                 font-family="Arial, sans-serif"
                 font-size="11"
@@ -2114,7 +2349,7 @@ function renderDiagramCard(
             >${escapeXml(typeLabel.text)}</text>
             <text
                 x="${node.x + 14}"
-                y="${node.y + 45}"
+                y="${node.y + titleTextOffset}"
                 fill="#17283f"
                 font-family="Arial, sans-serif"
                 font-size="15"
@@ -2130,7 +2365,7 @@ function renderDiagramCard(
             ${node.meta ? `
                 <text
                     x="${node.x + 14}"
-                    y="${node.y + diagramLayout.nodeHeaderHeight + 16}"
+                    y="${node.y + headerHeight + 16}"
                     fill="#65758a"
                     font-family="Arial, sans-serif"
                     font-size="10.5"
@@ -2228,16 +2463,25 @@ function renderDiagramArticle(
             diagramLayout.cardWidth - 56,
             10.5
         );
+    const hasLabels =
+        article.labels?.length > 0;
+    const articleOffset =
+        node.articles
+            .slice(0, index)
+            .reduce(
+                (total, item) => total + getDiagramArticleHeight(item),
+                0
+            );
     const top =
         node.y
         +
-        diagramLayout.nodeHeaderHeight
+        getNodeHeaderHeight(node)
         +
         7
         +
         (node.meta ? 22 : 0)
         +
-        index * diagramLayout.articleHeight;
+        articleOffset;
     const icon =
         article.icon
             ? `
@@ -2272,15 +2516,167 @@ function renderDiagramArticle(
             font-weight="700"
             ${displayText.attributes}
         >${escapeXml(displayText.text)}</text>
+        ${hasLabels
+            ? renderLabelChips(
+                article.labels,
+                node.x + 44,
+                node.x + diagramLayout.cardWidth - 12,
+                top + 19
+            )
+            : ""}
         <text
             x="${node.x + 44}"
-            y="${top + 27}"
+            y="${top + (hasLabels ? 47 : 27)}"
             fill="#69788b"
             font-family="Arial, sans-serif"
             font-size="10.5"
             ${articleNumberText.attributes}
         >${escapeXml(articleNumberText.text)}</text>
     `;
+}
+
+function renderLabelChips(
+    labels = [],
+    leftX,
+    rightX,
+    y
+) {
+    const items = labels
+        .filter(label => String(label?.text ?? "").trim())
+        .slice(0, 6);
+    if (items.length === 0) {
+        return "";
+    }
+
+    const left = items.filter(label => label.side !== "right");
+    const right = items.filter(label => label.side === "right");
+    const renderGroup = (group, align) => {
+        const widths = group.map(label =>
+            Math.max(24, Math.min(72, String(label.text).length * 5.2 + 10))
+        );
+        const gap = 4;
+        const total = widths.reduce((sum, width) => sum + width, 0)
+            + Math.max(0, widths.length - 1) * gap;
+        let cursor = align === "right" ? rightX - total : leftX;
+
+        return group.map((label, index) => {
+            const width = widths[index];
+            const x = cursor;
+            cursor += width + gap;
+            const text = truncateText(label.text, 12);
+            const fill = /^#[0-9a-f]{6}$/i.test(label.color)
+                ? label.color
+                : "#2f6fb4";
+            return `
+                <g opacity="${label.isInherited ? "0.68" : "1"}">
+                    <title>${escapeXml(label.isInherited ? `${text} (geerbt)` : text)}</title>
+                    <rect
+                        x="${x}"
+                        y="${y}"
+                        width="${width}"
+                        height="15"
+                        rx="3"
+                        fill="${fill}"
+                    />
+                    <text
+                        x="${align === "right" ? x + width - 5 : x + 5}"
+                        y="${y + 11}"
+                        text-anchor="${align === "right" ? "end" : "start"}"
+                        fill="${getLabelTextColor(fill)}"
+                        font-family="Arial, sans-serif"
+                        font-size="8.5"
+                        font-weight="700"
+                    >${escapeXml(text)}</text>
+                </g>
+            `;
+        }).join("");
+    };
+
+    return `
+        <g class="project-overview-labels">
+            ${renderGroup(left, "left")}
+            ${renderGroup(right, "right")}
+        </g>
+    `;
+}
+
+function getLabelTextColor(color) {
+    const value = String(color ?? "").replace("#", "");
+    if (value.length !== 6) {
+        return "#ffffff";
+    }
+    const red = Number.parseInt(value.slice(0, 2), 16);
+    const green = Number.parseInt(value.slice(2, 4), 16);
+    const blue = Number.parseInt(value.slice(4, 6), 16);
+    return (red * 299 + green * 587 + blue * 114) > 150000
+        ? "#17283f"
+        : "#ffffff";
+}
+
+function openOverviewColorsModal(colors, labels) {
+    return new Promise(resolve => {
+        const types = [
+            ["building", labels.nodeTypes.building],
+            ["generalPosition", labels.nodeTypes.generalPosition],
+            ["panel", labels.nodeTypes.panel],
+            ["field", labels.nodeTypes.field],
+            ["meter", labels.nodeTypes.meter]
+        ];
+        const backdrop = document.createElement("div");
+        backdrop.className = "project-modal-backdrop";
+        backdrop.innerHTML = `
+            <form class="project-modal project-overview-colors-modal">
+                <h3>${escapeXml(labels.levelColors)}</h3>
+                <p class="project-properties-hint">${escapeXml(labels.levelColorsHint)}</p>
+                <div class="project-overview-color-fields">
+                    ${types.map(([type, label]) => `
+                        <div class="project-overview-color-row">
+                            <strong>${escapeXml(label)}</strong>
+                            <label>
+                                <span>${escapeXml(labels.colorHeader)}</span>
+                                <input type="color" data-color-type="${type}" data-color-part="header" value="${colors[type].header}">
+                            </label>
+                            <label>
+                                <span>${escapeXml(labels.colorFill)}</span>
+                                <input type="color" data-color-type="${type}" data-color-part="fill" value="${colors[type].fill}">
+                            </label>
+                        </div>
+                    `).join("")}
+                </div>
+                <div class="project-modal-actions">
+                    <button type="button" data-action="reset-colors">${escapeXml(labels.resetColors)}</button>
+                    <button type="button" data-action="cancel">${escapeXml(labels.close)}</button>
+                    <button type="submit">${escapeXml(labels.saveColors)}</button>
+                </div>
+            </form>
+        `;
+        const close = value => {
+            backdrop.remove();
+            resolve(value);
+        };
+        backdrop.addEventListener("click", event => {
+            if (event.target === backdrop || event.target.closest("[data-action=cancel]")) {
+                close(null);
+            }
+            if (event.target.closest("[data-action=reset-colors]")) {
+                Object.entries(defaultOverviewColors).forEach(([type, parts]) => {
+                    ["header", "fill"].forEach(part => {
+                        const input = backdrop.querySelector(`[data-color-type="${type}"][data-color-part="${part}"]`);
+                        if (input) input.value = parts[part];
+                    });
+                });
+            }
+        });
+        backdrop.querySelector("form").addEventListener("submit", event => {
+            event.preventDefault();
+            const result = parseOverviewColors(colors);
+            backdrop.querySelectorAll("input[data-color-type]").forEach(input => {
+                result[input.dataset.colorType][input.dataset.colorPart] = input.value;
+            });
+            close(result);
+        });
+        document.body.appendChild(backdrop);
+    });
 }
 
 function fitText(

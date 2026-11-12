@@ -23,6 +23,9 @@ ProjectBuilder ist eine Desktop-Anwendung zur Planung und Kalkulation von Janitz
 - Kunden- und Projektlisten können vollständig geleert werden
 - Salesforce-Status, Anmeldung/Abmeldung und Fortschrittsanzeige für lange
   Aktionen einschließlich Projekt-Senden und -Laden
+- Mehrere farbige Labels und wiederverwendbare Labelvorlagen fuer Strukturknoten
+  und Artikel; Labels koennen gezielt an untergeordnete Ebenen vererbt oder dort
+  ausgeblendet werden
 - Windows-Desktopanwendung auf Basis von Electron
 
 ## Installation für die Entwicklung

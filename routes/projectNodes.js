@@ -599,6 +599,48 @@ router.post(
 
             `);
 
+        const getNodeLabels =
+            database.projectNodes.prepare(`
+                SELECT id, text, color, side, sortOrder
+                FROM projectNodeLabels
+                WHERE projectNodeId = ?
+                ORDER BY sortOrder, id
+            `);
+
+        const getNodeLabelSettings =
+            database.projectNodes.prepare(`
+                SELECT inheritToChildren, inheritFromParent
+                FROM projectNodeLabelSettings
+                WHERE projectNodeId = ?
+            `);
+
+        const insertNodeLabelSettings =
+            database.projectNodes.prepare(`
+                INSERT INTO projectNodeLabelSettings
+                    (projectNodeId, inheritToChildren, inheritFromParent)
+                VALUES (?, ?, ?)
+            `);
+
+        const getHiddenNodeLabels =
+            database.projectNodes.prepare(`
+                SELECT sourceProjectNodeLabelId
+                FROM projectNodeLabelHidden
+                WHERE projectNodeId = ?
+            `);
+
+        const insertHiddenNodeLabel =
+            database.projectNodes.prepare(`
+                INSERT OR IGNORE INTO projectNodeLabelHidden
+                    (projectNodeId, sourceProjectNodeLabelId)
+                VALUES (?, ?)
+            `);
+
+        const insertNodeLabel =
+            database.projectNodes.prepare(`
+                INSERT INTO projectNodeLabels (projectNodeId, text, color, side, sortOrder)
+                VALUES (@projectNodeId, @text, @color, @side, @sortOrder)
+            `);
+
         const insertNodeArticle =
             database.projectNodes.prepare(`
 
@@ -631,6 +673,51 @@ router.post(
                 )
 
             `);
+
+        const getArticleLabels =
+            database.projectNodes.prepare(`
+                SELECT text, color, side, sortOrder
+                FROM projectArticleLabels
+                WHERE projectNodeArticleId = ?
+                ORDER BY sortOrder, id
+            `);
+
+        const getArticleLabelSettings =
+            database.projectNodes.prepare(`
+                SELECT inheritFromParent
+                FROM projectArticleLabelSettings
+                WHERE projectNodeArticleId = ?
+            `);
+
+        const insertArticleLabelSettings =
+            database.projectNodes.prepare(`
+                INSERT INTO projectArticleLabelSettings
+                    (projectNodeArticleId, inheritFromParent)
+                VALUES (?, ?)
+            `);
+
+        const getHiddenArticleLabels =
+            database.projectNodes.prepare(`
+                SELECT sourceProjectNodeLabelId
+                FROM projectArticleLabelHidden
+                WHERE projectNodeArticleId = ?
+            `);
+
+        const insertHiddenArticleLabel =
+            database.projectNodes.prepare(`
+                INSERT OR IGNORE INTO projectArticleLabelHidden
+                    (projectNodeArticleId, sourceProjectNodeLabelId)
+                VALUES (?, ?)
+            `);
+
+        const insertArticleLabel =
+            database.projectNodes.prepare(`
+                INSERT INTO projectArticleLabels
+                    (projectNodeArticleId, text, color, side, sortOrder)
+                VALUES (@projectNodeArticleId, @text, @color, @side, @sortOrder)
+            `);
+
+        const labelIdMap = new Map();
 
         const duplicateNode =
             (node, parentId, isRoot = false) => {
@@ -671,11 +758,35 @@ router.post(
                         result.lastInsertRowid
                     );
 
+                const nodeSettings = getNodeLabelSettings.get(node.id);
+                if (nodeSettings) {
+                    insertNodeLabelSettings.run(
+                        newNode.id,
+                        nodeSettings.inheritToChildren,
+                        nodeSettings.inheritFromParent
+                    );
+                }
+
+                getNodeLabels.all(node.id).forEach(label => {
+                    const labelResult = insertNodeLabel.run({
+                        projectNodeId: newNode.id,
+                        ...label
+                    });
+                    labelIdMap.set(Number(label.id), Number(labelResult.lastInsertRowid));
+                });
+
+                getHiddenNodeLabels.all(node.id).forEach(hiddenLabel => {
+                    const newSourceLabelId = labelIdMap.get(Number(hiddenLabel.sourceProjectNodeLabelId));
+                    if (newSourceLabelId) {
+                        insertHiddenNodeLabel.run(newNode.id, newSourceLabelId);
+                    }
+                });
+
                 getNodeArticles
                     .all(node.id)
                     .forEach((nodeArticle, index) => {
 
-                        insertNodeArticle.run({
+                        const articleResult = insertNodeArticle.run({
 
                             projectNodeId:
                                 newNode.id,
@@ -697,6 +808,29 @@ router.post(
                             specialDiscount: nodeArticle.specialDiscount ?? null,
                             specialPrice: nodeArticle.specialPrice ?? null
 
+                        });
+
+                        getArticleLabels.all(nodeArticle.id).forEach(label => {
+                            insertArticleLabel.run({
+                                projectNodeArticleId: articleResult.lastInsertRowid,
+                                ...label
+                            });
+                        });
+                        const articleSettings = getArticleLabelSettings.get(nodeArticle.id);
+                        if (articleSettings) {
+                            insertArticleLabelSettings.run(
+                                articleResult.lastInsertRowid,
+                                articleSettings.inheritFromParent
+                            );
+                        }
+                        getHiddenArticleLabels.all(nodeArticle.id).forEach(hiddenLabel => {
+                            const newSourceLabelId = labelIdMap.get(Number(hiddenLabel.sourceProjectNodeLabelId));
+                            if (newSourceLabelId) {
+                                insertHiddenArticleLabel.run(
+                                    articleResult.lastInsertRowid,
+                                    newSourceLabelId
+                                );
+                            }
                         });
 
                     });
@@ -837,6 +971,36 @@ router.delete(
 
             `);
 
+        const deleteNodeArticleLabels =
+            database.projectNodes.prepare(`
+                DELETE FROM projectArticleLabels
+                WHERE projectNodeArticleId IN (
+                    SELECT id FROM projectNodeArticles WHERE projectNodeId = ?
+                )
+            `);
+
+        const deleteNodeArticleLabelInheritance =
+            database.projectNodes.prepare(`
+                DELETE FROM projectArticleLabelHidden
+                WHERE projectNodeArticleId IN (
+                    SELECT id FROM projectNodeArticles WHERE projectNodeId = ?
+                )
+            `);
+
+        const deleteNodeArticleLabelSettings =
+            database.projectNodes.prepare(`
+                DELETE FROM projectArticleLabelSettings
+                WHERE projectNodeArticleId IN (
+                    SELECT id FROM projectNodeArticles WHERE projectNodeId = ?
+                )
+            `);
+
+        const deleteNodeLabels =
+            database.projectNodes.prepare(`
+                DELETE FROM projectNodeLabels
+                WHERE projectNodeId = ?
+            `);
+
         const deleteNode =
             database.projectNodes.prepare(`
 
@@ -859,7 +1023,26 @@ router.delete(
 
                     });
 
+                deleteNodeArticleLabels.run(
+                    nodeId
+                );
+                deleteNodeArticleLabelInheritance.run(nodeId);
+                deleteNodeArticleLabelSettings.run(nodeId);
+
+                database.projectNodeLabelHidden.prepare(`
+                    DELETE FROM projectNodeLabelHidden
+                    WHERE projectNodeId = ?
+                `).run(nodeId);
+                database.projectNodeLabelSettings.prepare(`
+                    DELETE FROM projectNodeLabelSettings
+                    WHERE projectNodeId = ?
+                `).run(nodeId);
+
                 deleteNodeArticles.run(
+                    nodeId
+                );
+
+                deleteNodeLabels.run(
                     nodeId
                 );
 

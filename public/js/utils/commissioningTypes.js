@@ -45,6 +45,11 @@ export function getCommissioningType(article = {}) {
     const text = getArticleClassificationText(article);
     const articleNumber = compactArticleText(article.articleNumber);
 
+    // IBN-Dienstleistungsartikel (DL510...) tragen selbst die Typbezeichnung
+    // im Namen, sind aber keine Messgeraete und duerfen weder ein Badge noch
+    // einen weiteren IBN-Bedarf erzeugen.
+    if (/^dl510/.test(articleNumber)) return null;
+
     // The more specific device families must be checked before UMG 96 and
     // module patterns so that a device is assigned to exactly one type.
     if (identityText.includes("umg20cm")) return 3;

@@ -14,11 +14,25 @@ import settingsRouter from "./routes/settings.js";
 import backupsRouter from "./routes/backups.js";
 import databaseRouter from "./routes/database.js";
 import salesforceRouter from "./routes/salesforce.js";
+import knowledgeRouter from "./routes/knowledge.js";
 import { startAutomaticBackupScheduler } from "./utils/backup.js";
+import { isLocalSessionAuthenticated, requireLocalSession } from "./utils/localAuth.js";
 import { warmConnection as warmSalesforceConnection } from "./services/salesforce.js";
 import { acquireDatabaseAccess } from "./database/config.js";
 
 const app = express()
+
+function isSalesforceStartupCheckEnabled() {
+    try {
+        return database.settings
+            .prepare("SELECT value FROM settings WHERE key = ?")
+            .get("app.checkSalesforceOnStartup")?.value !== "false";
+    } catch {
+        // A missing or unavailable setting must keep the historical default:
+        // check Salesforce at startup.
+        return true;
+    }
+}
 
 // --------------------------------------------------
 // __dirname für ES Modules
@@ -59,6 +73,25 @@ app.use(express.static(path.join(__dirname, "public")))
 // Datenbankprofile dürfen den exklusiven Wechsel-Endpunkt direkt bedienen.
 // Alle anderen API-Anfragen erhalten einen kurzen Lese-/Schreibzugriffsschutz,
 // damit ein Wechsel erst nach laufenden Autosaves oder Imports erfolgt.
+app.get("/api/auth/session", (req, res) => {
+    res.json({ authenticated: isLocalSessionAuthenticated(req) });
+});
+
+// Salesforce OAuth is the bootstrap for the local ProjectBuilder session.
+// The login endpoint must remain reachable without an existing session;
+// every other API endpoint requires the local session cookie.
+app.use("/api", (req, res, next) => {
+    const isPublicApiEndpoint = req.method === "GET"
+        && ["/", "/version", "/changelog"].includes(req.path);
+    const isSalesforceLoginEndpoint = req.method === "POST"
+        && req.path === "/salesforce/login";
+    if (isPublicApiEndpoint || isSalesforceLoginEndpoint) {
+        next();
+        return;
+    }
+    requireLocalSession(req, res, next);
+});
+
 app.use("/api/database", databaseRouter);
 
 app.use("/api", async (req, res, next) => {
@@ -164,6 +197,7 @@ app.use(
 app.use("/api/settings", settingsRouter);
 app.use("/api/backups", backupsRouter);
 app.use("/api/salesforce", salesforceRouter);
+app.use("/api/knowledge", knowledgeRouter);
 
 // Unbekannte API-Endpunkte dürfen nicht in die SPA-Fallbackseite laufen.
 // Andernfalls würde beispielsweise ein nicht geladener Export-Endpunkt als
@@ -205,7 +239,9 @@ export function startServer({ port = 3000, host = "127.0.0.1" } = {}) {
             server.removeListener("error", handleError);
             server.projectBuilderPort = address.port;
             server.projectBuilderUrl = `http://127.0.0.1:${address.port}`;
-            warmSalesforceConnection().catch(() => {});
+            if (isSalesforceStartupCheckEnabled()) {
+                warmSalesforceConnection().catch(() => {});
+            }
             resolve(server);
         });
     });

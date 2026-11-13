@@ -5,3 +5,4 @@ export * from "./projectNodes.js";
 export * from "./projectNodeArticles.js";
 export * from "./projectLabels.js";
 export * from "./settings.js";
+export * from "./knowledge.js";

@@ -1,0 +1,311 @@
+#gridvis-items-header {
+    gap: 14px;
+}
+
+#gridvis-items-content {
+    display: flex;
+    min-height: 0;
+    margin: 8px;
+    overflow: auto;
+    border: 1px solid #aab8c5;
+    background: var(--gridvis-workspace);
+    flex-direction: column;
+}
+
+.gridvis-items-toolbar {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(220px, 300px) auto;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #aab8c5;
+    background: #fff;
+}
+
+.gridvis-items-toolbar-heading {
+    display: grid;
+    gap: 3px;
+}
+
+.gridvis-items-toolbar-heading strong {
+    color: var(--gridvis-text);
+    font-size: 14px;
+}
+
+.gridvis-items-toolbar-heading span,
+.gridvis-items-notice,
+.gridvis-items-project-summary {
+    color: var(--gridvis-muted);
+    font-size: 12px;
+}
+
+#gridvis-items-project {
+    min-height: 34px;
+    padding: 6px 9px;
+    border: 1px solid #9fb8d2;
+    border-radius: 2px;
+    background: #fff;
+    color: var(--gridvis-text);
+    font: inherit;
+}
+
+.gridvis-items-button,
+.gridvis-items-copy {
+    min-height: 34px;
+    padding: 7px 12px;
+    border: 1px solid var(--gridvis-blue);
+    border-radius: 2px;
+    background: var(--gridvis-blue);
+    color: #fff;
+    cursor: pointer;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.gridvis-items-button:hover:not(:disabled),
+.gridvis-items-copy:hover:not(:disabled) {
+    border-color: var(--gridvis-blue-dark);
+    background: var(--gridvis-blue-dark);
+}
+
+.gridvis-items-button:disabled,
+.gridvis-items-copy:disabled {
+    cursor: default;
+    opacity: .5;
+}
+
+.gridvis-items-project-summary {
+    grid-column: 1 / -1;
+    padding-top: 2px;
+}
+
+.gridvis-items-project-summary strong {
+    color: var(--gridvis-text);
+}
+
+.gridvis-items-warning {
+    color: #a65a00;
+    font-weight: 700;
+}
+
+.gridvis-items-notice {
+    display: flex;
+    gap: 6px;
+    padding: 9px 12px;
+    border-bottom: 1px solid #c3cdd6;
+    background: #edf3f8;
+    line-height: 1.4;
+}
+
+.gridvis-items-notice strong {
+    color: var(--gridvis-text);
+}
+
+.gridvis-items-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(260px, 1fr));
+    gap: 10px;
+    padding: 10px;
+    align-items: start;
+}
+
+.gridvis-items-card {
+    display: flex;
+    min-width: 0;
+    border: 1px solid #aab8c5;
+    background: #fff;
+    flex-direction: column;
+}
+
+.gridvis-items-card-header {
+    padding: 11px 12px 9px;
+    border-bottom: 1px solid #c5d0da;
+    background: var(--gridvis-navy);
+    color: #fff;
+}
+
+.gridvis-items-card-header h2 {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.25;
+}
+
+.gridvis-items-card-header p {
+    margin: 6px 0 0;
+    color: #d9e5ef;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.gridvis-items-form {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+}
+
+.gridvis-items-field {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto 105px;
+    align-items: center;
+    gap: 8px;
+    color: var(--gridvis-text);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.gridvis-items-field small {
+    color: var(--gridvis-muted);
+    font-size: 11px;
+    font-weight: 400;
+}
+
+.gridvis-items-field-label {
+    min-width: 0;
+}
+
+.gridvis-items-field-unit {
+    white-space: nowrap;
+    text-align: right;
+}
+
+.gridvis-items-field input {
+    width: 100%;
+    min-height: 30px;
+    box-sizing: border-box;
+    padding: 5px 7px;
+    border: 1px solid #9fb8d2;
+    border-radius: 2px;
+    background: #fff;
+    color: var(--gridvis-text);
+    font: inherit;
+    font-weight: 400;
+    text-align: right;
+}
+
+.gridvis-items-field-select {
+    width: 100%;
+    min-height: 30px;
+    box-sizing: border-box;
+    padding: 5px 7px;
+    border: 1px solid #9fb8d2;
+    border-radius: 2px;
+    background: #fff;
+    color: var(--gridvis-text);
+    font: inherit;
+    text-align: right;
+}
+
+.gridvis-items-field input:focus,
+.gridvis-items-field-select:focus,
+#gridvis-items-project:focus {
+    border-color: var(--gridvis-blue);
+    box-shadow: 0 0 0 2px rgba(77, 126, 175, .18);
+    outline: none;
+}
+
+.gridvis-items-formula {
+    display: grid;
+    gap: 5px;
+    min-height: 64px;
+    padding: 9px 12px;
+    border-top: 1px solid #e0e5e9;
+    border-bottom: 1px solid #e0e5e9;
+    background: #f5f7f9;
+    color: var(--gridvis-muted);
+    font-size: 11px;
+}
+
+.gridvis-items-formula strong {
+    color: var(--gridvis-text);
+}
+
+.gridvis-items-formula code {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    font-family: Consolas, "Courier New", monospace;
+    line-height: 1.4;
+}
+
+.gridvis-items-result {
+    display: grid;
+    gap: 6px;
+    padding: 12px;
+    background: #eef6fb;
+}
+
+.gridvis-items-result > div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.gridvis-items-result span {
+    color: var(--gridvis-muted);
+    font-size: 12px;
+}
+
+.gridvis-items-result strong {
+    color: var(--gridvis-blue-dark);
+    font-size: 15px;
+    text-align: right;
+}
+
+.gridvis-items-error {
+    min-height: 17px;
+    margin: 8px 12px 0;
+    color: #b42318;
+    font-size: 11px;
+}
+
+.gridvis-items-error[hidden] {
+    display: block;
+    visibility: hidden;
+}
+
+.gridvis-items-copy {
+    align-self: flex-start;
+    margin: 0 12px 12px;
+    border-color: #9fb8d2;
+    background: #fff;
+    color: var(--gridvis-blue-dark);
+}
+
+.gridvis-items-copy:hover:not(:disabled) {
+    border-color: var(--gridvis-blue);
+    background: #edf4fb;
+    color: var(--gridvis-blue-dark);
+}
+
+.gridvis-items-loading {
+    display: grid;
+    height: 100%;
+    place-items: center;
+    color: var(--gridvis-muted);
+    font-size: 14px;
+}
+
+.gridvis-items-loading-error {
+    color: #b42318;
+}
+
+@media (max-width: 1100px) {
+    .gridvis-items-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 760px) {
+    .gridvis-items-toolbar {
+        grid-template-columns: 1fr;
+    }
+
+    .gridvis-items-project-summary {
+        grid-column: auto;
+    }
+
+    .gridvis-items-grid {
+        grid-template-columns: 1fr;
+    }
+}

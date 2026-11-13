@@ -39,6 +39,14 @@ navbar.innerHTML = `
                 <span class="navbar-item-icon">${utils.icons.projects}</span>
                 <div class="navbar-item-text">${i18n.t("navbar.projects")}</div>
             </div>
+            <div data-view="gridvis-items" class="navbar-item ">
+                <span class="navbar-item-icon">${utils.icons.gridVisItems}</span>
+                <div class="navbar-item-text">${i18n.t("navbar.gridVisItems")}</div>
+            </div>
+            <div data-view="faq-technik" class="navbar-item ">
+                <span class="navbar-item-icon">${utils.icons.book}</span>
+                <div class="navbar-item-text">${i18n.t("navbar.faqTechnik")}</div>
+            </div>
         </div>
         <div id="navbar-item-group-3" class="navbar-item-group">
             <div id="navbar-import-pricelist" data-view="importPricelist" class="navbar-item">

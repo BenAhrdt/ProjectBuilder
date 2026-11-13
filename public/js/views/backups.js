@@ -8,7 +8,7 @@ let selectedRestoreFile = null;
 let inspectedBackup = null;
 
 function sectionOptions(prefix, values = {}, disabled = {}) {
-    return ["articles", "customers", "projects"].map(section => `
+    return ["articles", "customers", "projects", "knowledge"].map(section => `
         <label class="backup-option${disabled[section] ? " backup-option-disabled" : ""}">
             <input
                 type="checkbox"
@@ -114,7 +114,7 @@ function registerHandlers() {
 
 function readSelection(prefix) {
     return Object.fromEntries(
-        ["articles", "customers", "projects"].map(section => [
+        ["articles", "customers", "projects", "knowledge"].map(section => [
             section,
             document.getElementById(`${prefix}-${section}`)?.checked === true
         ])
@@ -238,7 +238,7 @@ function renderRestorePreview() {
             ))}
         </div>
         <div class="backup-counts">
-            ${["articles", "customers", "projects"].filter(section => inspectedBackup.available[section]).map(section => `
+            ${["articles", "customers", "projects", "knowledge"].filter(section => inspectedBackup.available[section]).map(section => `
                 <span>${i18n.t(`backups.${section}`)}: <strong>${inspectedBackup.counts[section]}</strong></span>
             `).join("")}
         </div>

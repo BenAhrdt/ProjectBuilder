@@ -42,6 +42,14 @@ const tableColumns = {
     projectNodeArticles: [
         "id", "projectNodeId", "articleNumber", "quantity", "positionName",
         "sortOrder", "isOptional", "isAlternative", "specialDiscount", "specialPrice"
+    ],
+    faqEntries: [
+        "id", "externalId", "question", "answer", "category", "articleReferences", "deviceTypes",
+        "tags", "source", "active", "sortOrder", "updatedAt"
+    ],
+    technicalData: [
+        "id", "active", "articleNumber", "deviceType", "category", "parameter", "value",
+        "unit", "source", "notes", "updatedAt"
     ]
 };
 
@@ -53,7 +61,8 @@ function normalizeSelection(selection = {}) {
     return {
         articles: selection.articles === true,
         customers: selection.customers === true,
-        projects: selection.projects === true
+        projects: selection.projects === true,
+        knowledge: selection.knowledge === true
     };
 }
 
@@ -118,6 +127,16 @@ function createBackup(selectionInput = {}) {
         };
     }
 
+    if (selection.knowledge) {
+        const faq = selectAll("faqEntries");
+        const technical = selectAll("technicalData");
+        sections.knowledge = {
+            count: faq.length + technical.length,
+            faq,
+            technical
+        };
+    }
+
     return {
         format: BACKUP_FORMAT,
         version: BACKUP_VERSION,
@@ -162,12 +181,15 @@ function inspectBackup(input) {
         available: {
             articles: Array.isArray(backup.sections.articles?.data),
             customers: Array.isArray(backup.sections.customers?.data),
-            projects: Array.isArray(backup.sections.projects?.projects)
+            projects: Array.isArray(backup.sections.projects?.projects),
+            knowledge: Array.isArray(backup.sections.knowledge?.faq)
+                && Array.isArray(backup.sections.knowledge?.technical)
         },
         counts: {
             articles: backup.sections.articles?.data?.length ?? 0,
             customers: backup.sections.customers?.data?.length ?? 0,
-            projects: backup.sections.projects?.projects?.length ?? 0
+            projects: backup.sections.projects?.projects?.length ?? 0,
+            knowledge: backup.sections.knowledge?.count ?? 0
         }
     };
 }
@@ -233,7 +255,7 @@ function restoreBackup(input, selectionInput = {}) {
     }
 
     const restore = backupDatabase.transaction(() => {
-        const result = { articles: 0, customers: 0, projects: 0 };
+        const result = { articles: 0, customers: 0, projects: 0, knowledge: 0 };
 
         if (selection.customers && !selection.projects) {
             const referencedCustomers = backupDatabase.prepare(`
@@ -336,6 +358,15 @@ function restoreBackup(input, selectionInput = {}) {
             result.projects = restoredProjects.length;
         }
 
+        if (selection.knowledge) {
+            const knowledgeSection = backup.sections.knowledge;
+            backupDatabase.prepare("DELETE FROM faqEntries").run();
+            backupDatabase.prepare("DELETE FROM technicalData").run();
+            insertRows(backupDatabase, "faqEntries", knowledgeSection.faq);
+            insertRows(backupDatabase, "technicalData", knowledgeSection.technical);
+            result.knowledge = knowledgeSection.faq.length + knowledgeSection.technical.length;
+        }
+
         return result;
     });
 
@@ -369,7 +400,8 @@ function getAutomaticBackupSettings() {
         selection: {
             articles: getSetting("backup.auto.articles", "true") === "true",
             customers: getSetting("backup.auto.customers", "true") === "true",
-            projects: getSetting("backup.auto.projects", "true") === "true"
+            projects: getSetting("backup.auto.projects", "true") === "true",
+            knowledge: getSetting("backup.auto.knowledge", "true") === "true"
         },
         lastRunAt: getSetting("backup.auto.lastRunAt", "") || null,
         nextRunAt: getSetting("backup.auto.nextRunAt", "") || null,
@@ -402,6 +434,7 @@ function updateAutomaticBackupSettings(input = {}) {
     setSetting("backup.auto.articles", selection.articles);
     setSetting("backup.auto.customers", selection.customers);
     setSetting("backup.auto.projects", selection.projects);
+    setSetting("backup.auto.knowledge", selection.knowledge);
     setSetting("backup.auto.lastError", "");
 
     const shouldReschedule = !previous.nextRunAt

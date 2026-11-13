@@ -8,6 +8,8 @@ import * as project from "./views/project.js";
 import * as changelog from "./views/changelog.js";
 import * as backups from "./views/backups.js";
 import * as settings from "./views/settings.js";
+import * as gridvisItems from "./views/gridvisItems.js";
+import * as knowledge from "./views/knowledge.js";
 import * as navigationHistory from "./utils/navigationHistory.js";
 
 const routes = {
@@ -42,6 +44,14 @@ const routes = {
     "/settings": {
         render: settings.renderView,
         active: "settings",
+    },
+    "/gridvis-items": {
+        render: gridvisItems.renderView,
+        active: "gridvis-items",
+    },
+    "/faq-technik": {
+        render: knowledge.renderView,
+        active: "faq-technik",
     },
     "/changelog": {
         render: changelog.renderView,

@@ -2,6 +2,29 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.55 - 2026-11-13
+
+### Added
+
+- New **GridVis Items** area with three AZR/item calculators for license
+  expansion, renewal with a different item count, and reactivating parked
+  items. AZR extensions can be selected as 1 or 3 years; one year uses 365
+  days internally.
+- New **FAQ & Technical Data** area for searchable FAQ entries and structured
+  device data. Both data sets can be imported together from Excel sheets named
+  `FAQ` and `Technische Daten` and are included in backups.
+- Excel project exports now include a styled **Inbetriebnahme** sheet with
+  project/header information, the Janitza logo, and measurement-point data
+  derived from the project structure.
+
+### Changed
+
+- The Salesforce startup check runs optionally in the background and does not
+  block local/offline startup. Salesforce login also protects the local
+  ProjectBuilder session.
+- Prepared blank FAQ/technical-data rows with `Aktiv = Ja` are ignored during
+  import when their actual content fields are empty.
+
 ## 1.5.54 - 2026-11-13
 
 ### Fixed

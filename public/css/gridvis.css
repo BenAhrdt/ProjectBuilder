@@ -282,6 +282,60 @@ body {
     background: var(--gridvis-workspace);
 }
 
+.local-auth-gate {
+    position: fixed;
+    inset: var(--header-height) 0 var(--footer-height);
+    z-index: 90;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    box-sizing: border-box;
+    background: rgba(209, 215, 220, .88);
+}
+
+.local-auth-gate[hidden] {
+    display: none;
+}
+
+.local-auth-card {
+    width: min(440px, 100%);
+    padding: 28px;
+    border: 1px solid var(--gridvis-line-dark);
+    background: #fff;
+    box-shadow: 0 16px 40px rgba(15, 27, 39, .22);
+    color: var(--gridvis-text);
+    text-align: center;
+}
+
+.local-auth-card h1 {
+    margin: 0 0 12px;
+    font-size: 22px;
+}
+
+.local-auth-card p {
+    margin: 0 0 22px;
+    line-height: 1.45;
+}
+
+#local-auth-login {
+    min-height: 34px;
+    padding: 7px 14px;
+    border: 1px solid var(--gridvis-blue);
+    border-radius: 2px;
+    background: var(--gridvis-blue);
+    color: #fff;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+}
+
+#local-auth-login:hover,
+#local-auth-login:focus-visible {
+    border-color: var(--gridvis-blue-dark);
+    background: var(--gridvis-blue-dark);
+    outline: none;
+}
+
 #below::before {
     position: absolute;
     inset: 0;

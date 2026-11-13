@@ -38,6 +38,7 @@ import {
     getProjectFilesDirectory,
     removeProjectFile
 } from "../utils/projectFiles.js";
+import { getCommissioningType } from "../public/js/utils/commissioningTypes.js";
 
 const router =
     express.Router();
@@ -2780,6 +2781,11 @@ export async function buildProjectWorkbookBuffer(
         exportData
     );
 
+    buildExcelCommissioningSheet(
+        workbook,
+        exportData
+    );
+
     buildExcelPrintableStructureSheet(
         workbook,
         exportData,
@@ -3224,6 +3230,712 @@ function escapeXml(value) {
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&apos;");
+}
+
+function buildExcelCommissioningSheet(
+    workbook,
+    {
+        project,
+        positions,
+        orderedNodes
+    }
+) {
+
+    const sheet =
+        workbook.addWorksheet(
+            "Inbetriebnahme",
+            {
+                pageSetup: {
+                    paperSize: 9,
+                    orientation: "landscape",
+                    fitToPage: true,
+                    fitToWidth: 1,
+                    fitToHeight: 0,
+                    margins: {
+                        left: 0.25,
+                        right: 0.25,
+                        top: 0.35,
+                        bottom: 0.35,
+                        header: 0.15,
+                        footer: 0.15
+                    }
+                }
+            }
+        );
+
+    const columns = [
+        { key: "location", width: 20 },
+        { key: "field", width: 18 },
+        { key: "separator", width: 18 },
+        { key: "target", width: 28 },
+        { key: "ratio", width: 18 },
+        { key: "transformerType", width: 16 },
+        { key: "meterMark", width: 28 },
+        { key: "group", width: 20 },
+        { key: "meterType", width: 25 },
+        { key: "power", width: 16 },
+        { key: "meterValue", width: 20 },
+        { key: "clampValue", width: 20 },
+        { key: "fuse", width: 16 },
+        { key: "modbusId", width: 14 },
+        { key: "ipAddress", width: 18 },
+        { key: "serialNumber", width: 20 },
+        { key: "mac", width: 18 },
+        { key: "remark", width: 28 }
+    ];
+
+    sheet.columns =
+        columns;
+
+    sheet.properties.defaultRowHeight =
+        20;
+
+    sheet.mergeCells("A1:C1");
+    sheet.mergeCells("A2:C2");
+    sheet.mergeCells("D1:N1");
+    sheet.mergeCells("D2:E2");
+    sheet.mergeCells("F2:N2");
+    sheet.mergeCells("D3:E3");
+    sheet.mergeCells("F3:H3");
+    sheet.mergeCells("I3:J3");
+    sheet.mergeCells("K3:L3");
+    sheet.mergeCells("O1:R3");
+
+    sheet.getCell("A1").value =
+        "Ersteller: ProjectBuilder";
+    sheet.getCell("A2").value =
+        "Datum: "
+        + new Intl.DateTimeFormat("de-DE").format(new Date());
+    sheet.getCell("D1").value =
+        "Kunden / Projektinformationen";
+    sheet.getCell("D2").value =
+        "Projekt";
+    sheet.getCell("F2").value =
+        project.name ?? "";
+    sheet.getCell("D3").value =
+        "Kunde";
+    sheet.getCell("F3").value =
+        project.customerName ?? "";
+    sheet.getCell("I3").value =
+        "Kundennummer";
+    sheet.getCell("K3").value =
+        project.customerNumber ?? "";
+    sheet.getCell("M3").value =
+        "Ort";
+    sheet.getCell("N3").value =
+        project.customerCity ?? "";
+
+    [
+        "A1",
+        "A2",
+        "D1",
+        "D2",
+        "F2",
+        "D3",
+        "F3",
+        "I3",
+        "K3",
+        "M3",
+        "N3"
+    ].forEach(address => {
+
+        const cell =
+            sheet.getCell(address);
+
+        cell.font = {
+            name: "Arial",
+            size:
+                address === "D1"
+                    ? 16
+                    : 10,
+            bold:
+                [
+                    "A1",
+                    "A2",
+                    "D1",
+                    "D2",
+                    "D3",
+                    "I3",
+                    "M3"
+                ].includes(address),
+            underline:
+                [
+                    "A1",
+                    "A2",
+                    "D1"
+                ].includes(address)
+        };
+
+        cell.alignment = {
+            horizontal:
+                address === "D1"
+                    ? "center"
+                    : "left",
+            vertical: "middle",
+            wrapText: true
+        };
+
+    });
+
+    [
+        "D2",
+        "D3",
+        "I3",
+        "M3"
+    ].forEach(address => {
+
+        sheet.getCell(address).font = {
+            name: "Arial",
+            size: 10,
+            bold: true,
+            color: {
+                argb: "FF1F3552"
+            }
+        };
+
+    });
+
+    for (let rowNumber = 1; rowNumber <= 3; rowNumber += 1) {
+
+        sheet.getRow(rowNumber).height =
+            rowNumber === 1
+                ? 28
+                : 24;
+
+        for (let columnNumber = 1; columnNumber <= 18; columnNumber += 1) {
+
+            sheet.getCell(rowNumber, columnNumber).border = {
+                top: {
+                    style: "medium",
+                    color: {
+                        argb: "FF1F1F1F"
+                    }
+                },
+                left: {
+                    style: "medium",
+                    color: {
+                        argb: "FF1F1F1F"
+                    }
+                },
+                bottom: {
+                    style: "medium",
+                    color: {
+                        argb: "FF1F1F1F"
+                    }
+                },
+                right: {
+                    style: "medium",
+                    color: {
+                        argb: "FF1F1F1F"
+                    }
+                }
+            };
+
+        }
+
+    }
+
+    const logoPath =
+        path.join(
+            publicIconsDirectory,
+            "janitza-logo.png"
+        );
+
+    if (fs.existsSync(logoPath)) {
+
+        const logoId =
+            workbook.addImage({
+                buffer:
+                    fs.readFileSync(logoPath),
+                extension: "png"
+            });
+
+        sheet.addImage(
+            logoId,
+            {
+                tl: {
+                    col: 14.25,
+                    row: 0.25
+                },
+                ext: {
+                    width: 190,
+                    height: 69
+                }
+            }
+        );
+
+    }
+
+    sheet.getRow(4).height =
+        8;
+
+    const headers = [
+        "Einbauort",
+        "Feld",
+        "BMK Trenner",
+        "Name Ziel",
+        "Wandlerverhältnis",
+        "Wandlertyp",
+        "BMK Messgerät und Vorsicherung",
+        "Messgruppe (b. Module)",
+        "Messgerät Typ",
+        "Leistung Messger.",
+        "Messwert Messgerät in A",
+        "Messwert Stromzange in A",
+        "Absicherung",
+        "Modbus ID",
+        "IP-Adresse",
+        "Seriennummer",
+        "Mac",
+        "Bemerkung"
+    ];
+
+    const headerRowNumber =
+        5;
+    const headerRow =
+        sheet.getRow(headerRowNumber);
+
+    headers.forEach((header, index) => {
+
+        headerRow.getCell(index + 1).value =
+            header;
+
+    });
+
+    styleExcelHeaderRow(headerRow);
+    headerRow.font = {
+        name: "Arial",
+        size: 9,
+        bold: true,
+        color: {
+            argb: "FFFFFFFF"
+        }
+    };
+    headerRow.alignment = {
+        horizontal: "center",
+        vertical: "middle",
+        wrapText: true,
+        shrinkToFit: true
+    };
+    headerRow.eachCell(cell => {
+
+        cell.border = {
+            top: {
+                style: "thin",
+                color: {
+                    argb: "FFFFFFFF"
+                }
+            },
+            left: {
+                style: "thin",
+                color: {
+                    argb: "FFFFFFFF"
+                }
+            },
+            bottom: {
+                style: "thin",
+                color: {
+                    argb: "FFFFFFFF"
+                }
+            },
+            right: {
+                style: "thin",
+                color: {
+                    argb: "FFFFFFFF"
+                }
+            }
+        };
+
+    });
+    headerRow.height =
+        38;
+
+    const nodesById =
+        new Map(
+            orderedNodes.map(node => [
+                String(node.id),
+                node
+            ])
+        );
+
+    const positionsByNodeId =
+        new Map();
+
+    positions.forEach(position => {
+
+        const key =
+            String(position.nodeId);
+
+        if (!positionsByNodeId.has(key)) {
+
+            positionsByNodeId.set(
+                key,
+                []
+            );
+
+        }
+
+        positionsByNodeId.get(key).push(position);
+
+    });
+
+    const nodeGroups =
+        [];
+    const groupsByNodeId =
+        new Map();
+
+    positions
+        .filter(position =>
+            !position.isOptional
+            && !position.isAlternative
+        )
+        .forEach(position => {
+
+            const nodeId =
+                String(position.nodeId);
+
+            if (!groupsByNodeId.has(nodeId)) {
+
+                const group = {
+                    nodeId,
+                    positions: []
+                };
+
+                groupsByNodeId.set(
+                    nodeId,
+                    group
+                );
+                nodeGroups.push(group);
+
+            }
+
+            groupsByNodeId
+                .get(nodeId)
+                .positions
+                .push(position);
+
+        });
+
+    const commissioningRows =
+        nodeGroups.flatMap(group => {
+
+            const node =
+                nodesById.get(group.nodeId)
+                ?? {};
+            const transformerInfo =
+                getExcelCommissioningTransformerInfo(
+                    group.positions
+                );
+            const commissioningPositions =
+                group.positions.filter(position =>
+                    getCommissioningType(position) !== null
+                );
+            const hasTransformerInfo =
+                Boolean(
+                    transformerInfo.ratio
+                    || transformerInfo.type
+                );
+
+            if (
+                commissioningPositions.length === 0
+                && !hasTransformerInfo
+            ) {
+
+                return [];
+
+            }
+
+            const rowPositions =
+                commissioningPositions.length > 0
+                    ? commissioningPositions
+                    : [null];
+
+            if (
+                hasTransformerInfo
+                && commissioningPositions.length > 0
+                && commissioningPositions.every(position =>
+                    !canUseExcelCommissioningTransformerInfo(position)
+                )
+            ) {
+
+                rowPositions.push(null);
+
+            }
+
+            return rowPositions.flatMap(position => {
+
+                const contextPosition =
+                    position
+                    || group.positions[0]
+                    || {};
+                const quantity =
+                    Number(position?.quantity);
+                const repeatCount =
+                    position
+                    && Number.isInteger(quantity)
+                    && quantity > 1
+                        ? quantity
+                        : 1;
+                const useTransformerInfo =
+                    !position
+                    || canUseExcelCommissioningTransformerInfo(position);
+
+                return Array.from(
+                    { length: repeatCount },
+                    () => [
+                        node.dataCollectionLocation
+                        || contextPosition.building
+                        || contextPosition.panel
+                        || null,
+                        contextPosition.field || null,
+                        null,
+                        contextPosition.meter
+                        || node.name
+                        || null,
+                        useTransformerInfo
+                            ? transformerInfo.ratio || null
+                            : null,
+                        useTransformerInfo
+                            ? transformerInfo.type || null
+                            : null,
+                        null,
+                        null,
+                        position
+                            ? position.manufacturerType
+                                || position.positionName
+                                || position.articleNumber
+                                || null
+                            : null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                    ]
+                );
+
+            });
+
+        });
+
+    const rows =
+        commissioningRows.length > 0
+            ? commissioningRows
+            : [Array(headers.length).fill(null)];
+
+    rows.forEach(values => {
+
+        const row =
+            sheet.addRow(values);
+
+        row.height =
+            24;
+
+        values.forEach((_value, index) => {
+
+            const cell =
+                row.getCell(index + 1);
+
+            cell.font = {
+                name: "Arial",
+                size: 9,
+                color: {
+                    argb: "FF1F1F1F"
+                }
+            };
+            cell.alignment = {
+                horizontal:
+                    index < 2
+                        ? "left"
+                        : "center",
+                vertical: "middle",
+                wrapText: true,
+                shrinkToFit: true
+            };
+            cell.fill = {
+                type: "pattern",
+                pattern: "solid",
+                fgColor: {
+                    argb:
+                        index < 2
+                            ? "FFE5E5E5"
+                            : "FFFFFFFF"
+                }
+            };
+            cell.border = {
+                top: {
+                    style: "thin",
+                    color: {
+                        argb: "FF9DA7B2"
+                    }
+                },
+                left: {
+                    style: "thin",
+                    color: {
+                        argb: "FF9DA7B2"
+                    }
+                },
+                bottom: {
+                    style: "thin",
+                    color: {
+                        argb: "FF9DA7B2"
+                    }
+                },
+                right: {
+                    style: "thin",
+                    color: {
+                        argb: "FF9DA7B2"
+                    }
+                }
+            };
+
+        });
+
+    });
+
+    const lastDataRow =
+        sheet.rowCount;
+    const noteRowNumber =
+        lastDataRow + 2;
+
+    sheet.mergeCells(
+        noteRowNumber,
+        4,
+        noteRowNumber,
+        18
+    );
+    sheet.getCell(noteRowNumber, 4).value =
+        "Alle relevanten Felder für den Einbau sind zu dokumentieren! "
+        + "Nicht relevante Felder können freigelassen werden! "
+        + "Die Dokumentation muss vom Kunden unterzeichnet werden!";
+    sheet.getCell(noteRowNumber, 4).font = {
+        name: "Arial",
+        size: 10,
+        bold: true,
+        color: {
+            argb: "FFFF0000"
+        }
+    };
+    sheet.getCell(noteRowNumber, 4).alignment = {
+        vertical: "middle",
+        wrapText: true
+    };
+    sheet.getRow(noteRowNumber).height =
+        32;
+
+    sheet.autoFilter = {
+        from: "A" + headerRowNumber,
+        to: "R" + lastDataRow
+    };
+
+    sheet.views = [
+        {
+            state: "frozen",
+            ySplit: headerRowNumber,
+            xSplit: 2,
+            showGridLines: false
+        }
+    ];
+
+    sheet.pageSetup.printTitlesRow =
+        headerRowNumber + ":" + headerRowNumber;
+    sheet.pageSetup.printArea =
+        "A1:R" + noteRowNumber;
+
+}
+
+function canUseExcelCommissioningTransformerInfo(
+    position
+) {
+
+    const text =
+        [
+            position.articleNumber,
+            position.manufacturerType,
+            position.positionName
+        ]
+            .filter(Boolean)
+            .join(" ");
+
+    return !/umg\s*800/i.test(text)
+        && String(position.articleNumber ?? "") !== "5238002";
+
+}
+
+function getExcelCommissioningTransformerInfo(
+    positions
+) {
+
+    const ratios = [];
+    const types = [];
+
+    positions.forEach(position => {
+
+        const text =
+            [
+                position.positionName,
+                position.manufacturerType,
+                position.articleNumber,
+                position.description
+            ]
+                .filter(Boolean)
+                .join(" ");
+
+        if (
+            !text
+            || /\bmodul(?:e)?\b/i.test(text)
+        ) {
+
+            return;
+
+        }
+
+        const ratioMatches =
+            text.match(
+                /\b\d+(?:[.,]\d+)?\s*\/\s*\d+(?:[.,]\d+)?\s*(?:mV|V|mA|A)\b/gi
+            )
+            ?? [];
+
+        ratioMatches.forEach(value => {
+
+            ratios.push(
+                value.replace(/\s+/g, "")
+            );
+
+        });
+
+        const typeMatch =
+            text.match(/\bLP\b/i)
+            || text.match(/\bRogowski\b/i)
+            || text.match(/\bCT[- ]?(?:AC|DC|\d+)\b/i)
+            || text.match(/\bRCM[- ]?[A-Z0-9]+\b/i)
+            || text.match(/\b(?:Stromwandler|Wandler)\b/i);
+
+        if (typeMatch?.[0]) {
+
+            types.push(
+                typeMatch[0].replace(/\s+/g, " ").trim()
+            );
+
+        }
+
+    });
+
+    const ratio =
+        [...new Set(ratios)].join(" / ");
+
+    return {
+        ratio,
+        type:
+            ratios.some(value => /\/333mV$/i.test(value))
+                ? "Low Power"
+                : [...new Set(types)].join(" / ")
+    };
+
 }
 
 function buildExcelDataCollectionPlanSheet(

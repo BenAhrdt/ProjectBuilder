@@ -16,6 +16,7 @@ async function renderView() {
         : { activeProfileId: null, profiles: [] };
     const preferredPort = settings["app.preferredPort"] ?? "0";
     const openInBrowser = settings["app.openInBrowser"] === "true";
+    const checkSalesforceOnStartup = settings["app.checkSalesforceOnStartup"] !== "false";
 
     view.innerHTML = `
         <div class="view-header">${i18n.t("settings.title")}</div>
@@ -77,6 +78,11 @@ async function renderView() {
                     <span>${i18n.t("settings.openInBrowser")}</span>
                 </label>
                 <p>${i18n.t("settings.browserHint")}</p>
+                <label class="settings-checkbox">
+                    <input id="settings-check-salesforce-on-startup" type="checkbox" ${checkSalesforceOnStartup ? "checked" : ""}>
+                    <span>${i18n.t("settings.checkSalesforceOnStartup")}</span>
+                </label>
+                <p>${i18n.t("settings.checkSalesforceOnStartupHint")}</p>
                 <p class="settings-restart-hint">${i18n.t("settings.restartHint")}</p>
                 <button id="save-app-settings" class="settings-primary" type="button">
                     ${i18n.t("settings.save")}
@@ -207,7 +213,8 @@ async function saveSettings() {
 
     const values = {
         "app.preferredPort": String(port),
-        "app.openInBrowser": String(document.getElementById("settings-open-in-browser").checked)
+        "app.openInBrowser": String(document.getElementById("settings-open-in-browser").checked),
+        "app.checkSalesforceOnStartup": String(document.getElementById("settings-check-salesforce-on-startup").checked)
     };
     try {
         const responses = await Promise.all(Object.entries(values).map(([key, value]) =>

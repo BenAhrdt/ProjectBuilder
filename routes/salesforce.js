@@ -30,6 +30,7 @@ import {
 import { logCustomerDiscountChange } from "../utils/customerDiscountHistory.js";
 import { buildOverviewDocuments } from "../public/js/views/projectOverview.js";
 import { getProjectFilePath } from "../utils/projectFiles.js";
+import { clearLocalSession, createLocalSession } from "../utils/localAuth.js";
 
 const router = express.Router();
 
@@ -560,7 +561,18 @@ function addDays(date, days) {
 
 router.get("/status", async (_req, res) => {
     try { res.json(await salesforce.getStatus()); }
-    catch (error) { handleError(res, error); }
+    catch (error) {
+        if (salesforce.isSalesforceAuthenticationError(error)) {
+            clearLocalSession(res);
+            res.status(401).json({
+                success: false,
+                code: "SALESFORCE_AUTH_REQUIRED",
+                error: "Die Salesforce-Anmeldung ist nicht mehr gültig."
+            });
+            return;
+        }
+        handleError(res, error);
+    }
 });
 
 router.get("/customers/:customerId/link", async (req, res) => {
@@ -650,12 +662,20 @@ router.get("/projects/:projectId/links", async (req, res) => {
 });
 
 router.post("/login", async (_req, res) => {
-    try { res.json(await salesforce.loginWithBrowser()); }
+    try {
+        const result = await salesforce.loginWithBrowser();
+        createLocalSession(res);
+        res.json(result);
+    }
     catch (error) { handleError(res, error); }
 });
 
 router.post("/logout", async (_req, res) => {
-    try { res.json(await salesforce.logout()); }
+    try {
+        const result = await salesforce.logout();
+        clearLocalSession(res);
+        res.json(result);
+    }
     catch (error) { handleError(res, error); }
 });
 

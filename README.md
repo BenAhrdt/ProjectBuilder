@@ -16,6 +16,10 @@ ProjectBuilder ist eine Desktop-Anwendung zur Planung und Kalkulation von Janitz
   CON- und Kommunikationsmodule werden dabei ausgenommen
 - Kalkulation mit Listenpreisen oder rabattierten Preisen
 - Excel-Projektexport und Datenerfassungsplan
+- Zusätzliches Excel-Blatt `Inbetriebnahme` mit automatisch abgeleiteten
+  Messstellen- und Wandlerinformationen
+- GridVis-Items-Menü mit AZR-/Item-Berechnungen und Projektübernahme
+- Durchsuchbare FAQ und technische Gerätedaten per Excel-Import
 - Ausschreibungsexport als Word-Dokument und GAEB XML
 - GAEB-Austauschphasen X81, X82, X83 und X84
 - Lokale Datenspeicherung in SQLite

@@ -2,6 +2,30 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.55 - 13.11.2026
+
+### Neu
+
+- Neuer Bereich **GridVis-Items** mit drei AZR-/Item-Rechnern für
+  Lizenzerweiterung, Verlängerung mit abweichender Item-Anzahl und
+  Reaktivierung geparkter Items. Die AZR-Erweiterung kann mit 1 oder 3 Jahren
+  angesetzt werden; intern werden 365 Tage pro Jahr verwendet.
+- Neuer Bereich **FAQ & Technik** zum Durchsuchen von FAQ-Einträgen und
+  technischen Gerätedaten. Beide Datenbereiche können gemeinsam aus einer
+  Excel-Datei mit den Blättern `FAQ` und `Technische Daten` importiert und in
+  Backups gesichert werden.
+- Der Excel-Projektexport erzeugt zusätzlich ein gestaltetes Blatt
+  **Inbetriebnahme** mit Projekt-/Kopfdaten, Janitza-Logo und automatisch aus
+  der Projektstruktur abgeleiteten Messstelleninformationen.
+
+### Geändert
+
+- Die Salesforce-Prüfung beim Programmstart läuft optional im Hintergrund und
+  blockiert den lokalen/offlinefähigen Start nicht. Die Salesforce-Anmeldung
+  schützt zusätzlich die lokale ProjectBuilder-Sitzung.
+- Vorbereitete leere FAQ-/Technik-Zeilen mit `Aktiv = Ja` werden beim Import
+  ignoriert, solange keine eigentlichen Inhaltsfelder befüllt sind.
+
 ## 1.5.54 - 13.11.2026
 
 ### Behoben

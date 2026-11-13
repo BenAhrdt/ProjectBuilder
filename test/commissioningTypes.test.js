@@ -56,6 +56,20 @@ test("assigns the configured commissioning types to device families", () => {
     );
     assert.equal(
         getCommissioningType({
+            articleNumber: "DL5101094",
+            manufacturerType: "IBN Messgeraet von Typ 1"
+        }),
+        null
+    );
+    assert.equal(
+        getCommissioningType({
+            articleNumber: "DL5101095",
+            manufacturerType: "IBN Messgeraet von Typ 2"
+        }),
+        null
+    );
+    assert.equal(
+        getCommissioningType({
             articleNumber: "1401356",
             manufacturerType: "B23 Energiezähler"
         }),

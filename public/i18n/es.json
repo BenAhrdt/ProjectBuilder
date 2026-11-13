@@ -44,6 +44,8 @@
     "navbar.importPricelist": "Importar lista de precios",
     "navbar.backups": "Copia y restauración",
     "navbar.settings": "Configuración",
+    "navbar.databaseProfiles": "Perfiles de base de datos",
+    "navbar.applicationStartup": "Inicio de la aplicación",
     "navbar.appearance": "Inicio de la aplicación",
     "navbar.info": "Información",
     "navbar.projects": "Proyectos",

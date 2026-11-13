@@ -2,6 +2,16 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.56 - 2026-11-14
+
+### Changed
+
+- **FAQ & Technical Data** now uses only the regular manual Excel import.
+- The unused file-location/SharePoint/OneDrive management and automatic loading
+  when opening the area have been removed.
+- Settings are grouped into separate **Database Profiles** and **Application
+  Startup** areas.
+
 ## 1.5.55 - 2026-11-13
 
 ### Added

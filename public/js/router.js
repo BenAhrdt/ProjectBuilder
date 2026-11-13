@@ -45,6 +45,14 @@ const routes = {
         render: settings.renderView,
         active: "settings",
     },
+    "/settings/database-profiles": {
+        render: () => settings.renderView("database-profiles"),
+        active: "settings-database-profiles",
+    },
+    "/settings/application": {
+        render: () => settings.renderView("application"),
+        active: "settings-application",
+    },
     "/gridvis-items": {
         render: gridvisItems.renderView,
         active: "gridvis-items",

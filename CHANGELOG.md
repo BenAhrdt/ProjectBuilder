@@ -2,6 +2,16 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.56 - 14.11.2026
+
+### Geändert
+
+- **FAQ & Technik** verwendet ausschließlich den normalen manuellen Excel-Import.
+- Die nicht benötigte Dateiorte-/SharePoint-/OneDrive-Verwaltung und das
+  automatische Einlesen beim Öffnen wurden entfernt.
+- Die Einstellungen sind in die getrennten Bereiche **Datenbankprofile** und
+  **Anwendungsstart** gegliedert.
+
 ## 1.5.55 - 13.11.2026
 
 ### Neu

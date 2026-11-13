@@ -2,6 +2,17 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.56 - 14.11.2026
+
+### Cambiado
+
+- **FAQ y datos técnicos** ahora utiliza únicamente la importación manual normal
+  de Excel.
+- Se eliminaron la gestión innecesaria de ubicaciones de archivos/SharePoint/
+  OneDrive y la carga automática al abrir esta sección.
+- La configuración está agrupada en las áreas separadas **Perfiles de base de
+  datos** e **Inicio de la aplicación**.
+
 ## 1.5.55 - 13.11.2026
 
 ### Nuevo

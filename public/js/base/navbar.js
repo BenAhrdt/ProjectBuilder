@@ -65,9 +65,13 @@ navbar.innerHTML = `
                         <span class="navbar-item-icon">${utils.icons.backup}</span>
                         <div class="navbar-item-text">${i18n.t("navbar.backups")}</div>
                     </div>
-                    <div id="navbar-appearance" data-view="settings" class="navbar-item navbar-subitem">
+                    <div id="navbar-database-profiles" data-view="settings-database-profiles" data-path="/settings/database-profiles" class="navbar-item navbar-subitem">
+                        <span class="navbar-item-icon">${utils.icons.building}</span>
+                        <div class="navbar-item-text">${i18n.t("navbar.databaseProfiles")}</div>
+                    </div>
+                    <div id="navbar-application" data-view="settings-application" data-path="/settings/application" class="navbar-item navbar-subitem">
                         <span class="navbar-item-icon">${utils.icons.settings}</span>
-                        <div class="navbar-item-text">${i18n.t("navbar.appearance")}</div>
+                        <div class="navbar-item-text">${i18n.t("navbar.applicationStartup")}</div>
                     </div>
                 </div>
             </div>
@@ -181,7 +185,7 @@ navbarItems.forEach(item => {
         window.dispatchEvent(new CustomEvent("projectbuilder:close-navigation"));
         // Prüfen, ob in data-vie etwas liegt und rendern
         const view = item.dataset.view;
-        router.navigate(`/${view}`);
+        router.navigate(item.dataset.path || `/${view}`);
     });
 });
 
@@ -220,7 +224,9 @@ export function setItemsActive(dataView) {
         const item = document.querySelector(`[data-view="${dataView}"]`);
         item?.classList.add("active");
 
-        const settingsView = dataView === "settings" || dataView === "backups";
+        const settingsView = dataView === "settings"
+            || dataView === "backups"
+            || dataView.startsWith("settings-");
         settingsParent?.classList.toggle("active", settingsView);
         setSettingsExpanded(false);
 }

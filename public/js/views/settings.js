@@ -4,8 +4,13 @@ import { showAlert, showConfirm, showPrompt } from "../utils/modal.js";
 await i18n.loadLanguage();
 
 const view = document.getElementById("view");
+const sectionLabels = {
+    "database-profiles": "settings.databases",
+    application: "settings.application"
+};
 
-async function renderView() {
+async function renderView(section = "application") {
+    const activeSection = Object.hasOwn(sectionLabels, section) ? section : "application";
     const [settingsResponse, databaseResponse] = await Promise.all([
         fetch("/api/settings"),
         fetch("/api/database/profiles", { cache: "no-store" })
@@ -14,86 +19,103 @@ async function renderView() {
     const databaseProfiles = databaseResponse.ok
         ? await databaseResponse.json()
         : { activeProfileId: null, profiles: [] };
-    const preferredPort = settings["app.preferredPort"] ?? "0";
-    const openInBrowser = settings["app.openInBrowser"] === "true";
-    const checkSalesforceOnStartup = settings["app.checkSalesforceOnStartup"] !== "false";
+    const sectionContent = activeSection === "database-profiles"
+        ? renderDatabaseProfiles(databaseProfiles)
+        : renderApplicationSettings(settings);
 
     view.innerHTML = `
-        <div class="view-header">${i18n.t("settings.title")}</div>
+        <div class="view-header">
+            <span>${i18n.t("settings.title")}</span>
+            <span class="settings-section-title">${i18n.t(sectionLabels[activeSection])}</span>
+        </div>
         <div class="view-left"></div>
         <main class="view-content settings-content">
-            <section class="settings-card settings-database-card">
-                <h2>${i18n.t("settings.databases")}</h2>
-                <p>${i18n.t("settings.databasesHint")}</p>
-                <div class="settings-database-list">
-                    ${databaseProfiles.profiles.length === 0
-                        ? `<p>${i18n.t("settings.databaseLoadFailed")}</p>`
-                        : databaseProfiles.profiles.map(profile => `
-                            <div class="settings-database-row${profile.active ? " is-active" : ""}">
-                                <div class="settings-database-name">
-                                    <strong>${escapeHtml(profile.name)}</strong>
-                                    ${profile.active
-                                        ? `<span class="settings-database-active">${i18n.t("settings.databaseActive")}</span>`
-                                        : ""}
-                                </div>
-                                <div class="settings-database-actions">
-                                    ${profile.active
-                                        ? `<button id="save-database-as" class="settings-secondary" type="button">
-                                            ${i18n.t("settings.saveDatabaseAs")}
-                                        </button>`
-                                        : `
-                                            <button
-                                                class="settings-secondary database-switch-button"
-                                                type="button"
-                                                data-profile-id="${escapeAttribute(profile.id)}"
-                                            >${i18n.t("settings.switchDatabase")}</button>
-                                            ${profile.id !== "default" ? `
-                                                <button
-                                                    class="settings-danger database-delete-button"
-                                                    type="button"
-                                                    data-profile-id="${escapeAttribute(profile.id)}"
-                                                    data-profile-name="${escapeAttribute(profile.name)}"
-                                                >${i18n.t("settings.deleteDatabase")}</button>
-                                            ` : ""}
-                                        `}
-                                </div>
-                            </div>
-                        `).join("")}
-                </div>
-                <button id="create-database-profile" class="settings-primary" type="button">
-                    ${i18n.t("settings.newDatabase")}
-                </button>
-            </section>
-            <section class="settings-card">
-                <h2>${i18n.t("settings.application")}</h2>
-                <label class="settings-field">
-                    <span>${i18n.t("settings.preferredPort")}</span>
-                    <input id="settings-preferred-port" type="number" min="0" max="65535"
-                        step="1" value="${escapeAttribute(preferredPort)}">
-                    <small>${i18n.t("settings.portHint")}</small>
-                    <small class="settings-current-port">${i18n.t("settings.currentPort").replace("{port}", window.location.port)}</small>
-                </label>
-                <label class="settings-checkbox">
-                    <input id="settings-open-in-browser" type="checkbox" ${openInBrowser ? "checked" : ""}>
-                    <span>${i18n.t("settings.openInBrowser")}</span>
-                </label>
-                <p>${i18n.t("settings.browserHint")}</p>
-                <label class="settings-checkbox">
-                    <input id="settings-check-salesforce-on-startup" type="checkbox" ${checkSalesforceOnStartup ? "checked" : ""}>
-                    <span>${i18n.t("settings.checkSalesforceOnStartup")}</span>
-                </label>
-                <p>${i18n.t("settings.checkSalesforceOnStartupHint")}</p>
-                <p class="settings-restart-hint">${i18n.t("settings.restartHint")}</p>
-                <button id="save-app-settings" class="settings-primary" type="button">
-                    ${i18n.t("settings.save")}
-                </button>
-            </section>
+            ${sectionContent}
         </main>
         <div class="view-right"></div>
     `;
 
-    document.getElementById("save-app-settings").addEventListener("click", saveSettings);
+    document.getElementById("save-app-settings")?.addEventListener("click", saveSettings);
     registerDatabaseProfileActions();
+}
+
+function renderDatabaseProfiles(databaseProfiles) {
+    return `
+        <section class="settings-card settings-database-card">
+            <h2>${i18n.t("settings.databases")}</h2>
+            <p>${i18n.t("settings.databasesHint")}</p>
+            <div class="settings-database-list">
+                ${databaseProfiles.profiles.length === 0
+                    ? `<p>${i18n.t("settings.databaseLoadFailed")}</p>`
+                    : databaseProfiles.profiles.map(profile => `
+                        <div class="settings-database-row${profile.active ? " is-active" : ""}">
+                            <div class="settings-database-name">
+                                <strong>${escapeHtml(profile.name)}</strong>
+                                ${profile.active
+                                    ? `<span class="settings-database-active">${i18n.t("settings.databaseActive")}</span>`
+                                    : ""}
+                            </div>
+                            <div class="settings-database-actions">
+                                ${profile.active
+                                    ? `<button id="save-database-as" class="settings-secondary" type="button">
+                                        ${i18n.t("settings.saveDatabaseAs")}
+                                    </button>`
+                                    : `
+                                        <button
+                                            class="settings-secondary database-switch-button"
+                                            type="button"
+                                            data-profile-id="${escapeAttribute(profile.id)}"
+                                        >${i18n.t("settings.switchDatabase")}</button>
+                                        ${profile.id !== "default" ? `
+                                            <button
+                                                class="settings-danger database-delete-button"
+                                                type="button"
+                                                data-profile-id="${escapeAttribute(profile.id)}"
+                                                data-profile-name="${escapeAttribute(profile.name)}"
+                                            >${i18n.t("settings.deleteDatabase")}</button>
+                                        ` : ""}
+                                    `}
+                            </div>
+                        </div>
+                    `).join("")}
+            </div>
+            <button id="create-database-profile" class="settings-primary" type="button">
+                ${i18n.t("settings.newDatabase")}
+            </button>
+        </section>
+    `;
+}
+
+function renderApplicationSettings(settings) {
+    const preferredPort = settings["app.preferredPort"] ?? "0";
+    const openInBrowser = settings["app.openInBrowser"] === "true";
+    const checkSalesforceOnStartup = settings["app.checkSalesforceOnStartup"] !== "false";
+    return `
+        <section class="settings-card">
+            <h2>${i18n.t("settings.application")}</h2>
+            <label class="settings-field">
+                <span>${i18n.t("settings.preferredPort")}</span>
+                <input id="settings-preferred-port" type="number" min="0" max="65535"
+                    step="1" value="${escapeAttribute(preferredPort)}">
+                <small>${i18n.t("settings.portHint")}</small>
+                <small class="settings-current-port">${i18n.t("settings.currentPort").replace("{port}", window.location.port)}</small>
+            </label>
+            <label class="settings-checkbox">
+                <input id="settings-open-in-browser" type="checkbox" ${openInBrowser ? "checked" : ""}>
+                <span>${i18n.t("settings.openInBrowser")}</span>
+            </label>
+            <p>${i18n.t("settings.browserHint")}</p>
+            <label class="settings-checkbox">
+                <input id="settings-check-salesforce-on-startup" type="checkbox" ${checkSalesforceOnStartup ? "checked" : ""}>
+                <span>${i18n.t("settings.checkSalesforceOnStartup")}</span>
+            </label>
+            <p>${i18n.t("settings.checkSalesforceOnStartupHint")}</p>
+            <p class="settings-restart-hint">${i18n.t("settings.restartHint")}</p>
+            <button id="save-app-settings" class="settings-primary" type="button">
+                ${i18n.t("settings.save")}
+            </button>
+        </section>
+    `;
 }
 
 function registerDatabaseProfileActions() {
@@ -114,7 +136,7 @@ function registerDatabaseProfileActions() {
             });
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || i18n.t("settings.databaseCopyFailed"));
-            await renderView();
+            await renderView("database-profiles");
         } catch (error) {
             button.disabled = false;
             await showAlert(error.message || i18n.t("settings.databaseCopyFailed"));
@@ -138,7 +160,7 @@ function registerDatabaseProfileActions() {
             });
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || i18n.t("settings.databaseSwitchFailed"));
-            await renderView();
+            await renderView("database-profiles");
         } catch (error) {
             button.disabled = false;
             await showAlert(error.message || i18n.t("settings.databaseSwitchFailed"));
@@ -193,7 +215,7 @@ function registerDatabaseProfileActions() {
                 if (!response.ok) {
                     throw new Error(result.error || i18n.t("settings.deleteDatabaseFailed"));
                 }
-                await renderView();
+                await renderView("database-profiles");
             } catch (error) {
                 clickedButton.disabled = false;
                 await showAlert(error.message || i18n.t("settings.deleteDatabaseFailed"));

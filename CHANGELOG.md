@@ -2,6 +2,12 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.54 - 13.11.2026
+
+### Behoben
+
+- EMD-Zaehler werden nun als benoetigte Inbetriebnahmen vom Typ 5 erkannt.
+
 ## 1.5.53 - 12.11.2026
 
 ### Neu

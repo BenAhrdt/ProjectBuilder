@@ -51,6 +51,10 @@ test("assigns the configured commissioning types to device families", () => {
         4
     );
     assert.equal(
+        getCommissioningType({ manufacturerType: "EMD-Zaehler" }),
+        5
+    );
+    assert.equal(
         getCommissioningType({
             articleNumber: "1401356",
             manufacturerType: "B23 Energiezähler"

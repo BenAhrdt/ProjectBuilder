@@ -2,6 +2,12 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.54 - 13.11.2026
+
+### Corregido
+
+- Los contadores EMD ahora se clasifican como puesta en marcha de tipo 5.
+
 ## 1.5.53 - 12.11.2026
 
 ### Nuevo

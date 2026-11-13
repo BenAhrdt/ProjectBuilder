@@ -2,6 +2,12 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.54 - 2026-11-13
+
+### Fixed
+
+- EMD meters are now classified as requiring commissioning type 5.
+
 ## 1.5.53 - 2026-11-12
 
 ### Added

@@ -106,6 +106,7 @@ export function getCommissioningType(article = {}) {
 
     if (
         /(?:energiezahler|energymeter|stromzahler)/.test(text)
+        || /emd/.test(text)
         || /(?:b21|b23|b24)/.test(text)
         || /^140135[3-9]$/.test(articleNumber)
     ) {

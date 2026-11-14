@@ -67,7 +67,7 @@ const defaultOverviewColors = {
     panel: { fill: "#DCEDEA", header: "#578986", text: "#184B4B" },
     field: { fill: "#E8F0E5", header: "#819B77", text: "#2F4A37" },
     meter: { fill: "#F3EBDD", header: "#B18A55", text: "#5B4120" },
-    article: { fill: "#F1EDF6", header: "#9A8BB0", text: "#493C5E" },
+    article: { fill: "transparent", header: "transparent", text: "#493C5E" },
     empty: { fill: "#FAFBFC", header: "#E7ECF1", text: "#526173" }
 };
 
@@ -85,16 +85,20 @@ function parseOverviewColors(value) {
 
     const isColor = color =>
         /^#[0-9a-f]{6}$/i.test(String(color ?? ""));
+    const isSurfaceColor = color =>
+        isColor(color)
+        ||
+        String(color ?? "").toLowerCase() === "transparent";
 
     return Object.fromEntries(
         Object.entries(defaultOverviewColors).map(([type, defaults]) => [
             type,
             {
                 ...defaults,
-                ...(isColor(colors?.[type]?.fill)
+                ...(isSurfaceColor(colors?.[type]?.fill)
                     ? { fill: colors[type].fill }
                     : {}),
-                ...(isColor(colors?.[type]?.header)
+                ...(isSurfaceColor(colors?.[type]?.header)
                     ? { header: colors[type].header }
                     : {}),
                 ...(isColor(colors?.[type]?.text)
@@ -2606,22 +2610,26 @@ function renderDiagramArticle(
                 stroke="#dce3ec"
             />
         ` : ""}
-        <rect
-            x="${node.x + 8}"
-            y="${top - 5}"
-            width="${diagramLayout.cardWidth - 16}"
-            height="${articleHeight + 1}"
-            rx="2"
-            fill="${articleColors.fill}"
-        />
-        <rect
-            x="${node.x + 8}"
-            y="${top - 5}"
-            width="${diagramLayout.cardWidth - 16}"
-            height="3"
-            rx="2"
-            fill="${articleColors.header}"
-        />
+        ${articleColors.fill !== "transparent" ? `
+            <rect
+                x="${node.x + 8}"
+                y="${top - 5}"
+                width="${diagramLayout.cardWidth - 16}"
+                height="${articleHeight + 1}"
+                rx="2"
+                fill="${articleColors.fill}"
+            />
+        ` : ""}
+        ${articleColors.header !== "transparent" ? `
+            <rect
+                x="${node.x + 8}"
+                y="${top - 5}"
+                width="${diagramLayout.cardWidth - 16}"
+                height="3"
+                rx="2"
+                fill="${articleColors.header}"
+            />
+        ` : ""}
         ${icon}
         <text
             x="${articleTextX}"
@@ -2858,11 +2866,11 @@ function openOverviewColorsModal(colors, labels) {
                             <strong>${escapeXml(label)}</strong>
                             <label>
                                 <span>${escapeXml(labels.colorHeader)}</span>
-                                <input type="color" data-color-type="${type}" data-color-part="header" value="${colors[type].header}">
+                                <input type="color" data-color-type="${type}" data-color-part="header" data-transparent="${isTransparentColor(colors[type].header)}" value="${getColorInputValue(colors[type].header)}">
                             </label>
                             <label>
                                 <span>${escapeXml(labels.colorFill)}</span>
-                                <input type="color" data-color-type="${type}" data-color-part="fill" value="${colors[type].fill}">
+                                <input type="color" data-color-type="${type}" data-color-part="fill" data-transparent="${isTransparentColor(colors[type].fill)}" value="${getColorInputValue(colors[type].fill)}">
                             </label>
                         </div>
                     `).join("")}
@@ -2878,6 +2886,11 @@ function openOverviewColorsModal(colors, labels) {
             backdrop.remove();
             resolve(value);
         };
+        backdrop.querySelectorAll("input[type=color]").forEach(input => {
+            input.addEventListener("input", () => {
+                input.dataset.transparent = "false";
+            });
+        });
         backdrop.addEventListener("click", event => {
             if (event.target === backdrop || event.target.closest("[data-action=cancel]")) {
                 close(null);
@@ -2886,7 +2899,10 @@ function openOverviewColorsModal(colors, labels) {
                 Object.entries(defaultOverviewColors).forEach(([type, parts]) => {
                     ["header", "fill"].forEach(part => {
                         const input = backdrop.querySelector(`[data-color-type="${type}"][data-color-part="${part}"]`);
-                        if (input) input.value = parts[part];
+                        if (input) {
+                            input.value = getColorInputValue(parts[part]);
+                            input.dataset.transparent = isTransparentColor(parts[part]);
+                        }
                     });
                 });
             }
@@ -2895,12 +2911,25 @@ function openOverviewColorsModal(colors, labels) {
             event.preventDefault();
             const result = parseOverviewColors(colors);
             backdrop.querySelectorAll("input[data-color-type]").forEach(input => {
-                result[input.dataset.colorType][input.dataset.colorPart] = input.value;
+                result[input.dataset.colorType][input.dataset.colorPart] =
+                    input.dataset.transparent === "true"
+                        ? "transparent"
+                        : input.value;
             });
             close(result);
         });
         document.body.appendChild(backdrop);
     });
+}
+
+function isTransparentColor(value) {
+    return String(value ?? "").toLowerCase() === "transparent";
+}
+
+function getColorInputValue(value) {
+    return /^#[0-9a-f]{6}$/i.test(String(value ?? ""))
+        ? value
+        : "#ffffff";
 }
 
 function fitText(

@@ -2,6 +2,16 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.58 - 14.11.2026
+
+### Verbessert
+
+- Artikelzeilen sind standardmäßig transparent und übernehmen die
+  Hintergrundfarbe der übergeordneten Feld- oder Messstellenkarte.
+- Eigene Artikelfarben bleiben über **Ebenenfarben** optional einstellbar;
+  transparente Standardwerte werden beim Zurücksetzen und Speichern korrekt
+  beibehalten.
+
 ## 1.5.57 - 14.11.2026
 
 ### Verbessert

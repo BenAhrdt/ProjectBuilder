@@ -2,6 +2,16 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.58 - 14.11.2026
+
+### Mejorado
+
+- Las filas de artículos son transparentes de forma predeterminada y heredan
+  el color de fondo de la tarjeta de campo o punto de medición superior.
+- Los colores propios de los artículos siguen disponibles en **Colores de
+  niveles**; los valores transparentes se conservan correctamente al restaurar
+  y guardar.
+
 ## 1.5.57 - 14.11.2026
 
 ### Mejorado

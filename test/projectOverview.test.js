@@ -230,6 +230,41 @@ test(
 );
 
 test(
+    "lets article rows inherit the parent card background by default",
+    () => {
+        const diagram = buildOverviewDiagram({
+            project: { name: "Transparente Artikel" },
+            nodes: [
+                {
+                    id: 1,
+                    parentId: null,
+                    type: "field",
+                    name: "Feld"
+                }
+            ],
+            nodeArticles: [
+                {
+                    id: 1,
+                    projectNodeId: 1,
+                    articleNumber: "A-1",
+                    quantity: 1
+                }
+            ],
+            articles: [
+                {
+                    articleNumber: "A-1",
+                    manufacturerType: "Artikel"
+                }
+            ],
+            labels
+        });
+
+        assert.match(diagram.svg, /fill="#E8F0E5"/i);
+        assert.doesNotMatch(diagram.svg, /fill="#F1EDF6"/i);
+    }
+);
+
+test(
     "inherits effective node labels to articles without propagating from articles",
     () => {
         const diagram = buildOverviewDiagram({

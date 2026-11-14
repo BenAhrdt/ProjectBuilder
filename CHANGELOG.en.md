@@ -2,6 +2,15 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.58 - 2026-11-14
+
+### Improved
+
+- Article rows are transparent by default and inherit the background color of
+  their parent field or measuring-point card.
+- Custom article colors remain available through **Level colors**; transparent
+  defaults are preserved correctly when resetting and saving.
+
 ## 1.5.57 - 2026-11-14
 
 ### Improved

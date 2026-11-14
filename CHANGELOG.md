@@ -2,6 +2,22 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.57 - 14.11.2026
+
+### Verbessert
+
+- Der Übersichtsplan verwendet eine lebendigere, gedämpfte Akzentfarbpalette
+  für Gesamt, Gebäude, Verteilung, Feld, Messstelle und Artikel.
+- Der Dialog **Ebenenfarben** zeigt die Ebenen in Top-down-Reihenfolge und
+  enthält zusätzlich **Gesamt** und **Artikel**.
+- Artikel-Labels werden links bzw. rechts in adaptiven Spalten angezeigt,
+  ohne Mengen und Artikelnummern zu verschieben.
+
+### Behoben
+
+- Der Dialog **Ebenenfarben** öffnet beim Klick zuverlässig und wird über dem
+  Übersichtsplan angezeigt.
+
 ## 1.5.56 - 14.11.2026
 
 ### Geändert

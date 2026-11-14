@@ -569,6 +569,8 @@
     "project.overviewPriceBasis": "Preisbasis",
     "project.overviewPrice": "Preis",
     "project.levelColors": "Ebenenfarben",
+    "project.overviewTotal": "Gesamt",
+    "project.overviewArticle": "Artikel",
     "project.levelColorsHint": "Farben für die Hierarchieebenen des Übersichtsplans festlegen.",
     "project.colorHeader": "Kopf",
     "project.colorFill": "Fläche",

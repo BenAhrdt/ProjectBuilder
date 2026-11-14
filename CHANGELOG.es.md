@@ -2,6 +2,22 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.57 - 14.11.2026
+
+### Mejorado
+
+- El plano general utiliza ahora una paleta de acentos más viva pero apagada
+  para total, edificio, distribución, campo, punto de medición y artículo.
+- El diálogo **Colores de niveles** sigue el orden de arriba abajo e incluye
+  también **Total** y **Artículo**.
+- Las etiquetas de artículos se muestran en columnas adaptativas a la izquierda
+  o derecha sin desplazar hacia abajo las cantidades ni los números de artículo.
+
+### Corregido
+
+- El diálogo **Colores de niveles** se abre de forma fiable al hacer clic y
+  aparece por encima del plano general.
+
 ## 1.5.56 - 14.11.2026
 
 ### Cambiado

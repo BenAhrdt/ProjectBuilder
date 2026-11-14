@@ -8,7 +8,8 @@ const diagramLayout = {
     verticalGap: 26,
     margin: 40,
     nodeHeaderHeight: 78,
-    articleHeight: 36
+    articleHeight: 36,
+    articleLabelColumnWidth: 86
 };
 
 const detailPageLayout = {
@@ -60,13 +61,14 @@ const nodeColors = {
 };
 
 const defaultOverviewColors = {
-    project: { fill: "#111827", header: "#111827", text: "#ffffff" },
-    building: { fill: "#eef5fb", header: "#d8e8f7", text: "#1f4f7d" },
-    generalPosition: { fill: "#f3f6fa", header: "#dfe8f2", text: "#526173" },
-    panel: { fill: "#e6f0fa", header: "#c9def1", text: "#1f5e8f" },
-    field: { fill: "#f1f7fc", header: "#dbeaf7", text: "#285d87" },
-    meter: { fill: "#f7fbfe", header: "#e8f2fa", text: "#35698f" },
-    empty: { fill: "#f8fafc", header: "#eef2f6", text: "#526173" }
+    project: { fill: "#3D557B", header: "#2C3A5C", text: "#ffffff" },
+    building: { fill: "#D8E7F0", header: "#4F7191", text: "#173A52" },
+    generalPosition: { fill: "#E1E9F2", header: "#687F9D", text: "#26384F" },
+    panel: { fill: "#DCEDEA", header: "#578986", text: "#184B4B" },
+    field: { fill: "#E8F0E5", header: "#819B77", text: "#2F4A37" },
+    meter: { fill: "#F3EBDD", header: "#B18A55", text: "#5B4120" },
+    article: { fill: "#F1EDF6", header: "#9A8BB0", text: "#493C5E" },
+    empty: { fill: "#FAFBFC", header: "#E7ECF1", text: "#526173" }
 };
 
 function parseOverviewColors(value) {
@@ -85,8 +87,9 @@ function parseOverviewColors(value) {
         /^#[0-9a-f]{6}$/i.test(String(color ?? ""));
 
     return Object.fromEntries(
-        Object.entries(defaultOverviewColors).map(([type, defaults]) => ({
-            [type]: {
+        Object.entries(defaultOverviewColors).map(([type, defaults]) => [
+            type,
+            {
                 ...defaults,
                 ...(isColor(colors?.[type]?.fill)
                     ? { fill: colors[type].fill }
@@ -98,7 +101,7 @@ function parseOverviewColors(value) {
                     ? { text: colors[type].text }
                     : {})
             }
-        }))
+        ])
     );
 
 }
@@ -570,6 +573,30 @@ function openProjectOverview({
             }
         };
 
+    const openColors =
+        async () => {
+            const colors = await openOverviewColorsModal(
+                parseOverviewColors(project?.overviewColors),
+                labels
+            );
+            if (!colors) {
+                return;
+            }
+            await onSaveOverviewColors(colors);
+            project.overviewColors = JSON.stringify(colors);
+            views = buildViews();
+            showView(backdrop.dataset.viewMode || "overview");
+        };
+
+    backdrop
+        .querySelector(
+            "[data-action=\"overview-colors\"]"
+        )
+        .addEventListener(
+            "click",
+            openColors
+        );
+
     backdrop.addEventListener(
         "click",
         async event => {
@@ -586,18 +613,6 @@ function openProjectOverview({
                 applyScale(scale - 0.1);
             } else if (action === "fit") {
                 fitDiagram();
-            } else if (action === "overview-colors") {
-                const colors = await openOverviewColorsModal(
-                    parseOverviewColors(project?.overviewColors),
-                    labels
-                );
-                if (!colors) {
-                    return;
-                }
-                await onSaveOverviewColors(colors);
-                project.overviewColors = JSON.stringify(colors);
-                views = buildViews();
-                showView(backdrop.dataset.viewMode || "overview");
             } else if (action === "view-overview") {
                 showView("overview");
             } else if (action === "view-details") {
@@ -1584,18 +1599,29 @@ function getCardHeight(
 }
 
 function getDiagramArticleHeight(article) {
+    const labelRows =
+        getLabelChipRowCount(
+            article.labels,
+            diagramLayout.articleLabelColumnWidth
+        );
 
-    return article.labels?.length > 0
-        ? 52
-        : diagramLayout.articleHeight;
+    return Math.max(
+        diagramLayout.articleHeight,
+        labelRows * 18 + 12
+    );
 
 }
 
 function getNodeHeaderHeight(node) {
+    const labelRows =
+        getLabelChipRowCount(
+            node.labels,
+            diagramLayout.cardWidth - 24
+        );
 
     return diagramLayout.nodeHeaderHeight
         +
-        (node.labels?.length > 0 ? 20 : 0);
+        labelRows * 20;
 
 }
 
@@ -1682,7 +1708,7 @@ function renderTreeDiagram(
                 role="img"
                 aria-label="${escapeXml(labels.title)}"
             >
-                <rect width="100%" height="100%" fill="#f7f9fc" />
+                <rect width="100%" height="100%" fill="#ffffff" />
                 <g class="project-overview-connectors">
                     ${connectors.join("")}
                 </g>
@@ -2207,11 +2233,19 @@ function renderDiagramCard(
     const headerHeight =
         getNodeHeaderHeight(node);
     const hasLabels =
-        node.labels?.length > 0;
+        getLabelChipRowCount(
+            node.labels,
+            diagramLayout.cardWidth - 24
+        ) > 0;
+    const labelRows =
+        getLabelChipRowCount(
+            node.labels,
+            diagramLayout.cardWidth - 24
+        );
     const typeTextOffset =
-        hasLabels ? 35 : 20;
+        hasLabels ? 20 + labelRows * 15 : 20;
     const titleTextOffset =
-        hasLabels ? 60 : 45;
+        hasLabels ? typeTextOffset + 25 : 45;
     const colors =
         options.overviewColors?.[node.type]
         ??
@@ -2256,6 +2290,12 @@ function renderDiagramCard(
             cardWidth - 28,
             10.5
         );
+    const projectHeaderHeight =
+        node.meta ? 76 : 56;
+    const projectHeaderTextColor =
+        getLabelTextColor(colors.header);
+    const projectFillTextColor =
+        getLabelTextColor(colors.fill);
 
     if (node.type === "project") {
         return `
@@ -2270,10 +2310,20 @@ function renderDiagramCard(
                     stroke="#15263d"
                     stroke-width="2"
                 />
+                <path
+                    d="M ${node.x + 12} ${node.y}
+                       H ${node.x + cardWidth - 12}
+                       Q ${node.x + cardWidth} ${node.y} ${node.x + cardWidth} ${node.y + 12}
+                       V ${node.y + projectHeaderHeight}
+                       H ${node.x}
+                       V ${node.y + 12}
+                       Q ${node.x} ${node.y} ${node.x + 12} ${node.y} Z"
+                    fill="${colors.header}"
+                />
                 <text
                     x="${node.x + 16}"
                     y="${node.y + 23}"
-                    fill="#bcd0ea"
+                    fill="${projectHeaderTextColor}"
                     font-family="Arial, sans-serif"
                     font-size="12"
                     font-weight="700"
@@ -2282,7 +2332,7 @@ function renderDiagramCard(
                 <text
                     x="${node.x + 16}"
                     y="${node.y + 48}"
-                    fill="#ffffff"
+                    fill="${projectHeaderTextColor}"
                     font-family="Arial, sans-serif"
                     font-size="17"
                     font-weight="700"
@@ -2292,7 +2342,7 @@ function renderDiagramCard(
                     <text
                         x="${node.x + 16}"
                         y="${node.y + 70}"
-                        fill="#dbe7f5"
+                        fill="${projectHeaderTextColor}"
                         font-family="Arial, sans-serif"
                         font-size="12"
                         ${projectMeta.attributes}
@@ -2303,7 +2353,7 @@ function renderDiagramCard(
                     options,
                     node.x + 16,
                     node.y + (node.meta ? 96 : 76),
-                    "#ffffff"
+                    projectFillTextColor
                 )}
             </g>
         `;
@@ -2384,7 +2434,8 @@ function renderDiagramCard(
                     renderDiagramArticle(
                         node,
                         article,
-                        index
+                        index,
+                        options
                     )
                 ).join("")
                 : ""}
@@ -2434,7 +2485,8 @@ function renderDiagramPrice(
 function renderDiagramArticle(
     node,
     article,
-    index
+    index,
+    options = {}
 ) {
     const markers = [
         article.isOptional ? "OPTIONAL" : "",
@@ -2447,12 +2499,42 @@ function renderDiagramArticle(
     const textColor =
         markers.length > 0
             ? "#9a6700"
-            : "#26384f";
+            : options.overviewColors?.article?.text
+                ?? "#26384f";
+    const articleColors =
+        options.overviewColors?.article
+        ??
+        defaultOverviewColors.article;
+    const articleHeight =
+        getDiagramArticleHeight(article);
+    const articleLabelGroups =
+        getLabelGroups(article.labels);
+    const hasLeftLabels =
+        articleLabelGroups.left.length > 0;
+    const hasRightLabels =
+        articleLabelGroups.right.length > 0;
+    const leftLabelWidth =
+        hasLeftLabels
+            ? getLabelChipGroupWidth(
+                articleLabelGroups.left,
+                diagramLayout.articleLabelColumnWidth
+            )
+            : 0;
+    const rightLabelWidth =
+        hasRightLabels
+            ? getLabelChipGroupWidth(
+                articleLabelGroups.right,
+                diagramLayout.articleLabelColumnWidth
+            )
+            : 0;
     const displayText =
         fitText(
             displayName,
             29,
-            diagramLayout.cardWidth - 56,
+            diagramLayout.cardWidth
+                - 56
+                - (hasLeftLabels ? leftLabelWidth + 6 : 0)
+                - (hasRightLabels ? rightLabelWidth + 6 : 0),
             11.5,
             700
         );
@@ -2463,8 +2545,6 @@ function renderDiagramArticle(
             diagramLayout.cardWidth - 56,
             10.5
         );
-    const hasLabels =
-        article.labels?.length > 0;
     const articleOffset =
         node.articles
             .slice(0, index)
@@ -2482,12 +2562,32 @@ function renderDiagramArticle(
         (node.meta ? 22 : 0)
         +
         articleOffset;
+    const articleTextX =
+        node.x
+        +
+        44
+        +
+        (hasLeftLabels ? leftLabelWidth + 6 : 0);
+    const articleIconX =
+        node.x
+        +
+        12
+        +
+        (hasLeftLabels ? leftLabelWidth + 6 : 0);
+    const articleLabelLeftX =
+        node.x + 12;
+    const articleLabelRightX =
+        node.x + diagramLayout.cardWidth - 12;
+    const articleLabelRightStartX =
+        articleLabelRightX
+        -
+        rightLabelWidth;
     const icon =
         article.icon
             ? `
                 <image
                     href="${escapeXml(article.icon)}"
-                    x="${node.x + 12}"
+                    x="${articleIconX}"
                     y="${top + 2}"
                     width="24"
                     height="24"
@@ -2506,9 +2606,25 @@ function renderDiagramArticle(
                 stroke="#dce3ec"
             />
         ` : ""}
+        <rect
+            x="${node.x + 8}"
+            y="${top - 5}"
+            width="${diagramLayout.cardWidth - 16}"
+            height="${articleHeight + 1}"
+            rx="2"
+            fill="${articleColors.fill}"
+        />
+        <rect
+            x="${node.x + 8}"
+            y="${top - 5}"
+            width="${diagramLayout.cardWidth - 16}"
+            height="3"
+            rx="2"
+            fill="${articleColors.header}"
+        />
         ${icon}
         <text
-            x="${node.x + 44}"
+            x="${articleTextX}"
             y="${top + 12}"
             fill="${textColor}"
             font-family="Arial, sans-serif"
@@ -2516,17 +2632,25 @@ function renderDiagramArticle(
             font-weight="700"
             ${displayText.attributes}
         >${escapeXml(displayText.text)}</text>
-        ${hasLabels
+        ${hasLeftLabels
             ? renderLabelChips(
-                article.labels,
-                node.x + 44,
-                node.x + diagramLayout.cardWidth - 12,
-                top + 19
+                articleLabelGroups.left,
+                articleLabelLeftX,
+                articleLabelLeftX + leftLabelWidth,
+                top + 2
+            )
+            : ""}
+        ${hasRightLabels
+            ? renderLabelChips(
+                articleLabelGroups.right,
+                articleLabelRightStartX,
+                articleLabelRightX,
+                top + 2
             )
             : ""}
         <text
-            x="${node.x + 44}"
-            y="${top + (hasLabels ? 47 : 27)}"
+            x="${articleTextX}"
+            y="${top + 27}"
             fill="#69788b"
             font-family="Arial, sans-serif"
             font-size="10.5"
@@ -2551,44 +2675,49 @@ function renderLabelChips(
     const left = items.filter(label => label.side !== "right");
     const right = items.filter(label => label.side === "right");
     const renderGroup = (group, align) => {
-        const widths = group.map(label =>
-            Math.max(24, Math.min(72, String(label.text).length * 5.2 + 10))
+        const rows = getLabelChipRows(
+            group,
+            rightX - leftX
         );
         const gap = 4;
-        const total = widths.reduce((sum, width) => sum + width, 0)
-            + Math.max(0, widths.length - 1) * gap;
-        let cursor = align === "right" ? rightX - total : leftX;
 
-        return group.map((label, index) => {
-            const width = widths[index];
-            const x = cursor;
-            cursor += width + gap;
-            const text = truncateText(label.text, 12);
-            const fill = /^#[0-9a-f]{6}$/i.test(label.color)
-                ? label.color
-                : "#2f6fb4";
-            return `
-                <g opacity="${label.isInherited ? "0.68" : "1"}">
-                    <title>${escapeXml(label.isInherited ? `${text} (geerbt)` : text)}</title>
-                    <rect
-                        x="${x}"
-                        y="${y}"
-                        width="${width}"
-                        height="15"
-                        rx="3"
-                        fill="${fill}"
-                    />
-                    <text
-                        x="${align === "right" ? x + width - 5 : x + 5}"
-                        y="${y + 11}"
-                        text-anchor="${align === "right" ? "end" : "start"}"
-                        fill="${getLabelTextColor(fill)}"
-                        font-family="Arial, sans-serif"
-                        font-size="8.5"
-                        font-weight="700"
-                    >${escapeXml(text)}</text>
-                </g>
-            `;
+        return rows.map((row, rowIndex) => {
+            const total = row.reduce((sum, item) => sum + item.width, 0)
+                + Math.max(0, row.length - 1) * gap;
+            let cursor = align === "right" ? rightX - total : leftX;
+
+            return row.map(item => {
+                const { label, width } = item;
+                const x = cursor;
+                cursor += width + gap;
+                const text = truncateText(label.text, 12);
+                const fill = /^#[0-9a-f]{6}$/i.test(label.color)
+                    ? label.color
+                    : "#2f6fb4";
+                const chipY = y + rowIndex * 18;
+                return `
+                    <g opacity="${label.isInherited ? "0.68" : "1"}">
+                        <title>${escapeXml(label.isInherited ? `${text} (geerbt)` : text)}</title>
+                        <rect
+                            x="${x}"
+                            y="${chipY}"
+                            width="${width}"
+                            height="15"
+                            rx="3"
+                            fill="${fill}"
+                        />
+                        <text
+                            x="${align === "right" ? x + width - 5 : x + 5}"
+                            y="${chipY + 11}"
+                            text-anchor="${align === "right" ? "end" : "start"}"
+                            fill="${getLabelTextColor(fill)}"
+                            font-family="Arial, sans-serif"
+                            font-size="8.5"
+                            font-weight="700"
+                        >${escapeXml(text)}</text>
+                    </g>
+                `;
+            }).join("");
         }).join("");
     };
 
@@ -2598,6 +2727,100 @@ function renderLabelChips(
             ${renderGroup(right, "right")}
         </g>
     `;
+}
+
+function getLabelChipRows(
+    labels = [],
+    maximumWidth
+) {
+    const items = labels
+        .filter(label => String(label?.text ?? "").trim())
+        .slice(0, 6)
+        .map(label => ({
+            label,
+            width: Math.max(
+                24,
+                Math.min(
+                    72,
+                    String(label.text).length * 5.2 + 10
+                )
+            )
+        }));
+    const rows = [];
+    let row = [];
+    let rowWidth = 0;
+
+    items.forEach(item => {
+        const nextWidth =
+            rowWidth
+            +
+            (row.length > 0 ? 4 : 0)
+            +
+            item.width;
+
+        if (
+            row.length > 0
+            &&
+            Number.isFinite(maximumWidth)
+            &&
+            nextWidth > maximumWidth
+        ) {
+            rows.push(row);
+            row = [];
+            rowWidth = 0;
+        }
+
+        row.push(item);
+        rowWidth += (row.length > 1 ? 4 : 0) + item.width;
+    });
+
+    if (row.length > 0) {
+        rows.push(row);
+    }
+
+    return rows;
+}
+
+function getLabelGroups(
+    labels = []
+) {
+    const items = labels
+        .filter(label => String(label?.text ?? "").trim())
+        .slice(0, 6);
+
+    return {
+        left: items.filter(label => label?.side !== "right"),
+        right: items.filter(label => label?.side === "right")
+    };
+}
+
+function getLabelChipGroupWidth(
+    labels = [],
+    maximumWidth
+) {
+    const gap = 4;
+
+    return getLabelChipRows(labels, maximumWidth)
+        .reduce(
+            (maximum, row) => Math.max(
+                maximum,
+                row.reduce((sum, item) => sum + item.width, 0)
+                    + Math.max(0, row.length - 1) * gap
+            ),
+            0
+        );
+}
+
+function getLabelChipRowCount(
+    labels = [],
+    maximumWidth
+) {
+    const { left, right } = getLabelGroups(labels);
+
+    return Math.max(
+        getLabelChipRows(left, maximumWidth).length,
+        getLabelChipRows(right, maximumWidth).length
+    );
 }
 
 function getLabelTextColor(color) {
@@ -2616,11 +2839,12 @@ function getLabelTextColor(color) {
 function openOverviewColorsModal(colors, labels) {
     return new Promise(resolve => {
         const types = [
+            ["project", labels.overviewTotal ?? "Gesamt"],
             ["building", labels.nodeTypes.building],
-            ["generalPosition", labels.nodeTypes.generalPosition],
             ["panel", labels.nodeTypes.panel],
             ["field", labels.nodeTypes.field],
-            ["meter", labels.nodeTypes.meter]
+            ["meter", labels.nodeTypes.meter],
+            ["article", labels.overviewArticle ?? "Artikel"]
         ];
         const backdrop = document.createElement("div");
         backdrop.className = "project-modal-backdrop";

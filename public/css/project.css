@@ -3044,7 +3044,7 @@ body.project-overview-open {
 
     inset: 0;
 
-    z-index: 100;
+    z-index: 3000;
 
     display: flex;
 

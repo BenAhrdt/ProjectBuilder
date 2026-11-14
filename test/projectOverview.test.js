@@ -130,6 +130,106 @@ test(
 );
 
 test(
+    "applies custom overview colors to level cards",
+    () => {
+        const diagram = buildOverviewDiagram({
+            project: { name: "Farbprojekt" },
+            nodes: [
+                {
+                    id: 1,
+                    parentId: null,
+                    type: "building",
+                    name: "Gebäude"
+                }
+            ],
+            nodeArticles: [
+                {
+                    id: 1,
+                    projectNodeId: 1,
+                    articleNumber: "A-1",
+                    quantity: 1
+                }
+            ],
+            articles: [
+                {
+                    articleNumber: "A-1",
+                    manufacturerType: "Artikel"
+                }
+            ],
+            labels,
+            overviewColors: {
+                building: {
+                    header: "#123456",
+                    fill: "#abcdef"
+                },
+                article: {
+                    header: "#fedcba",
+                    fill: "#fedcba"
+                }
+            }
+        });
+
+        assert.match(diagram.svg, /fill="#123456"/);
+        assert.match(diagram.svg, /fill="#abcdef"/);
+        assert.match(diagram.svg, /fill="#fedcba"/);
+    }
+);
+
+test(
+    "uses muted colorful defaults from total to article",
+    () => {
+        const diagram = buildOverviewDiagram({
+            project: { name: "Standardfarben" },
+            nodes: [
+                {
+                    id: 1,
+                    parentId: null,
+                    type: "building",
+                    name: "Gebäude"
+                },
+                {
+                    id: 2,
+                    parentId: 1,
+                    type: "panel",
+                    name: "Verteilung"
+                },
+                {
+                    id: 3,
+                    parentId: 2,
+                    type: "field",
+                    name: "Feld"
+                },
+                {
+                    id: 4,
+                    parentId: 3,
+                    type: "meter",
+                    name: "Messstelle"
+                }
+            ],
+            labels
+        });
+
+        [
+            "#2C3A5C",
+            "#3D557B",
+            "#4F7191",
+            "#D8E7F0",
+            "#578986",
+            "#DCEDEA",
+            "#819B77",
+            "#E8F0E5",
+            "#B18A55",
+            "#F3EBDD"
+        ].forEach(color => {
+            assert.match(
+                diagram.svg,
+                new RegExp(`fill="${color}"`, "i")
+            );
+        });
+    }
+);
+
+test(
     "inherits effective node labels to articles without propagating from articles",
     () => {
         const diagram = buildOverviewDiagram({

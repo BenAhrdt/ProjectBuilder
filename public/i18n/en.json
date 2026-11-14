@@ -569,6 +569,8 @@
     "project.overviewPriceBasis": "Price basis",
     "project.overviewPrice": "Price",
     "project.levelColors": "Level colors",
+    "project.overviewTotal": "Total",
+    "project.overviewArticle": "Article",
     "project.levelColorsHint": "Define the colors used for hierarchy levels in the overview plan.",
     "project.colorHeader": "Header",
     "project.colorFill": "Fill",

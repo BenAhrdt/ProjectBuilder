@@ -6241,6 +6241,10 @@ function registerProjectOverview(
                         i18n.t("project.structureDiscountedPrices"),
                     levelColors:
                         i18n.t("project.levelColors"),
+                    overviewTotal:
+                        i18n.t("project.overviewTotal"),
+                    overviewArticle:
+                        i18n.t("project.overviewArticle"),
                     levelColorsHint:
                         i18n.t("project.levelColorsHint"),
                     colorHeader:

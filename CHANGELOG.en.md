@@ -2,6 +2,22 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.57 - 2026-11-14
+
+### Improved
+
+- The overview plan now uses a livelier but muted accent palette for total,
+  building, distribution, field, measuring point and article levels.
+- The **Level colors** dialog follows the top-down order and now includes
+  **Total** and **Article**.
+- Article labels are rendered in adaptive left or right columns without moving
+  quantities and article numbers downward.
+
+### Fixed
+
+- The **Level colors** dialog now opens reliably when clicked and appears above
+  the overview plan.
+
 ## 1.5.56 - 2026-11-14
 
 ### Changed

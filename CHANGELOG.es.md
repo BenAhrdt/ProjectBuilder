@@ -2,6 +2,21 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.59 - 15.11.2026
+
+### Nuevo
+
+- **FAQ & Technik** ahora incluye una comparación para todos los artículos,
+  incluidos los transformadores de corriente y los artículos sin datos técnicos.
+- Los artículos seleccionados se muestran como chips que se pueden quitar; al
+  pasar el ratón se muestra la tarjeta de detalles de artículo de la vista de proyecto.
+- Las tablas de comparación se pueden copiar al portapapeles como datos separados por tabuladores.
+
+### Mejorado
+
+- Las filas técnicas de Excel con varios números de artículo se asignan
+  automáticamente a cada artículo durante la importación.
+
 ## 1.5.58 - 14.11.2026
 
 ### Mejorado

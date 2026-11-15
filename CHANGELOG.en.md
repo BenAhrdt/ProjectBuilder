@@ -2,6 +2,21 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.59 - 2026-11-15
+
+### Added
+
+- **FAQ & Technik** now includes a comparison view for all articles,
+  including current transformers and articles without technical data.
+- Selected articles are shown as removable chips; hovering shows the familiar
+  article detail card from the project view.
+- Comparison tables can be copied to the clipboard as tab-separated data.
+
+### Improved
+
+- Technical Excel rows containing multiple article numbers are automatically
+  assigned to each individual article during import.
+
 ## 1.5.58 - 2026-11-14
 
 ### Improved

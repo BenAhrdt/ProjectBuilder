@@ -21,6 +21,13 @@ function text(value) {
     return String(value ?? "").trim();
 }
 
+function splitArticleReferences(value) {
+    return text(value)
+        .split(/[;,]/)
+        .map(item => item.trim())
+        .filter(Boolean);
+}
+
 function rowValues(row) {
     return new Map(Object.entries(row).map(([key, value]) => [normalizeKey(key), text(value)]));
 }
@@ -108,7 +115,19 @@ function parseTechnicalRows(rows, updatedAt) {
         }
 
         if (parameter && value) {
-            parsed.push({ active, articleNumber, deviceType, category, parameter, value, unit, source, notes, updatedAt });
+            const articleNumbers = splitArticleReferences(articleNumber);
+            (articleNumbers.length ? articleNumbers : [""]).forEach(articleReference => parsed.push({
+                active,
+                articleNumber: articleReference,
+                deviceType,
+                category,
+                parameter,
+                value,
+                unit,
+                source,
+                notes,
+                updatedAt
+            }));
             return;
         }
 
@@ -127,18 +146,21 @@ function parseTechnicalRows(rows, updatedAt) {
             errors.push(`Technische Daten Zeile ${index + 2}: Merkmal und Wert sind erforderlich.`);
             return;
         }
-        propertyColumns.forEach(([, header, cellValue]) => parsed.push({
-            active,
-            articleNumber,
-            deviceType,
-            category,
-            parameter: header,
-            value: cellValue,
-            unit,
-            source,
-            notes,
-            updatedAt
-        }));
+        const articleNumbers = splitArticleReferences(articleNumber);
+        (articleNumbers.length ? articleNumbers : [""]).forEach(articleReference => {
+            propertyColumns.forEach(([, header, cellValue]) => parsed.push({
+                active,
+                articleNumber: articleReference,
+                deviceType,
+                category,
+                parameter: header,
+                value: cellValue,
+                unit,
+                source,
+                notes,
+                updatedAt
+            }));
+        });
     });
     return { parsed, errors };
 }

@@ -2,6 +2,22 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.59 - 15.11.2026
+
+### Neu
+
+- **FAQ & Technik** enthält jetzt einen Vergleich für alle Artikel, auch für
+  Stromwandler und Artikel ohne technische Daten.
+- Ausgewählte Artikel werden als entfernbare Chips angezeigt; beim Überfahren
+  erscheint die bekannte Artikel-Detailkarte aus der Projektansicht.
+- Vergleichstabellen können als tab-getrennte Daten in die Zwischenablage
+  kopiert werden.
+
+### Verbessert
+
+- Technische Excel-Zeilen mit mehreren Artikelnummern werden beim Import
+  automatisch den einzelnen Artikeln zugeordnet.
+
 ## 1.5.58 - 14.11.2026
 
 ### Verbessert

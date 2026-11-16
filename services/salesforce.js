@@ -845,6 +845,69 @@ export async function downloadOpportunityProjectFile(opportunityId) {
     return { data: await downloadSalesforceData(version.VersionData), modifiedAt: version.LastModifiedDate };
 }
 
+const KNOWLEDGE_ACCOUNT_NAME = process.env.SALESFORCE_KNOWLEDGE_ACCOUNT_NAME ?? "Janitza Technik Account";
+const KNOWLEDGE_OPPORTUNITY_NAME = process.env.SALESFORCE_KNOWLEDGE_OPPORTUNITY_NAME ?? "FAQ und Technik";
+const KNOWLEDGE_FILE_TITLE = process.env.SALESFORCE_KNOWLEDGE_FILE_TITLE ?? "FAQ-und-Technische-Daten";
+
+export async function downloadKnowledgeWorkbook() {
+    const opportunities = await query(`
+        SELECT Id, Name, AccountId, Account.Name, LastModifiedDate
+        FROM Opportunity
+        WHERE Name = '${escapeSoql(KNOWLEDGE_OPPORTUNITY_NAME)}'
+          AND Account.Name = '${escapeSoql(KNOWLEDGE_ACCOUNT_NAME)}'
+        ORDER BY LastModifiedDate DESC
+        LIMIT 2
+    `);
+    const opportunity = opportunities.records[0];
+    if (!opportunity) return null;
+
+    const titleVariants = [KNOWLEDGE_FILE_TITLE, `${KNOWLEDGE_FILE_TITLE}.xlsx`]
+        .map(escapeSoql)
+        .map(title => `'${title}'`)
+        .join(", ");
+    const links = await query(`
+        SELECT ContentDocumentId, ContentDocument.Title,
+            ContentDocument.LatestPublishedVersion.LastModifiedDate
+        FROM ContentDocumentLink
+        WHERE LinkedEntityId = '${escapeSoql(opportunity.Id)}'
+          AND ContentDocument.Title IN (${titleVariants})
+        ORDER BY ContentDocument.CreatedDate DESC
+        LIMIT 1
+    `);
+    const link = links.records[0];
+    if (!link?.ContentDocumentId) {
+        return {
+            opportunityId: opportunity.Id,
+            opportunityName: opportunity.Name,
+            accountName: opportunity.Account?.Name ?? KNOWLEDGE_ACCOUNT_NAME,
+            available: false
+        };
+    }
+
+    const versions = await query(`
+        SELECT Id, Title, FileExtension, VersionData, LastModifiedDate
+        FROM ContentVersion
+        WHERE ContentDocumentId = '${escapeSoql(link.ContentDocumentId)}'
+          AND IsLatest = true
+        LIMIT 1
+    `);
+    const version = versions.records[0];
+    if (!version?.VersionData) {
+        throw new Error("Die Salesforce-Datei für FAQ und Technik ist nicht verfügbar.");
+    }
+    return {
+        data: await downloadSalesforceData(version.VersionData),
+        modifiedAt: version.LastModifiedDate
+            ?? link.ContentDocument?.LatestPublishedVersion?.LastModifiedDate
+            ?? null,
+        opportunityId: opportunity.Id,
+        opportunityName: opportunity.Name,
+        accountName: opportunity.Account?.Name ?? KNOWLEDGE_ACCOUNT_NAME,
+        title: version.Title ?? link.ContentDocument?.Title ?? KNOWLEDGE_FILE_TITLE,
+        available: true
+    };
+}
+
 export async function synchronizeQuote(opportunityId, quoteId) {
     return updateRecord("Opportunity", opportunityId, { SyncedQuoteId: quoteId });
 }

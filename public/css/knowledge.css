@@ -154,14 +154,18 @@
 }
 
 .knowledge-status {
+    flex: 0 0 auto;
     min-height: 0;
+    box-sizing: border-box;
     padding: 0 12px;
     color: #17663a;
     font-size: 12px;
+    line-height: 1.35;
 }
 
 .knowledge-status:not(:empty) {
-    padding-top: 8px;
+    min-height: 31px;
+    padding: 8px 12px 7px;
 }
 
 .knowledge-status.is-error {

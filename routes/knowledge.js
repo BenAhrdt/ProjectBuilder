@@ -2,12 +2,19 @@ import express from "express";
 import multer from "multer";
 import XLSX from "xlsx";
 import * as database from "../database/index.js";
+import * as salesforce from "../services/salesforce.js";
+import {
+    isSalesforceAuthenticationError,
+    normalizeExternalError
+} from "../utils/externalError.js";
 
 const router = express.Router();
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 20 * 1024 * 1024 }
 });
+
+const SALESFORCE_LAST_MODIFIED_SETTING = "knowledge.salesforceLastModifiedAt";
 
 function normalizeKey(value) {
     return String(value ?? "")
@@ -193,6 +200,63 @@ function replaceTechnicalData(rows) {
     rows.forEach(row => insert.run(row));
 }
 
+function getSalesforceLastModifiedAt() {
+    return database.settings.prepare(
+        "SELECT value FROM settings WHERE key = ?"
+    ).get(SALESFORCE_LAST_MODIFIED_SETTING)?.value ?? null;
+}
+
+function saveSalesforceLastModifiedAt(value) {
+    if (!value) return;
+    database.settings.prepare(`
+        INSERT INTO settings (key, value) VALUES (?, ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value
+    `).run(SALESFORCE_LAST_MODIFIED_SETTING, value);
+}
+
+function isRemoteVersionNewer(remoteModifiedAt, localModifiedAt) {
+    if (!localModifiedAt) return true;
+    const remoteTime = Date.parse(remoteModifiedAt ?? "");
+    const localTime = Date.parse(localModifiedAt ?? "");
+    if (Number.isFinite(remoteTime) && Number.isFinite(localTime)) {
+        return remoteTime > localTime;
+    }
+    return String(remoteModifiedAt ?? "") !== String(localModifiedAt ?? "");
+}
+
+function importWorkbookBuffer(buffer, updatedAt = new Date().toISOString()) {
+    const workbook = XLSX.read(buffer, { type: "buffer" });
+    const faqSheet = sheetByAliases(workbook, ["FAQ", "FAQs", "Fragen"]);
+    const technicalSheet = sheetByAliases(workbook, ["Technische Daten", "Technik", "Technical Data", "TechnicalData"]);
+    if (!faqSheet && !technicalSheet) {
+        throw new Error("Die Excel-Datei benötigt ein Blatt FAQ oder Technische Daten.");
+    }
+
+    const faqResult = faqSheet ? parseFaqRows(rowsFromSheet(faqSheet), updatedAt) : { parsed: [], errors: [] };
+    const technicalResult = technicalSheet ? parseTechnicalRows(rowsFromSheet(technicalSheet), updatedAt) : { parsed: [], errors: [] };
+    const errors = [...faqResult.errors, ...technicalResult.errors];
+    if (errors.length) {
+        const error = new Error(errors.slice(0, 10).join("\n"));
+        error.details = errors;
+        throw error;
+    }
+
+    const replace = database.faqEntries.transaction(() => {
+        if (faqSheet) replaceFaqEntries(faqResult.parsed);
+        if (technicalSheet) replaceTechnicalData(technicalResult.parsed);
+    });
+    replace();
+
+    return {
+        faq: faqSheet ? faqResult.parsed.length : null,
+        technical: technicalSheet ? technicalResult.parsed.length : null,
+        replaced: {
+            faq: Boolean(faqSheet),
+            technical: Boolean(technicalSheet)
+        }
+    };
+}
+
 function getSearchValue(req) {
     return text(req.query.search).toLocaleLowerCase();
 }
@@ -234,41 +298,94 @@ router.get("/", (req, res) => {
     res.status(400).json({ error: "type muss faq oder technical sein." });
 });
 
+router.post("/salesforce-sync", async (req, res) => {
+    const force = req.body?.force === true;
+    try {
+        const remote = await salesforce.downloadKnowledgeWorkbook();
+        if (!remote) {
+            return res.json({
+                success: true,
+                connected: true,
+                available: false,
+                updated: false
+            });
+        }
+        if (!remote.available) {
+            return res.json({
+                success: true,
+                connected: true,
+                available: false,
+                updated: false,
+                opportunityId: remote.opportunityId,
+                opportunityName: remote.opportunityName,
+                accountName: remote.accountName
+            });
+        }
+
+        const localModifiedAt = getSalesforceLastModifiedAt();
+        const shouldImport = force || isRemoteVersionNewer(remote.modifiedAt, localModifiedAt);
+        if (!shouldImport) {
+            return res.json({
+                success: true,
+                connected: true,
+                available: true,
+                updated: false,
+                upToDate: true,
+                remoteModifiedAt: remote.modifiedAt,
+                localModifiedAt,
+                opportunityId: remote.opportunityId,
+                opportunityName: remote.opportunityName,
+                accountName: remote.accountName,
+                title: remote.title
+            });
+        }
+
+        const imported = importWorkbookBuffer(remote.data, remote.modifiedAt ?? new Date().toISOString());
+        saveSalesforceLastModifiedAt(remote.modifiedAt ?? new Date().toISOString());
+        return res.json({
+            success: true,
+            connected: true,
+            available: true,
+            updated: true,
+            upToDate: true,
+            remoteModifiedAt: remote.modifiedAt,
+            localModifiedAt: remote.modifiedAt,
+            opportunityId: remote.opportunityId,
+            opportunityName: remote.opportunityName,
+            accountName: remote.accountName,
+            title: remote.title,
+            ...imported
+        });
+    } catch (error) {
+        if (isSalesforceAuthenticationError(error)) {
+            return res.json({
+                success: true,
+                connected: false,
+                available: false,
+                updated: false
+            });
+        }
+        res.status(502).json({
+            success: false,
+            error: normalizeExternalError(error, "Die FAQ-/Technik-Datei konnte aus Salesforce nicht aktualisiert werden.")
+        });
+    }
+});
+
 router.post("/import", upload.single("file"), (req, res) => {
     try {
         if (!req.file) throw new Error("Keine Excel-Datei ausgewählt.");
-        const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
-        const faqSheet = sheetByAliases(workbook, ["FAQ", "FAQs", "Fragen"]);
-        const technicalSheet = sheetByAliases(workbook, ["Technische Daten", "Technik", "Technical Data", "TechnicalData"]);
-        if (!faqSheet && !technicalSheet) {
-            throw new Error("Die Excel-Datei benötigt ein Blatt FAQ oder Technische Daten.");
-        }
-
-        const updatedAt = new Date().toISOString();
-        const faqResult = faqSheet ? parseFaqRows(rowsFromSheet(faqSheet), updatedAt) : { parsed: [], errors: [] };
-        const technicalResult = technicalSheet ? parseTechnicalRows(rowsFromSheet(technicalSheet), updatedAt) : { parsed: [], errors: [] };
-        const errors = [...faqResult.errors, ...technicalResult.errors];
-        if (errors.length) {
-            return res.status(400).json({ success: false, error: errors.slice(0, 10).join("\n"), errors });
-        }
-
-        const replace = database.faqEntries.transaction(() => {
-            if (faqSheet) replaceFaqEntries(faqResult.parsed);
-            if (technicalSheet) replaceTechnicalData(technicalResult.parsed);
-        });
-        replace();
-
+        const imported = importWorkbookBuffer(req.file.buffer);
         res.json({
             success: true,
-            faq: faqSheet ? faqResult.parsed.length : null,
-            technical: technicalSheet ? technicalResult.parsed.length : null,
-            replaced: {
-                faq: Boolean(faqSheet),
-                technical: Boolean(technicalSheet)
-            }
+            ...imported
         });
     } catch (error) {
-        res.status(400).json({ success: false, error: error.message || "Der Excel-Import ist fehlgeschlagen." });
+        res.status(400).json({
+            success: false,
+            error: error.message || "Der Excel-Import ist fehlgeschlagen.",
+            errors: error.details ?? undefined
+        });
     }
 });
 

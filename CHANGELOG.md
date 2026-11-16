@@ -2,6 +2,21 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.60 - 16.11.2026
+
+### Neu
+
+- **FAQ & Technik** kann die Datei `FAQ-und-Technische-Daten` aus der festen
+  Salesforce-Opportunity **FAQ und Technik** unter dem Account **Janitza
+  Technik Account** automatisch prüfen und bei einer neuen Version einlesen.
+- Zusätzlich steht eine manuelle Aktion **Aus Salesforce aktualisieren** zur
+  Verfügung.
+
+### Behoben
+
+- Status- und Fehlermeldungen im Bereich **FAQ & Technik** werden jetzt in
+  einer eigenen Zeile oberhalb der Liste angezeigt.
+
 ## 1.5.59 - 15.11.2026
 
 ### Neu

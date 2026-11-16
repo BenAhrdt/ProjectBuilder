@@ -2,6 +2,20 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.60 - 2026-11-16
+
+### Added
+
+- **FAQ & Technical Data** can automatically check and import a newer version
+  of `FAQ-und-Technische-Daten` from the fixed Salesforce opportunity
+  **FAQ und Technik** under **Janitza Technik Account**.
+- A manual **Refresh from Salesforce** action is also available.
+
+### Fixed
+
+- Status and error messages in **FAQ & Technical Data** now appear in their
+  own row above the list.
+
 ## 1.5.59 - 2026-11-15
 
 ### Added

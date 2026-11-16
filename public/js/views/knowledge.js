@@ -64,6 +64,9 @@ function renderViewContent() {
                     </div>
                 `}
                 <div class="knowledge-toolbar-actions">
+                    <button id="knowledge-salesforce-sync-button" type="button" class="knowledge-secondary">
+                        ${i18n.t("knowledge.salesforceSync")}
+                    </button>
                     <button id="knowledge-import-button" type="button" class="knowledge-primary">
                         ${i18n.t("knowledge.import")}
                     </button>
@@ -103,6 +106,9 @@ function renderViewContent() {
     });
     document.getElementById("knowledge-import-file").addEventListener("change", event => {
         importWorkbook(event.target.files[0]);
+    });
+    document.getElementById("knowledge-salesforce-sync-button").addEventListener("click", () => {
+        refreshSalesforceKnowledge();
     });
     if (isComparison) {
         bindComparisonControls();
@@ -768,6 +774,91 @@ async function importWorkbook(file) {
     }
 }
 
+async function checkSalesforceKnowledge({ force = false } = {}) {
+    try {
+        const response = await fetch("/api/knowledge/salesforce-sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ force })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || result.success === false) {
+            throw new Error(result.error || i18n.t("knowledge.salesforceSyncFailed"));
+        }
+        return result;
+    } catch (error) {
+        return {
+            success: false,
+            connected: false,
+            available: false,
+            updated: false,
+            error: error.message || i18n.t("knowledge.salesforceSyncFailed")
+        };
+    }
+}
+
+function showSalesforceSyncStatus(result, { manual = false } = {}) {
+    const status = document.getElementById("knowledge-status");
+    if (!status || !result) return;
+    status.classList.remove("is-error");
+    if (!result.success) {
+        status.textContent = result.error || i18n.t("knowledge.salesforceSyncFailed");
+        status.classList.add("is-error");
+        return;
+    }
+    if (result.updated) {
+        const counts = [
+            result.faq === null ? "" : `${i18n.t("knowledge.faq")}: ${result.faq}`,
+            result.technical === null ? "" : `${i18n.t("knowledge.technical")}: ${result.technical}`
+        ].filter(Boolean).join(" · ");
+        status.textContent = `${i18n.t("knowledge.salesforceSyncUpdated")}${counts ? ` ${counts}` : ""}`;
+        return;
+    }
+    if (!manual) return;
+    if (!result.connected) {
+        status.textContent = i18n.t("knowledge.salesforceSyncNotConnected");
+        return;
+    }
+    if (!result.available) {
+        status.textContent = i18n.t("knowledge.salesforceSyncFileNotFound");
+        return;
+    }
+    if (result.upToDate) status.textContent = i18n.t("knowledge.salesforceSyncUpToDate");
+}
+
+async function refreshSalesforceKnowledge() {
+    const button = document.getElementById("knowledge-salesforce-sync-button");
+    if (button) {
+        button.disabled = true;
+        button.textContent = i18n.t("knowledge.salesforceSyncRunning");
+    }
+    const result = await checkSalesforceKnowledge({ force: true });
+    if (result.updated) {
+        try {
+            await loadEntries();
+            renderViewContent();
+        } catch (error) {
+            const status = document.getElementById("knowledge-status");
+            if (status) {
+                status.textContent = error.message || i18n.t("knowledge.loadFailed");
+                status.classList.add("is-error");
+            }
+            const nextButton = document.getElementById("knowledge-salesforce-sync-button");
+            if (nextButton) {
+                nextButton.disabled = false;
+                nextButton.textContent = i18n.t("knowledge.salesforceSync");
+            }
+            return;
+        }
+    }
+    showSalesforceSyncStatus(result, { manual: true });
+    const nextButton = document.getElementById("knowledge-salesforce-sync-button");
+    if (nextButton) {
+        nextButton.disabled = false;
+        nextButton.textContent = i18n.t("knowledge.salesforceSync");
+    }
+}
+
 async function loadEntries() {
     const [faqResponse, technicalResponse, articlesResponse] = await Promise.all([
         fetch("/api/knowledge?type=faq"),
@@ -783,8 +874,10 @@ async function loadEntries() {
 export async function renderView() {
     view.innerHTML = `<div class="knowledge-loading">${i18n.t("knowledge.loading")}</div>`;
     try {
+        const salesforceSync = await checkSalesforceKnowledge();
         await loadEntries();
         renderViewContent();
+        showSalesforceSyncStatus(salesforceSync);
     } catch (error) {
         view.innerHTML = `<div class="knowledge-loading knowledge-loading-error">${escapeHtml(error.message || i18n.t("knowledge.loadFailed"))}</div>`;
     }

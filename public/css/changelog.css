@@ -30,6 +30,11 @@
     font-size: 34px;
 }
 
+.changelog-error {
+    color: #b42318;
+    font-weight: 600;
+}
+
 .changelog-releases {
     display: grid;
     gap: 20px;

@@ -2,6 +2,14 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.62 - 2026-11-16
+
+### Fixed
+
+- The changelog now opens correctly from the footer instead of leaving the
+  previously displayed view on screen.
+- Navigation now handles views without an active main menu item correctly.
+
 ## 1.5.61 - 2026-11-16
 
 ### Fixed

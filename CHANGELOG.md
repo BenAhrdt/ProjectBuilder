@@ -2,6 +2,14 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.62 - 16.11.2026
+
+### Behoben
+
+- Der Changelog öffnet jetzt korrekt aus der Fußzeile, ohne dass die zuvor
+  angezeigte Ansicht stehen bleibt.
+- Die Navigation behandelt Ansichten ohne aktives Hauptmenü-Element korrekt.
+
 ## 1.5.61 - 16.11.2026
 
 ### Behoben

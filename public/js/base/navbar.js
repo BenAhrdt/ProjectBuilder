@@ -214,6 +214,7 @@ document.getElementById("global-search-input")?.addEventListener("focus", () => 
 });
 
 export function setItemsActive(dataView) {
+        const activeView = String(dataView ?? "");
         settingsParent?.classList.remove("active");
         // active von allen entfernen
         navbarItems.forEach(i => {
@@ -221,12 +222,12 @@ export function setItemsActive(dataView) {
         });
 
         // Item active setzen
-        const item = document.querySelector(`[data-view="${dataView}"]`);
+        const item = document.querySelector(`[data-view="${activeView}"]`);
         item?.classList.add("active");
 
-        const settingsView = dataView === "settings"
-            || dataView === "backups"
-            || dataView.startsWith("settings-");
+        const settingsView = activeView === "settings"
+            || activeView === "backups"
+            || activeView.startsWith("settings-");
         settingsParent?.classList.toggle("active", settingsView);
         setSettingsExpanded(false);
 }

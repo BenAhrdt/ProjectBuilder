@@ -129,6 +129,7 @@ app.get("/api", (req, res) => {
 })
 
 app.get("/api/version", (req, res) => {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
     res.json({ version: packageVersion })
 })
 
@@ -137,6 +138,7 @@ app.get("/api/changelog", (req, res) => {
         ? req.query.language
         : "de";
     const filename = language === "de" ? "CHANGELOG.md" : `CHANGELOG.${language}.md`;
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
     res.type("text/markdown").send(
         fs.readFileSync(path.join(__dirname, filename), "utf8")
     )

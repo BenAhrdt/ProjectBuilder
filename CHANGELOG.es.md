@@ -2,6 +2,15 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.62 - 16.11.2026
+
+### Corregido
+
+- El registro de cambios ahora se abre correctamente desde el pie de página
+  en lugar de dejar visible la vista anterior.
+- La navegación gestiona correctamente las vistas sin un elemento principal
+  activo en el menú.
+
 ## 1.5.61 - 16.11.2026
 
 ### Corregido

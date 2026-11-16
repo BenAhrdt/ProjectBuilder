@@ -4,34 +4,49 @@ await i18n.loadLanguage();
 const view = document.getElementById("view");
 
 async function renderView() {
-    const [changelogResponse, versionResponse] = await Promise.all([
-        fetch(`/api/changelog?language=${encodeURIComponent(i18n.getCurrentLanguage())}`),
-        fetch("/api/version")
-    ]);
+    try {
+        const [changelogResponse, versionResponse] = await Promise.all([
+            fetch(
+                `/api/changelog?language=${encodeURIComponent(i18n.getCurrentLanguage())}`,
+                { cache: "no-store" }
+            ),
+            fetch("/api/version", { cache: "no-store" })
+        ]);
 
-    if (!changelogResponse.ok || !versionResponse.ok) {
-        throw new Error(i18n.t("changelog.loadError"));
+        if (!changelogResponse.ok || !versionResponse.ok) {
+            throw new Error(i18n.t("changelog.loadError"));
+        }
+
+        const markdown = await changelogResponse.text();
+        const { version } = await versionResponse.json();
+        const releases = parseChangelog(markdown);
+        if (releases.length === 0) {
+            throw new Error(i18n.t("changelog.loadError"));
+        }
+
+        view.innerHTML = `
+            <div class="changelog-view">
+                <header class="changelog-header">
+                    <span class="changelog-header-icon">📖</span>
+                    <div>
+                        <h1>${i18n.t("changelog.title")}</h1>
+                        <p>${i18n.t("changelog.subtitle")}</p>
+                    </div>
+                </header>
+                <div id="changelog-releases" class="changelog-releases"></div>
+            </div>
+        `;
+
+        const container = document.getElementById("changelog-releases");
+        releases.forEach(release => container.append(createRelease(release, version)));
+    } catch (error) {
+        console.error("Changelog konnte nicht geladen werden:", error);
+        view.innerHTML = `
+            <div class="changelog-view">
+                <p class="changelog-error">${i18n.t("changelog.loadError")}</p>
+            </div>
+        `;
     }
-
-    const markdown = await changelogResponse.text();
-    const { version } = await versionResponse.json();
-    const releases = parseChangelog(markdown);
-
-    view.innerHTML = `
-        <div class="changelog-view">
-            <header class="changelog-header">
-                <span class="changelog-header-icon">📖</span>
-                <div>
-                    <h1>${i18n.t("changelog.title")}</h1>
-                    <p>${i18n.t("changelog.subtitle")}</p>
-                </div>
-            </header>
-            <div id="changelog-releases" class="changelog-releases"></div>
-        </div>
-    `;
-
-    const container = document.getElementById("changelog-releases");
-    releases.forEach(release => container.append(createRelease(release, version)));
 }
 
 function parseChangelog(markdown) {

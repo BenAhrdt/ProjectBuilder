@@ -3,12 +3,28 @@ import * as database from "../database/index.js";
 
 const SESSION_COOKIE = "projectbuilder-session";
 const SESSION_HASH_SETTING = "auth.localSessionHash";
+const SESSION_HASHES_SETTING = "auth.localSessionHashes";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
-function getStoredSessionHash() {
-    return database.settings
-        .prepare("SELECT value FROM settings WHERE key = ?")
-        .get(SESSION_HASH_SETTING)?.value ?? null;
+function getStoredSessionHashes() {
+    const rows = database.settings
+        .prepare("SELECT key, value FROM settings WHERE key IN (?, ?)")
+        .all(SESSION_HASH_SETTING, SESSION_HASHES_SETTING);
+    const legacyHash = rows.find(row => row.key === SESSION_HASH_SETTING)?.value;
+    const serializedHashes = rows.find(row => row.key === SESSION_HASHES_SETTING)?.value;
+    let hashes = [];
+
+    if (serializedHashes) {
+        try {
+            const parsed = JSON.parse(serializedHashes);
+            if (Array.isArray(parsed)) hashes = parsed;
+        } catch {
+            // Ignore malformed session data and keep the legacy value below.
+        }
+    }
+
+    if (legacyHash) hashes.push(legacyHash);
+    return [...new Set(hashes.filter(hash => /^[a-f0-9]{64}$/i.test(hash)))];
 }
 
 function hashSessionToken(token) {
@@ -26,13 +42,19 @@ function readSessionCookie(req) {
 
 function hasValidLocalSession(req) {
     const token = readSessionCookie(req);
-    const storedHash = getStoredSessionHash();
-    if (!token || !storedHash) return false;
+    const storedHashes = getStoredSessionHashes();
+    if (!token || storedHashes.length === 0) return false;
 
     const tokenHash = Buffer.from(hashSessionToken(token), "utf8");
-    const expectedHash = Buffer.from(storedHash, "utf8");
-    return tokenHash.length === expectedHash.length
-        && crypto.timingSafeEqual(tokenHash, expectedHash);
+    return storedHashes.some(storedHash => {
+        const expectedHash = Buffer.from(storedHash, "utf8");
+        return tokenHash.length === expectedHash.length
+            && crypto.timingSafeEqual(tokenHash, expectedHash);
+    });
+}
+
+function hasAnyLocalSession() {
+    return getStoredSessionHashes().length > 0;
 }
 
 function setSessionCookie(res, token) {
@@ -46,16 +68,37 @@ function setSessionCookie(res, token) {
 
 export function createLocalSession(res) {
     const token = crypto.randomBytes(32).toString("base64url");
-    database.settings.prepare(`
-        INSERT INTO settings (key, value) VALUES (?, ?)
-        ON CONFLICT(key) DO UPDATE SET value = excluded.value
-    `).run(SESSION_HASH_SETTING, hashSessionToken(token));
+    const hashes = [...getStoredSessionHashes(), hashSessionToken(token)];
+    const transaction = database.settings.transaction(() => {
+        database.settings.prepare(`
+            INSERT INTO settings (key, value) VALUES (?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value
+        `).run(SESSION_HASHES_SETTING, JSON.stringify(hashes));
+        database.settings.prepare("DELETE FROM settings WHERE key = ?").run(SESSION_HASH_SETTING);
+    });
+    transaction();
     setSessionCookie(res, token);
 }
 
 export function clearLocalSession(res) {
-    database.settings.prepare("DELETE FROM settings WHERE key = ?").run(SESSION_HASH_SETTING);
+    database.settings
+        .prepare("DELETE FROM settings WHERE key IN (?, ?)")
+        .run(SESSION_HASH_SETTING, SESSION_HASHES_SETTING);
     setSessionCookie(res, null);
+}
+
+// A local ProjectBuilder server is shared by Electron and the system browser.
+// If one client has already completed the Salesforce login, let another client
+// establish its own cookie without requiring a second OAuth round trip.
+export function establishSharedLocalSession(req, res) {
+    try {
+        if (hasValidLocalSession(req)) return true;
+        if (!hasAnyLocalSession()) return false;
+        createLocalSession(res);
+        return true;
+    } catch {
+        return false;
+    }
 }
 
 export function isLocalSessionAuthenticated(req) {

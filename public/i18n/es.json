@@ -236,7 +236,7 @@
     "salesforce.connectionRequiredTitle": "Se requiere iniciar sesión en Salesforce",
     "salesforce.connectionRequired": "Esta acción requiere iniciar sesión en Salesforce. ¿Conectar ahora?",
     "auth.requiredTitle": "Se requiere iniciar sesión en ProjectBuilder",
-    "auth.requiredMessage": "Inicie sesión con Salesforce para utilizar ProjectBuilder localmente.",
+    "auth.requiredMessage": "Inicie sesión con Salesforce para utilizar ProjectBuilder localmente. Un solo inicio de sesión desbloquea Electron y el navegador.",
     "auth.login": "Iniciar sesión con Salesforce",
     "articles.articles": "Artículos",
     "articles.search": "Buscar",

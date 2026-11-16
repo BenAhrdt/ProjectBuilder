@@ -2,6 +2,15 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.63 - 2026-11-16
+
+### Improved
+
+- The local ProjectBuilder sign-in is now shared between Electron and the
+  external browser. One sign-in unlocks both applications.
+- Multiple local session cookies remain valid at the same time, so signing in
+  to one application no longer locks the other one.
+
 ## 1.5.62 - 2026-11-16
 
 ### Fixed

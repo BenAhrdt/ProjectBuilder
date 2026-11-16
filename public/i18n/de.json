@@ -236,7 +236,7 @@
     "salesforce.connectionRequiredTitle": "Salesforce-Anmeldung erforderlich",
     "salesforce.connectionRequired": "Für diese Aktion ist eine Salesforce-Anmeldung erforderlich. Jetzt mit Salesforce verbinden?",
     "auth.requiredTitle": "ProjectBuilder-Anmeldung erforderlich",
-    "auth.requiredMessage": "Bitte melden Sie sich mit Salesforce an, um ProjectBuilder lokal zu verwenden.",
+    "auth.requiredMessage": "Bitte melden Sie sich mit Salesforce an, um ProjectBuilder lokal zu verwenden. Eine Anmeldung schaltet Electron und den Browser frei.",
     "auth.login": "Mit Salesforce anmelden",
     "articles.articles": "Artikel",
     "articles.search": "Suchen",

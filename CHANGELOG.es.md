@@ -2,6 +2,15 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.63 - 16.11.2026
+
+### Mejorado
+
+- El inicio de sesión local de ProjectBuilder ahora se comparte entre Electron
+  y el navegador externo. Un solo inicio de sesión desbloquea ambas aplicaciones.
+- Varias cookies de sesión locales pueden permanecer válidas al mismo tiempo;
+  iniciar sesión en una aplicación ya no bloquea la otra.
+
 ## 1.5.62 - 16.11.2026
 
 ### Corregido

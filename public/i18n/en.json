@@ -236,7 +236,7 @@
     "salesforce.connectionRequiredTitle": "Salesforce sign-in required",
     "salesforce.connectionRequired": "This action requires a Salesforce sign-in. Connect to Salesforce now?",
     "auth.requiredTitle": "ProjectBuilder sign-in required",
-    "auth.requiredMessage": "Sign in with Salesforce to use ProjectBuilder locally.",
+    "auth.requiredMessage": "Sign in with Salesforce to use ProjectBuilder locally. One sign-in unlocks both Electron and the browser.",
     "auth.login": "Sign in with Salesforce",
     "articles.articles": "Articles",
     "articles.search": "Search",

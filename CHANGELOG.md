@@ -2,6 +2,15 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.63 - 16.11.2026
+
+### Verbessert
+
+- Die lokale ProjectBuilder-Anmeldung wird jetzt zwischen Electron und dem
+  externen Browser geteilt. Ein Login schaltet beide Anwendungen frei.
+- Mehrere lokale Sitzungscookies bleiben gleichzeitig gültig; ein Login in
+  einer Anwendung sperrt die andere nicht mehr.
+
 ## 1.5.62 - 16.11.2026
 
 ### Behoben

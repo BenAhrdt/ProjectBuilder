@@ -16,7 +16,10 @@ import databaseRouter from "./routes/database.js";
 import salesforceRouter from "./routes/salesforce.js";
 import knowledgeRouter from "./routes/knowledge.js";
 import { startAutomaticBackupScheduler } from "./utils/backup.js";
-import { isLocalSessionAuthenticated, requireLocalSession } from "./utils/localAuth.js";
+import {
+    establishSharedLocalSession,
+    requireLocalSession
+} from "./utils/localAuth.js";
 import { warmConnection as warmSalesforceConnection } from "./services/salesforce.js";
 import { acquireDatabaseAccess } from "./database/config.js";
 
@@ -74,7 +77,7 @@ app.use(express.static(path.join(__dirname, "public")))
 // Alle anderen API-Anfragen erhalten einen kurzen Lese-/Schreibzugriffsschutz,
 // damit ein Wechsel erst nach laufenden Autosaves oder Imports erfolgt.
 app.get("/api/auth/session", (req, res) => {
-    res.json({ authenticated: isLocalSessionAuthenticated(req) });
+    res.json({ authenticated: establishSharedLocalSession(req, res) });
 });
 
 // Salesforce OAuth is the bootstrap for the local ProjectBuilder session.

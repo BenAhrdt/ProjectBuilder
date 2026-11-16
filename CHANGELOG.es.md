@@ -2,6 +2,18 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.61 - 16.11.2026
+
+### Corregido
+
+- El módulo **96-RCM-E** ya no requiere un elemento IBN/GridVis.
+- Las etiquetas del plano general se muestran completas y se actualizan
+  inmediatamente después de sustituir un artículo.
+- La vista de impresión del plano general incluye ahora el logotipo de Janitza
+  y elimina el borde de página no deseado.
+- Los nombres de archivo de las exportaciones de Excel conservan correctamente
+  las diéresis, como `ü`.
+
 ## 1.5.60 - 16.11.2026
 
 ### Nuevo

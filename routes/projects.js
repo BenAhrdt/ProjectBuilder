@@ -38,6 +38,7 @@ import {
     getProjectFilesDirectory,
     removeProjectFile
 } from "../utils/projectFiles.js";
+import { buildContentDisposition } from "../utils/downloadFilename.js";
 import { getCommissioningType } from "../public/js/utils/commissioningTypes.js";
 
 const router =
@@ -566,7 +567,7 @@ router.get(
 
         res.setHeader(
             "Content-Disposition",
-            `attachment; filename="${filename}"`
+            buildContentDisposition(filename)
         );
 
         res.send(
@@ -581,7 +582,7 @@ router.get("/:id/export.projectbuilder.json", (req, res) => {
     if (!exportData) return res.status(404).json({ error: "Projekt nicht gefunden" });
     const filename = `${sanitizeFilename(exportData.project.name || "Projekt")}.projectbuilder.json`;
     res.setHeader("Content-Type", "application/json; charset=utf-8");
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-Disposition", buildContentDisposition(filename));
     res.send(JSON.stringify(buildProjectFilePayload(exportData), null, 2));
 });
 
@@ -642,7 +643,10 @@ router.get(
         if (format === "gaeb") {
             const extension = `x${gaebType}`;
             res.setHeader("Content-Type", "application/xml; charset=utf-8");
-            res.setHeader("Content-Disposition", `attachment; filename="${baseName}-Ausschreibung.${extension}"`);
+            res.setHeader(
+                "Content-Disposition",
+                buildContentDisposition(`${baseName}-Ausschreibung.${extension}`)
+            );
             res.send(buildGaebTenderXml(exportData, priceMode, gaebType));
             return;
         }
@@ -653,7 +657,10 @@ router.get(
                 "Content-Type",
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             );
-            res.setHeader("Content-Disposition", `attachment; filename="${baseName}-Ausschreibung.docx"`);
+            res.setHeader(
+                "Content-Disposition",
+                buildContentDisposition(`${baseName}-Ausschreibung.docx`)
+            );
             res.send(buffer);
         } catch (error) {
             console.error("Word-Ausschreibung konnte nicht erstellt werden:", error);
@@ -993,9 +1000,7 @@ router.get("/:id/files/:fileId/content", (req, res) => {
         return;
     }
 
-    const safeName = String(file.name || "Datei")
-        .replace(/[\r\n"\\]/g, "_");
-    const fallbackName = safeName.replace(/[^\x20-\x7E]/g, "_") || "Datei";
+    const safeName = String(file.name || "Datei");
     const mimeType = String(file.mimeType || "application/octet-stream").toLowerCase();
     const safeInlineType =
         (mimeType.startsWith("image/") && mimeType !== "image/svg+xml")
@@ -1011,7 +1016,7 @@ router.get("/:id/files/:fileId/content", (req, res) => {
     res.setHeader("Content-Type", mimeType);
     res.setHeader(
         "Content-Disposition",
-        `${disposition}; filename="${fallbackName}"; filename*=UTF-8''${encodeURIComponent(safeName)}`
+        buildContentDisposition(safeName, disposition)
     );
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Cache-Control", "private, no-store");

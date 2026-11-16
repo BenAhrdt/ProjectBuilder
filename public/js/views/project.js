@@ -13082,7 +13082,12 @@ function updateNodeArticleElement(
             nodeArticle.articleNumber,
             fullArticle,
             nodeArticle,
-            getProjectArticleLabels(nodeArticle.id)
+            getEffectiveProjectArticleLabels(
+                currentNodeArticles,
+                currentNodes
+            ).filter(label =>
+                String(label.projectNodeArticleId) === String(nodeArticle.id)
+            )
         );
 
     const updatedArticleElement =

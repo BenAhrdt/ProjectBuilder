@@ -38,7 +38,7 @@ test("assigns the configured commissioning types to device families", () => {
     );
     assert.equal(
         getCommissioningType({ manufacturerType: "Modul 96-RCM-E" }),
-        2
+        null
     );
     assert.equal(
         getCommissioningType({

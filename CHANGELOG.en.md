@@ -2,6 +2,17 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.61 - 2026-11-16
+
+### Fixed
+
+- The **96-RCM-E** module no longer requires an IBN/GridVis item.
+- Overview labels are shown in full and update immediately after an article
+  replacement.
+- The overview plan print view now includes the Janitza logo and removes the
+  unwanted page border.
+- Excel export filenames preserve umlauts such as `ü` correctly.
+
 ## 1.5.60 - 2026-11-16
 
 ### Added

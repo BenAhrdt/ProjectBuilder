@@ -1495,6 +1495,25 @@ body.project-editor-resizing {
     border-bottom: 1px solid #dfe6ef;
 }
 
+.project-overview-print-brand {
+    display: flex;
+    min-width: 0;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.project-overview-print-brand img {
+    display: block;
+    width: 112px;
+    height: auto;
+    flex: 0 0 auto;
+    margin-top: 1px;
+}
+
+.project-overview-print-brand > div {
+    min-width: 0;
+}
+
 .project-overview-print-page h3 {
     margin: 0;
     color: #1f3552;
@@ -1830,6 +1849,7 @@ body.project-overview-open {
     .project-overview-dialog {
         display: block;
         overflow: visible;
+        border: 0 !important;
         border-radius: 0;
         box-shadow: none;
     }
@@ -1879,8 +1899,14 @@ body.project-overview-open {
         height: 190mm;
         padding: 0;
         overflow: hidden;
-        border: 0;
-        box-shadow: none;
+        margin: 0 !important;
+        border: 0 !important;
+        border-top: 0 !important;
+        border-right: 0 !important;
+        border-bottom: 0 !important;
+        border-left: 0 !important;
+        outline: 0 !important;
+        box-shadow: none !important;
         break-after: page;
         page-break-after: always;
     }

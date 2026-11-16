@@ -862,7 +862,7 @@ function buildOverviewTree({
             labelsByNodeId.set(nodeId, []);
         }
         labelsByNodeId.get(nodeId).push({
-            text: String(label.text ?? "").trim().slice(0, 24),
+            text: String(label.text ?? "").trim(),
             color: /^#[0-9a-f]{6}$/i.test(String(label.color ?? ""))
                 ? String(label.color).toLowerCase()
                 : "#2f6fb4",
@@ -893,7 +893,7 @@ function buildOverviewTree({
             labelsByArticleId.set(articleId, []);
         }
         labelsByArticleId.get(articleId).push({
-            text: String(label.text ?? "").trim().slice(0, 24),
+            text: String(label.text ?? "").trim(),
             color: /^#[0-9a-f]{6}$/i.test(String(label.color ?? ""))
                 ? String(label.color).toLowerCase()
                 : "#2f6fb4",
@@ -1536,9 +1536,15 @@ function renderPrintablePages({
                 ${pages.map((page, index) => `
                     <section class="project-overview-print-page">
                         <header>
-                            <div>
-                                <h3>${escapeXml(page.title)}</h3>
-                                <p>${escapeXml(page.breadcrumb)}</p>
+                            <div class="project-overview-print-brand">
+                                <img
+                                    src="/icons/janitza-logo.svg"
+                                    alt="Janitza"
+                                >
+                                <div>
+                                    <h3>${escapeXml(page.title)}</h3>
+                                    <p>${escapeXml(page.breadcrumb)}</p>
+                                </div>
                             </div>
                             <span>
                                 ${escapeXml(labels.page)} ${index + 1} / ${pages.length}
@@ -2698,7 +2704,7 @@ function renderLabelChips(
                 const { label, width } = item;
                 const x = cursor;
                 cursor += width + gap;
-                const text = truncateText(label.text, 12);
+                const text = String(label.text ?? "").trim();
                 const fill = /^#[0-9a-f]{6}$/i.test(label.color)
                     ? label.color
                     : "#2f6fb4";
@@ -2722,6 +2728,7 @@ function renderLabelChips(
                             font-family="Arial, sans-serif"
                             font-size="8.5"
                             font-weight="700"
+                            ${getTextFitAttributes(text, Math.max(width - 10, 0), 8.5, 700)}
                         >${escapeXml(text)}</text>
                     </g>
                 `;
@@ -2748,10 +2755,9 @@ function getLabelChipRows(
             label,
             width: Math.max(
                 24,
-                Math.min(
-                    72,
-                    String(label.text).length * 5.2 + 10
-                )
+                Number.isFinite(maximumWidth)
+                    ? Math.min(maximumWidth, String(label.text).length * 5.2 + 10)
+                    : String(label.text).length * 5.2 + 10
             )
         }));
     const rows = [];

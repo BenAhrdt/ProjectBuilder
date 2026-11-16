@@ -66,6 +66,10 @@ export function getCommissioningType(article = {}) {
         return null;
     }
 
+    // Das Modul 96-RCM-E ist die bislang einzige Ausnahme unter den
+    // Messmodulen: Es benoetigt keine Inbetriebnahme.
+    if (/(?:modul|module)96rcm/.test(identityText)) return null;
+
     // UMG 800 is a type 1 device. Its description contains the word
     // "modular", which must not make the device look like a type 2 module.
     if (

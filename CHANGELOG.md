@@ -2,6 +2,22 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.65 - 17.11.2026
+
+### Neu
+
+- Im Projektbaum kann für jedes Projektelement eine eigene Farbe für den
+  Übersichtsplan hinterlegt werden. Unterelemente bleiben dabei unabhängig.
+- Die Farbe kann direkt als Hex-Wert kopiert und eingefügt werden; die
+  Projektbaum-Symbole übernehmen die jeweils wirksame Farbe.
+
+### Verbessert
+
+- Der Projektbaum bietet jetzt **Alle zuklappen** und **Alle aufklappen**.
+- Große Übersichtspläne werden bei vielen Gebäuden kompakter über mehrere
+  Spalten verteilt.
+- Farbänderungen werden nach dem Speichern sofort sichtbar, ohne F5.
+
 ## 1.5.64 - 17.11.2026
 
 ### Verbessert

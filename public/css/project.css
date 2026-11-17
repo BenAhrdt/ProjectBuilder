@@ -866,6 +866,23 @@
 
 }
 
+.project-node-icon {
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+
+}
+
+.project-node-icon svg {
+
+    display: block;
+
+}
+
 .project-node-total {
 
     color: #666;
@@ -3367,6 +3384,45 @@ body.project-overview-open {
 
 }
 
+.project-node-overview-color-control {
+
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    grid-column: 1 / -1;
+
+}
+
+.project-node-overview-color-control input[type="color"] {
+
+    width: 46px;
+    height: 36px;
+    margin: 0;
+    padding: 2px;
+
+}
+
+.project-node-overview-color-control input[type="text"] {
+
+    width: 92px;
+    margin: 0;
+    padding: 8px 9px;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+
+}
+
+.project-node-overview-color-control button {
+
+    white-space: nowrap;
+
+}
+
+.project-node-overview-color-control + .project-properties-hint {
+
+    grid-column: 1 / -1;
+
+}
+
 .project-properties-modal .project-special-discount-field {
 
     grid-column: 1 / -1;
@@ -3692,6 +3748,18 @@ body.project-overview-open {
     width: 34px;
     height: 26px;
     padding: 1px;
+}
+
+.project-overview-color-row input[type="text"] {
+    width: 82px;
+    margin: 0;
+    padding: 5px 6px;
+    border: 1px solid #cfd8e3;
+    border-radius: 4px;
+    background: #ffffff;
+    color: #26384f;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 11px;
 }
 
 @media (max-width: 600px) {

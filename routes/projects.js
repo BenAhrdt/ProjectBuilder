@@ -2229,7 +2229,8 @@ function importProjectPayload(payload, options = {}) {
                         fundingObject,
                         responsibility,
                         collectionFrequency,
-                        thirdPartyQuantity
+                        thirdPartyQuantity,
+                        overviewColor
                     )
 
                     VALUES (
@@ -2244,7 +2245,8 @@ function importProjectPayload(payload, options = {}) {
                         @fundingObject,
                         @responsibility,
                         @collectionFrequency,
-                        @thirdPartyQuantity
+                        @thirdPartyQuantity,
+                        @overviewColor
                     )
 
                 `);
@@ -2345,7 +2347,9 @@ function importProjectPayload(payload, options = {}) {
                         collectionFrequency:
                             node.collectionFrequency ?? "",
                         thirdPartyQuantity:
-                            node.thirdPartyQuantity ?? ""
+                            node.thirdPartyQuantity ?? "",
+                        overviewColor:
+                            node.overviewColor ?? ""
                     });
 
                 oldToNewNodeId.set(
@@ -5438,7 +5442,9 @@ function buildExcelImportSheet(
                 collectionFrequency:
                     node.collectionFrequency ?? "",
                 thirdPartyQuantity:
-                    node.thirdPartyQuantity ?? ""
+                    node.thirdPartyQuantity ?? "",
+                overviewColor:
+                    node.overviewColor ?? ""
             })),
         positions:
             positions.map(position => ({
@@ -7937,8 +7943,8 @@ function replaceProjectPayload(projectId, payload, options = {}) {
             INSERT INTO projectNodes (
                 projectId, parentId, type, name, sortOrder, physicalQuantity,
                 deviceDesignation, dataCollectionLocation, fundingObject,
-                responsibility, collectionFrequency, thirdPartyQuantity
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                responsibility, collectionFrequency, thirdPartyQuantity, overviewColor
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         const insertPosition = database.projects.prepare(`
             INSERT INTO projectNodeArticles (
@@ -7955,7 +7961,7 @@ function replaceProjectPayload(projectId, payload, options = {}) {
                 node.physicalQuantity ?? "kWh", node.deviceDesignation ?? "",
                 node.dataCollectionLocation ?? "", node.fundingObject ?? "",
                 node.responsibility ?? "", node.collectionFrequency ?? "",
-                node.thirdPartyQuantity ?? ""
+                node.thirdPartyQuantity ?? "", node.overviewColor ?? ""
             );
             oldToNewNodeId.set(String(node.id), result.lastInsertRowid);
         }

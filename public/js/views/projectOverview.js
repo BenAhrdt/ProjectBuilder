@@ -1054,6 +1054,8 @@ function buildOverviewTree({
             meta: "",
             labels:
                 labelsByNodeId.get(String(node.id)) ?? [],
+            overviewColor:
+                node.overviewColor ?? "",
             articles:
                 articlesByNode.get(
                     String(node.id)
@@ -1085,6 +1087,7 @@ function buildOverviewTree({
             name: labels.noStructure,
             meta: "",
             labels: [],
+            overviewColor: "",
             articles: [],
             children: []
         });
@@ -1132,6 +1135,7 @@ function buildSummaryTree(
                             labels
                         ),
                 labels: node.labels ?? [],
+                overviewColor: node.overviewColor ?? "",
                 articles: [],
                 listTotal: node.listTotal,
                 discountedTotal: node.discountedTotal,
@@ -1635,6 +1639,56 @@ function getNodeHeaderHeight(node) {
 
 }
 
+function getOverviewNodeColors(
+    node,
+    options
+) {
+
+    const defaultColors =
+        options.overviewColors?.[node.type]
+        ??
+        nodeColors[node.type]
+        ??
+        nodeColors.empty;
+    const customColor =
+        String(node.overviewColor ?? "").toLowerCase();
+
+    if (!/^#[0-9a-f]{6}$/.test(customColor)) {
+        return defaultColors;
+    }
+
+    return {
+        ...defaultColors,
+        header: customColor,
+        fill: mixOverviewColor(customColor, "#ffffff", 0.82),
+        text: getLabelTextColor(customColor)
+    };
+
+}
+
+function mixOverviewColor(
+    first,
+    second,
+    secondWeight
+) {
+
+    const firstHex = String(first).slice(1);
+    const secondHex = String(second).slice(1);
+    const weight = Math.min(
+        Math.max(Number(secondWeight) || 0, 0),
+        1
+    );
+    const channel = index => Math.round(
+        Number.parseInt(firstHex.slice(index, index + 2), 16)
+            * (1 - weight)
+        + Number.parseInt(secondHex.slice(index, index + 2), 16)
+            * weight
+    ).toString(16).padStart(2, "0");
+
+    return `#${channel(0)}${channel(2)}${channel(4)}`;
+
+}
+
 function collectDiagramNodes(
     node,
     collection
@@ -1733,6 +1787,13 @@ function renderTreeDiagram(
 function layoutVerticalTree(
     root
 ) {
+    if (
+        root.type === "project"
+        && root.children.length > 8
+    ) {
+        return layoutWrappedOverviewTree(root);
+    }
+
     if (
         root.type === "field"
         &&
@@ -1854,6 +1915,105 @@ function layoutVerticalTree(
                 diagramLayout.margin,
                 220
             )
+    };
+}
+
+function layoutWrappedOverviewTree(
+    root
+) {
+    const childLayouts = root.children.map(child => ({
+        child,
+        dimensions: layoutVerticalTree(child)
+    }));
+    const columnCount = Math.min(
+        8,
+        Math.max(
+            2,
+            Math.ceil(Math.sqrt(childLayouts.length * 1.25))
+        )
+    );
+    const columnWidths = Array.from(
+        { length: columnCount },
+        () => 0
+    );
+    const rowHeights = [];
+
+    childLayouts.forEach((entry, index) => {
+        const column = index % columnCount;
+        const row = Math.floor(index / columnCount);
+        columnWidths[column] = Math.max(
+            columnWidths[column],
+            entry.dimensions.width
+        );
+        rowHeights[row] = Math.max(
+            rowHeights[row] ?? 0,
+            entry.dimensions.height
+        );
+    });
+
+    const wrappedGap = 40;
+    const rowGap = 56;
+    const contentWidth = columnWidths.reduce(
+        (total, width, index) => total + width + (index > 0 ? wrappedGap : 0),
+        0
+    );
+    const firstRowTop =
+        diagramLayout.margin
+        + root.height
+        + diagramLayout.horizontalGap;
+    const rowTops = [];
+    let nextRowTop = firstRowTop;
+
+    rowHeights.forEach((height, row) => {
+        rowTops[row] = nextRowTop;
+        nextRowTop += height + (row < rowHeights.length - 1 ? rowGap : 0);
+    });
+
+    const shiftTree = (node, deltaX, deltaY) => {
+        node.x += deltaX;
+        node.y += deltaY;
+        node.children.forEach(child => shiftTree(child, deltaX, deltaY));
+    };
+
+    const columnLefts = [];
+    let nextColumnLeft = diagramLayout.margin;
+    columnWidths.forEach((width, column) => {
+        columnLefts[column] = nextColumnLeft;
+        nextColumnLeft += width + (column < columnWidths.length - 1 ? wrappedGap : 0);
+    });
+
+    childLayouts.forEach((entry, index) => {
+        const column = index % columnCount;
+        const row = Math.floor(index / columnCount);
+        const deltaX =
+            columnLefts[column]
+            + (columnWidths[column] - entry.dimensions.width) / 2
+            - diagramLayout.margin;
+        const deltaY = rowTops[row] - diagramLayout.margin;
+        shiftTree(entry.child, deltaX, deltaY);
+        entry.child.overviewRow = row;
+        entry.child.overviewColumn = column;
+    });
+
+    root.layoutMode = "wrapped-overview";
+    root.wrappedOverviewRows = rowTops.map(top => ({
+        top: top - 24
+    }));
+    root.wrappedOverviewTrunkX = diagramLayout.margin - 18;
+    root.x =
+        diagramLayout.margin
+        + (contentWidth - diagramLayout.cardWidth) / 2;
+    root.y = diagramLayout.margin;
+
+    return {
+        width: Math.max(
+            contentWidth + diagramLayout.margin * 2,
+            420
+        ),
+        height: Math.max(
+            nextRowTop + diagramLayout.margin - rowGap,
+            220
+        )
     };
 }
 
@@ -2094,6 +2254,48 @@ function renderConnector(
     orientation
 ) {
     if (orientation === "vertical") {
+        if (parent.layoutMode === "wrapped-overview") {
+            const row = child.overviewRow ?? 0;
+            const rowBusY = parent.wrappedOverviewRows[row]?.top
+                ?? child.y - 24;
+            const firstBusY = parent.wrappedOverviewRows[0]?.top
+                ?? rowBusY;
+            const lastBusY = parent.wrappedOverviewRows.at(-1)?.top
+                ?? rowBusY;
+            const trunkX = parent.wrappedOverviewTrunkX;
+            const childCenterX = child.x + diagramLayout.cardWidth / 2;
+            const rootCenterX = parent.x + diagramLayout.cardWidth / 2;
+
+            return `
+                ${row === 0 ? `
+                    <path
+                        d="M ${rootCenterX} ${parent.y + parent.height}
+                           V ${firstBusY} H ${trunkX}"
+                        fill="none"
+                        stroke="#8da2bd"
+                        stroke-width="2"
+                        stroke-linejoin="round"
+                    />
+                ` : ""}
+                ${row === 0 ? `
+                    <path
+                        d="M ${trunkX} ${firstBusY} V ${lastBusY}"
+                        fill="none"
+                        stroke="#8da2bd"
+                        stroke-width="2"
+                    />
+                ` : ""}
+                <path
+                    d="M ${trunkX} ${rowBusY} H ${childCenterX} V ${child.y}"
+                    fill="none"
+                    stroke="#8da2bd"
+                    stroke-width="2"
+                    stroke-linejoin="round"
+                />
+                <circle cx="${childCenterX}" cy="${child.y}" r="4" fill="#4c8bf5" />
+            `;
+        }
+
         if (parent.layoutMode === "field-meters") {
             return renderFieldMeterConnector(parent, child);
         }
@@ -2257,11 +2459,10 @@ function renderDiagramCard(
     const titleTextOffset =
         hasLabels ? typeTextOffset + 25 : 45;
     const colors =
-        options.overviewColors?.[node.type]
-        ??
-        nodeColors[node.type]
-        ??
-        nodeColors.empty;
+        getOverviewNodeColors(
+            node,
+            options
+        );
     const cardWidth =
         diagramLayout.cardWidth;
     const typeLabel =
@@ -2873,10 +3074,12 @@ function openOverviewColorsModal(colors, labels) {
                             <label>
                                 <span>${escapeXml(labels.colorHeader)}</span>
                                 <input type="color" data-color-type="${type}" data-color-part="header" data-transparent="${isTransparentColor(colors[type].header)}" value="${getColorInputValue(colors[type].header)}">
+                                <input type="text" class="project-overview-color-hex" data-color-hex-type="${type}" data-color-hex-part="header" value="${escapeXml(isTransparentColor(colors[type].header) ? "transparent" : getColorInputValue(colors[type].header))}" maxlength="11" spellcheck="false" inputmode="text" aria-label="${escapeXml(labels.hexColor ?? "Hex")}">
                             </label>
                             <label>
                                 <span>${escapeXml(labels.colorFill)}</span>
                                 <input type="color" data-color-type="${type}" data-color-part="fill" data-transparent="${isTransparentColor(colors[type].fill)}" value="${getColorInputValue(colors[type].fill)}">
+                                <input type="text" class="project-overview-color-hex" data-color-hex-type="${type}" data-color-hex-part="fill" value="${escapeXml(isTransparentColor(colors[type].fill) ? "transparent" : getColorInputValue(colors[type].fill))}" maxlength="11" spellcheck="false" inputmode="text" aria-label="${escapeXml(labels.hexColor ?? "Hex")}">
                             </label>
                         </div>
                     `).join("")}
@@ -2892,10 +3095,57 @@ function openOverviewColorsModal(colors, labels) {
             backdrop.remove();
             resolve(value);
         };
+        const getHexInput = input =>
+            backdrop.querySelector(
+                `[data-color-hex-type="${input.dataset.colorType}"][data-color-hex-part="${input.dataset.colorPart}"]`
+            );
+        const getColorInput = hexInput =>
+            backdrop.querySelector(
+                `input[data-color-type="${hexInput.dataset.colorHexType}"][data-color-part="${hexInput.dataset.colorHexPart}"]`
+            );
+
         backdrop.querySelectorAll("input[type=color]").forEach(input => {
             input.addEventListener("input", () => {
                 input.dataset.transparent = "false";
+                const hexInput = getHexInput(input);
+                if (hexInput) {
+                    hexInput.value = input.value.toLowerCase();
+                }
             });
+        });
+        backdrop.querySelectorAll("input[data-color-hex-type]").forEach(hexInput => {
+            const syncFromHex = () => {
+                const colorInput = getColorInput(hexInput);
+                if (!colorInput) {
+                    return;
+                }
+
+                const value = String(hexInput.value ?? "").trim().toLowerCase();
+                if (value === "transparent") {
+                    colorInput.dataset.transparent = "true";
+                    hexInput.value = "transparent";
+                    return;
+                }
+
+                const normalized = value && !value.startsWith("#")
+                    ? `#${value}`
+                    : value;
+                if (!/^#[0-9a-f]{6}$/.test(normalized)) {
+                    hexInput.value = colorInput.dataset.transparent === "true"
+                        ? "transparent"
+                        : colorInput.value.toLowerCase();
+                    return;
+                }
+
+                colorInput.value = normalized;
+                colorInput.dataset.transparent = "false";
+                hexInput.value = normalized;
+            };
+
+            hexInput.addEventListener("change", syncFromHex);
+            hexInput.addEventListener("blur", syncFromHex);
+            hexInput.addEventListener("focus", () => hexInput.select());
+            hexInput.addEventListener("paste", () => setTimeout(syncFromHex, 0));
         });
         backdrop.addEventListener("click", event => {
             if (event.target === backdrop || event.target.closest("[data-action=cancel]")) {
@@ -2908,6 +3158,12 @@ function openOverviewColorsModal(colors, labels) {
                         if (input) {
                             input.value = getColorInputValue(parts[part]);
                             input.dataset.transparent = isTransparentColor(parts[part]);
+                            const hexInput = getHexInput(input);
+                            if (hexInput) {
+                                hexInput.value = isTransparentColor(parts[part])
+                                    ? "transparent"
+                                    : getColorInputValue(parts[part]).toLowerCase();
+                            }
                         }
                     });
                 });
@@ -2925,6 +3181,9 @@ function openOverviewColorsModal(colors, labels) {
             close(result);
         });
         document.body.appendChild(backdrop);
+        const firstHexInput = backdrop.querySelector("input[data-color-hex-type]");
+        firstHexInput?.focus();
+        firstHexInput?.select();
     });
 }
 

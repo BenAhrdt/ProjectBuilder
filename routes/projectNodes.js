@@ -6,6 +6,11 @@ from "../database/index.js";
 const router =
     express.Router();
 
+const normalizeOverviewColor =
+    value => /^#[0-9a-f]{6}$/i.test(String(value ?? ""))
+        ? String(value).toLowerCase()
+        : "";
+
 router.get(
     "/search",
     (req, res) => {
@@ -157,7 +162,8 @@ router.post(
                 fundingObject,
                 responsibility,
                 collectionFrequency,
-                thirdPartyQuantity
+                thirdPartyQuantity,
+                overviewColor
 
             )
 
@@ -174,7 +180,8 @@ router.post(
                 @fundingObject,
                 @responsibility,
                 @collectionFrequency,
-                @thirdPartyQuantity
+                @thirdPartyQuantity,
+                @overviewColor
 
             )
 
@@ -201,7 +208,8 @@ router.post(
             fundingObject: req.body.fundingObject ?? "",
             responsibility: req.body.responsibility ?? "",
             collectionFrequency: req.body.collectionFrequency ?? "",
-            thirdPartyQuantity: req.body.thirdPartyQuantity ?? ""
+            thirdPartyQuantity: req.body.thirdPartyQuantity ?? "",
+            overviewColor: normalizeOverviewColor(req.body.overviewColor)
 
         });
 
@@ -537,7 +545,8 @@ router.post(
                     fundingObject,
                     responsibility,
                     collectionFrequency,
-                    thirdPartyQuantity
+                    thirdPartyQuantity,
+                    overviewColor
 
                 )
 
@@ -554,7 +563,8 @@ router.post(
                     @fundingObject,
                     @responsibility,
                     @collectionFrequency,
-                    @thirdPartyQuantity
+                    @thirdPartyQuantity,
+                    @overviewColor
 
                 )
 
@@ -749,7 +759,8 @@ router.post(
                         fundingObject: node.fundingObject ?? "",
                         responsibility: node.responsibility ?? "",
                         collectionFrequency: node.collectionFrequency ?? "",
-                        thirdPartyQuantity: node.thirdPartyQuantity ?? ""
+                        thirdPartyQuantity: node.thirdPartyQuantity ?? "",
+                        overviewColor: normalizeOverviewColor(node.overviewColor)
 
                     });
 
@@ -905,7 +916,8 @@ router.patch(
                 fundingObject = @fundingObject,
                 responsibility = @responsibility,
                 collectionFrequency = @collectionFrequency,
-                thirdPartyQuantity = @thirdPartyQuantity
+                thirdPartyQuantity = @thirdPartyQuantity,
+                overviewColor = @overviewColor
 
             WHERE id = @id
 
@@ -923,7 +935,11 @@ router.patch(
             fundingObject: req.body.fundingObject ?? current.fundingObject ?? "",
             responsibility: req.body.responsibility ?? current.responsibility ?? "",
             collectionFrequency: req.body.collectionFrequency ?? current.collectionFrequency ?? "",
-            thirdPartyQuantity: req.body.thirdPartyQuantity ?? current.thirdPartyQuantity ?? ""
+            thirdPartyQuantity: req.body.thirdPartyQuantity ?? current.thirdPartyQuantity ?? "",
+            overviewColor:
+                req.body.overviewColor === undefined
+                    ? normalizeOverviewColor(current.overviewColor)
+                    : normalizeOverviewColor(req.body.overviewColor)
 
         });
 

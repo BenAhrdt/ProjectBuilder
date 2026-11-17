@@ -176,6 +176,35 @@ test(
 );
 
 test(
+    "uses an individual overview color without changing child defaults",
+    () => {
+        const diagram = buildOverviewDiagram({
+            project: { name: "Individuelle Farben" },
+            nodes: [
+                {
+                    id: 1,
+                    parentId: null,
+                    type: "building",
+                    name: "Rotes Gebäude",
+                    overviewColor: "#c0392b"
+                },
+                {
+                    id: 2,
+                    parentId: null,
+                    type: "building",
+                    name: "Standardgebäude"
+                }
+            ],
+            labels
+        });
+
+        assert.match(diagram.svg, /fill="#c0392b"/);
+        assert.match(diagram.svg, /fill="#f4dbd9"/);
+        assert.match(diagram.svg, /fill="#4F7191"/);
+    }
+);
+
+test(
     "uses muted colorful defaults from total to article",
     () => {
         const diagram = buildOverviewDiagram({
@@ -353,6 +382,27 @@ test(
         });
 
         assert.equal((diagram.svg.match(/>AV</g) ?? []).length, 2);
+    }
+);
+
+test(
+    "wraps large building overviews into a compact grid",
+    () => {
+        const diagram = buildOverviewDiagram({
+            project: { name: "Viele Gebäude" },
+            nodes: Array.from({ length: 54 }, (_, index) => ({
+                id: index + 1,
+                parentId: null,
+                type: "building",
+                name: `Gebäude ${index + 1}`,
+                sortOrder: index
+            })),
+            labels
+        });
+
+        assert.ok(diagram.width > 3000);
+        assert.ok(diagram.height < 2300);
+        assert.match(diagram.svg, /project-overview-connectors/);
     }
 );
 

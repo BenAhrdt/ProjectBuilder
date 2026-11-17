@@ -2,6 +2,24 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.65 - 17.11.2026
+
+### Nuevo
+
+- Cada elemento del árbol de proyectos puede tener ahora un color individual
+  para el plano general; los elementos secundarios permanecen independientes.
+- Los colores se pueden copiar y pegar directamente como valores hexadecimales
+  y los iconos del árbol usan el color efectivo.
+
+### Mejorado
+
+- El árbol de proyectos ofrece ahora las acciones **Contraer todo** y
+  **Expandir todo**.
+- Los planos generales grandes usan varias columnas para mantener compactos
+  muchos edificios.
+- Los cambios de color se muestran inmediatamente después de guardar, sin
+  pulsar F5.
+
 ## 1.5.64 - 17.11.2026
 
 ### Mejorado

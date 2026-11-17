@@ -686,7 +686,7 @@ async function renderView(
 
                     <div class="project-structure-header">
                         <h2>
-                            ${i18n.t("project.projectStructure")}
+                            ${i18n.t("project.projectTree")}
                         </h2>
 
                         <div class="project-structure-header-actions">
@@ -726,6 +726,28 @@ async function renderView(
                     </div>
 
                     <div class="project-root-actions">
+
+                        <button
+                            id="collapse-all-project-nodes"
+                            class="project-root-action project-tree-control"
+                            type="button"
+                            title="${i18n.t("project.collapseAllNodes")}"
+                            aria-label="${i18n.t("project.collapseAllNodes")}"
+                        >
+                            <span aria-hidden="true">−</span>
+                            <span>${i18n.t("project.collapseAllNodes")}</span>
+                        </button>
+
+                        <button
+                            id="expand-all-project-nodes"
+                            class="project-root-action project-tree-control"
+                            type="button"
+                            title="${i18n.t("project.expandAllNodes")}"
+                            aria-label="${i18n.t("project.expandAllNodes")}"
+                        >
+                            <span aria-hidden="true">+</span>
+                            <span>${i18n.t("project.expandAllNodes")}</span>
+                        </button>
 
                         <button
                             id="add-building"
@@ -926,6 +948,7 @@ async function renderView(
     registerProjectArticleSwapMode();
     registerProjectEditorResizer(projectId);
     generateNodeHandler(projectId);
+    registerProjectTreeControls(projectId);
     registerNodeButtons(projectId);
     registerArticleDragSources();
     registerArticleDropTargets(projectId);
@@ -2622,6 +2645,10 @@ function renderChildNodes(nodes, nodeArticles, articles, nodeTotals, parentId, n
             }
 
             const node = item.node;
+            const hasChildContent =
+                nodes.some(child => String(child.parentId) === String(node.id))
+                || nodeArticles.some(article => String(article.projectNodeId) === String(node.id));
+            const nodeIsCollapsed = hasChildContent && isNodeCollapsed(node.id);
 
             const nextNodeType =
                 getNextNodeType(node.type);
@@ -2655,13 +2682,19 @@ function renderChildNodes(nodes, nodeArticles, articles, nodeTotals, parentId, n
                         data-id="${node.id}"
                     >
 
-                        ${isNodeCollapsed(node.id)
-                            ? "▶"
-                            : "▼"}
+                        ${hasChildContent
+                            ? (nodeIsCollapsed ? "▶" : "▼")
+                            : ""}
 
                     </span>
 
-                        ${getNodeIcon(node.type)}
+                        <span
+                            class="project-node-icon"
+                            style="color: ${escapeAttribute(getProjectNodeOverviewIconColor(node))}"
+                            aria-hidden="true"
+                        >
+                            ${getNodeIcon(node.type)}
+                        </span>
 
                         <span class="project-node-name">
                             ${node.name}
@@ -2715,14 +2748,12 @@ function renderChildNodes(nodes, nodeArticles, articles, nodeTotals, parentId, n
                                 </button>
                             `).join("")}
 
-                            ${node.type === "meter" ? `
-                                <button
-                                    type="button"
-                                    data-action="properties"
-                                >
-                                    ${i18n.t("project.properties")}
-                                </button>
-                            ` : ""}
+                            <button
+                                type="button"
+                                data-action="properties"
+                            >
+                                ${i18n.t("project.properties")}
+                            </button>
 
                             <button
                                 type="button"
@@ -2765,7 +2796,7 @@ function renderChildNodes(nodes, nodeArticles, articles, nodeTotals, parentId, n
                     style="
                         display:
                         ${
-                            isNodeCollapsed(node.id)
+                            nodeIsCollapsed
                                 ? "none"
                                 : "block"
                         };
@@ -4477,6 +4508,10 @@ function updateCurrentNode(
 
     }
 
+    updateProjectNodeIconColor(
+        updatedNode
+    );
+
 }
 
 function openProjectModal({
@@ -4920,6 +4955,244 @@ function getArticleReplacementMatches(
 
 }
 
+function isValidProjectOverviewColor(
+    value
+) {
+
+    return /^#[0-9a-f]{6}$/i.test(
+        String(value ?? "")
+    );
+
+}
+
+function getProjectNodeColorInputValue(
+    node
+) {
+
+    return isValidProjectOverviewColor(node.overviewColor)
+        ? String(node.overviewColor).toLowerCase()
+        : "#4f7191";
+
+}
+
+function renderProjectNodeOverviewColorField(
+    node
+) {
+
+    const hasCustomColor =
+        isValidProjectOverviewColor(node.overviewColor);
+
+    return `
+        <fieldset>
+            <legend>${i18n.t("project.overviewColor")}</legend>
+            <div class="project-node-overview-color-control">
+                <input
+                    type="hidden"
+                    name="overviewColor"
+                    value="${hasCustomColor ? escapeAttribute(String(node.overviewColor).toLowerCase()) : ""}"
+                >
+                <input
+                    type="color"
+                    data-role="overview-color-picker"
+                    value="${getProjectNodeColorInputValue(node)}"
+                    aria-label="${i18n.t("project.chooseOverviewColor")}"
+                >
+                <input
+                    type="text"
+                    class="project-node-overview-color-hex"
+                    data-role="overview-color-hex"
+                    value="${hasCustomColor ? escapeAttribute(String(node.overviewColor).toLowerCase()) : getProjectNodeColorInputValue(node)}"
+                    maxlength="7"
+                    spellcheck="false"
+                    inputmode="text"
+                    aria-label="${i18n.t("project.overviewColorHex")}"
+                >
+                <button
+                    type="button"
+                    data-action="clear-overview-color"
+                >
+                    ${i18n.t("project.useDefaultOverviewColor")}
+                </button>
+            </div>
+            <p class="project-properties-hint">
+                ${i18n.t("project.overviewColorHint")}
+            </p>
+        </fieldset>
+    `;
+
+}
+
+function registerProjectNodeOverviewColorField(
+    modal,
+    node
+) {
+
+    const picker =
+        modal.querySelector(
+            "[data-role=\"overview-color-picker\"]"
+        );
+    const hidden =
+        modal.querySelector(
+            "[name=\"overviewColor\"]"
+        );
+    const clearButton =
+        modal.querySelector(
+            "[data-action=\"clear-overview-color\"]"
+        );
+    const hexInput =
+        modal.querySelector(
+            "[data-role=\"overview-color-hex\"]"
+        );
+    const defaultColor =
+        getProjectNodeColorInputValue({
+            type: node.type
+        });
+    const syncFromHex =
+        () => {
+            const value = String(hexInput?.value ?? "").trim();
+            const normalized =
+                value && !value.startsWith("#")
+                    ? `#${value}`
+                    : value;
+
+            if (!isValidProjectOverviewColor(normalized)) {
+                if (hexInput) {
+                    hexInput.value = picker?.value ?? defaultColor;
+                }
+                return;
+            }
+
+            if (picker) {
+                picker.value = normalized.toLowerCase();
+            }
+            if (hidden) {
+                hidden.value = normalized.toLowerCase();
+            }
+            if (hexInput) {
+                hexInput.value = normalized.toLowerCase();
+            }
+        };
+
+    picker?.addEventListener(
+        "input",
+        () => {
+            if (hidden) {
+                hidden.value = picker.value;
+            }
+            if (hexInput) {
+                hexInput.value = picker.value.toLowerCase();
+            }
+        }
+    );
+
+    hexInput?.addEventListener(
+        "change",
+        syncFromHex
+    );
+    hexInput?.addEventListener(
+        "blur",
+        syncFromHex
+    );
+    hexInput?.addEventListener(
+        "focus",
+        () => hexInput.select()
+    );
+    hexInput?.addEventListener(
+        "paste",
+        () => setTimeout(syncFromHex, 0)
+    );
+
+    clearButton?.addEventListener(
+        "click",
+        () => {
+            if (hidden) {
+                hidden.value = "";
+            }
+            if (picker) {
+                picker.value = defaultColor;
+            }
+            if (hexInput) {
+                hexInput.value = defaultColor;
+            }
+        }
+    );
+
+}
+
+function openProjectNodeColorModal(
+    node
+) {
+
+    return new Promise(resolve => {
+
+        const modal =
+            document.createElement("div");
+
+        modal.className =
+            "project-modal-backdrop";
+
+        modal.innerHTML = `
+            <form class="project-modal project-properties-modal">
+                <h3>${i18n.t("project.properties")}</h3>
+                ${renderProjectNodeOverviewColorField(node)}
+                <div class="project-modal-actions">
+                    <button type="button" data-action="cancel">
+                        ${i18n.t("project.cancel")}
+                    </button>
+                    <button type="submit">
+                        ${i18n.t("project.save")}
+                    </button>
+                </div>
+            </form>
+        `;
+
+        const close = result => {
+            modal.remove();
+            resolve(result);
+        };
+
+        registerProjectNodeOverviewColorField(
+            modal,
+            node
+        );
+
+        modal.addEventListener(
+            "mousedown",
+            event => {
+                if (event.target === modal) {
+                    close(null);
+                }
+            }
+        );
+        modal.querySelector(
+            "[data-action=\"cancel\"]"
+        )?.addEventListener(
+            "click",
+            () => close(null)
+        );
+        modal.querySelector("form")?.addEventListener(
+            "submit",
+            event => {
+                event.preventDefault();
+                const formData = new FormData(event.currentTarget);
+                close({
+                    overviewColor:
+                        String(formData.get("overviewColor") || "")
+                });
+            }
+        );
+
+        document.body.appendChild(modal);
+        const hexInput = modal.querySelector(
+            "[data-role=\"overview-color-hex\"]"
+        );
+        hexInput?.focus();
+        hexInput?.select();
+
+    });
+
+}
+
 function openMeterPropertiesModal(
     node
 ) {
@@ -5011,6 +5284,8 @@ function openMeterPropertiesModal(
                     </label>
                 </fieldset>
 
+                ${renderProjectNodeOverviewColorField(node)}
+
                 <div class="project-modal-actions">
                     <button type="button" data-action="cancel">
                         ${i18n.t("project.cancel")}
@@ -5063,7 +5338,8 @@ function openMeterPropertiesModal(
                     fundingObject: String(formData.get("fundingObject") || ""),
                     responsibility: String(formData.get("responsibility") || "").trim(),
                     collectionFrequency: String(formData.get("collectionFrequency") || "").trim(),
-                    thirdPartyQuantity: String(formData.get("thirdPartyQuantity") || "")
+                    thirdPartyQuantity: String(formData.get("thirdPartyQuantity") || ""),
+                    overviewColor: String(formData.get("overviewColor") || "")
                 });
 
             });
@@ -5071,6 +5347,11 @@ function openMeterPropertiesModal(
         document.body.appendChild(modal);
 
         modal.querySelector("[name=\"physicalQuantity\"]").focus();
+
+        registerProjectNodeOverviewColorField(
+            modal,
+            node
+        );
 
     });
 
@@ -6187,6 +6468,7 @@ function registerProjectOverview(
                         throw new Error(result.error || i18n.t("project.colorsSaveFailed"));
                     }
                     currentProject.overviewColors = JSON.stringify(colors);
+                    updateProjectNodeIconColors();
                 },
                 labels: {
                     title:
@@ -6251,6 +6533,8 @@ function registerProjectOverview(
                         i18n.t("project.colorHeader"),
                     colorFill:
                         i18n.t("project.colorFill"),
+                    hexColor:
+                        i18n.t("project.overviewColorHex"),
                     saveColors:
                         i18n.t("project.saveColors"),
                     resetColors:
@@ -6448,6 +6732,85 @@ function getProjectFormData() {
             ).value
 
     };
+
+}
+
+function getProjectNodeOverviewIconColor(
+    node
+) {
+
+    const customColor =
+        String(node.overviewColor ?? "").toLowerCase();
+
+    if (isValidProjectOverviewColor(customColor)) {
+        return customColor;
+    }
+
+    let projectColors =
+        currentProject?.overviewColors;
+
+    if (typeof projectColors === "string") {
+        try {
+            projectColors = JSON.parse(projectColors);
+        } catch {
+            projectColors = {};
+        }
+    }
+
+    const configuredColor =
+        projectColors?.[node.type]?.header;
+
+    if (isValidProjectOverviewColor(configuredColor)) {
+        return String(configuredColor).toLowerCase();
+    }
+
+    return {
+        building: "#4f7191",
+        generalPosition: "#687f9d",
+        panel: "#578986",
+        field: "#819b77",
+        meter: "#b18a55"
+    }[node.type]
+        ??
+        "#526173";
+
+}
+
+function updateProjectNodeIconColor(
+    node
+) {
+
+    document
+        .querySelectorAll(
+            ".project-node"
+        )
+        .forEach(nodeElement => {
+            if (
+                String(nodeElement.dataset.id)
+                !==
+                String(node.id)
+            ) {
+                return;
+            }
+
+            const icon =
+                nodeElement.querySelector(
+                    ".project-node-icon"
+                );
+
+            if (icon) {
+                icon.style.color =
+                    getProjectNodeOverviewIconColor(node);
+            }
+        });
+
+}
+
+function updateProjectNodeIconColors() {
+
+    currentNodes.forEach(
+        updateProjectNodeIconColor
+    );
 
 }
 
@@ -8596,7 +8959,7 @@ function registerNodeToggles(
                         ":scope > .project-node-children"
                     );
 
-                if (!children)
+                if (!children || children.children.length === 0)
                     return;
 
                 const isHidden =
@@ -8642,6 +9005,97 @@ function registerNodeToggles(
 
         });
 
+}
+
+function getCollapsibleProjectNodeIds(
+    nodes = currentNodes,
+    nodeArticles = currentNodeArticles
+) {
+    const nodeParentIds = new Set(
+        nodes
+            .filter(node => node.parentId !== null && node.parentId !== undefined)
+            .map(node => String(node.parentId))
+    );
+    const articleParentIds = new Set(
+        nodeArticles
+            .filter(article => article.projectNodeId !== null && article.projectNodeId !== undefined)
+            .map(article => String(article.projectNodeId))
+    );
+
+    const ids = new Set(
+        nodes
+            .filter(node =>
+                nodeParentIds.has(String(node.id))
+                || articleParentIds.has(String(node.id))
+            )
+            .map(node => String(node.id))
+    );
+
+    document
+        .querySelectorAll("#project-tree .project-node-wrapper")
+        .forEach(wrapper => {
+            const node = wrapper.querySelector(":scope > .project-node");
+            const children = wrapper.querySelector(":scope > .project-node-children");
+            if (node && children?.children.length > 0) {
+                ids.add(String(node.dataset.id));
+            }
+        });
+
+    return ids;
+}
+
+function applyCollapsedProjectTreeState() {
+    document
+        .querySelectorAll("#project-tree .project-node-wrapper")
+        .forEach(wrapper => {
+            const node = wrapper.querySelector(":scope > .project-node");
+            const children = wrapper.querySelector(":scope > .project-node-children");
+            const toggle = wrapper.querySelector(":scope > .project-node .node-toggle");
+
+            if (!node || !children || !toggle) {
+                return;
+            }
+
+            if (children.children.length === 0) {
+                children.style.display = "block";
+                toggle.textContent = "";
+                return;
+            }
+
+            const collapsed = collapsedNodes.has(String(node.dataset.id));
+            children.style.display = collapsed ? "none" : "block";
+            toggle.textContent = collapsed ? "▶" : "▼";
+        });
+
+    syncArticleListHeight();
+}
+
+function registerProjectTreeControls(
+    projectId
+) {
+    const collapseAllButton = document.getElementById("collapse-all-project-nodes");
+    const expandAllButton = document.getElementById("expand-all-project-nodes");
+
+    if (!collapseAllButton || !expandAllButton) {
+        return;
+    }
+
+    const setAllNodesCollapsed = collapsed => {
+        collapsedNodes = collapsed
+            ? getCollapsibleProjectNodeIds()
+            : new Set();
+        saveCollapsedNodes(projectId);
+        applyCollapsedProjectTreeState();
+    };
+
+    collapseAllButton.addEventListener(
+        "click",
+        () => setAllNodesCollapsed(true)
+    );
+    expandAllButton.addEventListener(
+        "click",
+        () => setAllNodesCollapsed(false)
+    );
 }
 
 function getArticleIcon(
@@ -10198,7 +10652,9 @@ function registerProjectNodeMenus(
                             );
 
                         const properties =
-                            await openMeterPropertiesModal(currentNode ?? {});
+                            node.dataset.type === "meter"
+                                ? await openMeterPropertiesModal(currentNode ?? {})
+                                : await openProjectNodeColorModal(currentNode ?? {});
 
                         if (properties === null) {
 

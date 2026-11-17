@@ -2,6 +2,21 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.65 - 2026-11-17
+
+### Added
+
+- Each project-tree element can now have an individual overview-plan color;
+  child elements remain independent.
+- Colors can be copied and pasted directly as hex values, and project-tree
+  icons use the effective color.
+
+### Improved
+
+- The project tree now offers **Collapse all** and **Expand all** actions.
+- Large overview plans use multiple columns to keep many buildings compact.
+- Color changes become visible immediately after saving, without pressing F5.
+
 ## 1.5.64 - 2026-11-17
 
 ### Improved

@@ -39,7 +39,8 @@ const projectNodeColumns = new Set(
     ["fundingObject", "TEXT DEFAULT ''"],
     ["responsibility", "TEXT DEFAULT ''"],
     ["collectionFrequency", "TEXT DEFAULT ''"],
-    ["thirdPartyQuantity", "TEXT DEFAULT ''"]
+    ["thirdPartyQuantity", "TEXT DEFAULT ''"],
+    ["overviewColor", "TEXT DEFAULT ''"]
 ].forEach(([name, definition]) => {
 
     if (!projectNodeColumns.has(name)) {

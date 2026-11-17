@@ -2,6 +2,16 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.64 - 2026-11-17
+
+### Improved
+
+- The Salesforce header action is now shown only when a local session is
+  active; the central sign-in card remains the entry point for signed-out
+  users.
+- The header adapts to smaller Electron windows so the Salesforce status,
+  logout action and language selector no longer overlap.
+
 ## 1.5.63 - 2026-11-16
 
 ### Improved

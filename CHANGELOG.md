@@ -2,6 +2,16 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.64 - 17.11.2026
+
+### Verbessert
+
+- Der Salesforce-Login im Header wird nur noch bei einer aktiven lokalen
+  Sitzung als kleine Aktion angezeigt; die zentrale Anmeldekarte bleibt der
+  Einstieg für nicht angemeldete Benutzer.
+- Die Kopfzeile passt sich an kleinere Electron-Fenster an, damit Salesforce-
+  Status, Abmeldung und Sprachauswahl nicht mehr überlappen.
+
 ## 1.5.63 - 16.11.2026
 
 ### Verbessert

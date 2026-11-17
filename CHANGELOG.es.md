@@ -2,6 +2,17 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.64 - 17.11.2026
+
+### Mejorado
+
+- La acción de Salesforce en el encabezado solo se muestra cuando existe una
+  sesión local activa; la tarjeta central de inicio de sesión sigue siendo el
+  acceso para usuarios no autenticados.
+- El encabezado se adapta a ventanas de Electron más pequeñas para que el
+  estado de Salesforce, el cierre de sesión y el selector de idioma no se
+  superpongan.
+
 ## 1.5.63 - 16.11.2026
 
 ### Mejorado

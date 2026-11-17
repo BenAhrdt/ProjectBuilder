@@ -186,10 +186,18 @@ body {
     order: 4;
     align-items: center;
     gap: 6px;
+    flex: 0 1 auto;
     min-width: 0;
+    overflow: hidden;
     color: #d9e5ef;
     font-size: 11px;
     white-space: nowrap;
+}
+
+#salesforce-header-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .salesforce-header-dot {
@@ -214,6 +222,7 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 5px;
+    flex: 0 0 auto;
     min-height: 24px;
     padding: 3px 7px;
     border: 1px solid #9fb8d2;
@@ -223,6 +232,12 @@ body {
     cursor: pointer;
     font-size: 11px;
     font-weight: 700;
+}
+
+/* Die Login-Aktion gehört zur zentralen Anmeldekarte. Das HTML-Attribut
+   hidden muss die sichtbare Button-Regel deshalb zuverlässig überstimmen. */
+#salesforce-header-connect[hidden] {
+    display: none;
 }
 
 #salesforce-header-connect[data-state="connected"] {
@@ -883,6 +898,115 @@ body.gridvis-nav-open #below::before {
 
     #view {
         grid-template-rows: auto minmax(0, 1fr);
+    }
+}
+
+/* Der Electron-Startwert liegt nahe an der verfügbaren Breite vieler
+   Notebook-Displays. Die Kopfzeile darf dort nicht durch den Salesforce-
+   Button in den Sprachbereich hineinlaufen. */
+@media (max-width: 1250px) {
+    #header {
+        gap: 8px;
+        padding-right: 10px;
+        padding-left: 6px;
+    }
+
+    .header-start,
+    .header-primary-nav,
+    .header-brand {
+        min-width: 0;
+    }
+
+    .header-primary-nav {
+        gap: 2px;
+        margin-left: 4px;
+        overflow: hidden;
+    }
+
+    .header-primary-nav button {
+        min-width: 0;
+        padding-right: 7px;
+        padding-left: 7px;
+        overflow: hidden;
+        font-size: 13px;
+        text-overflow: ellipsis;
+    }
+
+    .header-brand {
+        gap: 6px;
+    }
+
+    .header-brand-janitza {
+        width: 108px;
+    }
+
+    .header-brand-name {
+        font-size: 14px;
+    }
+
+    .header-brand-project-icon,
+    .header-brand-project-icon svg {
+        width: 26px;
+        height: 26px;
+    }
+
+    .header-history button {
+        width: 30px;
+    }
+
+    .salesforce-header-status {
+        gap: 4px;
+        font-size: 10px;
+    }
+
+    #salesforce-header-connect {
+        min-height: 22px;
+        padding-right: 5px;
+        padding-left: 5px;
+        font-size: 10px;
+    }
+
+    .language-selector {
+        gap: 6px;
+        font-size: 12px;
+    }
+
+    .language-dropdown-trigger {
+        min-width: 100px;
+        padding-right: 7px;
+        padding-left: 7px;
+    }
+}
+
+@media (max-width: 1100px) {
+    .header-primary-nav button {
+        padding-right: 5px;
+        padding-left: 5px;
+        font-size: 12px;
+    }
+
+    .header-brand-janitza {
+        width: 94px;
+    }
+
+    .header-brand-name {
+        font-size: 13px;
+    }
+
+    .header-brand-project-icon {
+        display: none;
+    }
+
+    .header-history button {
+        width: 26px;
+    }
+
+    #salesforce-header-label {
+        max-width: 84px;
+    }
+
+    .language-selector > span {
+        display: none;
     }
 }
 

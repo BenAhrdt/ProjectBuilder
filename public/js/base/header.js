@@ -130,6 +130,7 @@ function renderSalesforceHeaderStatus(state) {
     const connected = state === "connected";
     const notChecked = state === "not-checked";
     const offline = state === "offline";
+    const showHeaderAction = localSessionAuthenticated && !checking;
     const actionLabel = localSessionAuthenticated
         ? i18n.t("salesforce.headerLogout")
         : i18n.t("salesforce.headerConnect");
@@ -143,7 +144,7 @@ function renderSalesforceHeaderStatus(state) {
                 : `${i18n.t("salesforce.headerLabel")}: ${connected
                     ? i18n.t("salesforce.headerConnected")
                     : i18n.t("salesforce.headerDisconnected")}`;
-    salesforceHeaderConnect.hidden = checking;
+    salesforceHeaderConnect.hidden = !showHeaderAction;
     salesforceHeaderConnect.disabled = checking;
     salesforceHeaderConnect.dataset.state = state;
     salesforceHeaderConnect.dataset.localAuthenticated = String(localSessionAuthenticated);
@@ -216,7 +217,7 @@ headerPrimaryItems.forEach(item => {
     item.addEventListener("click", () => navigate(item.dataset.headerPath));
 });
 
-salesforceHeaderConnect?.addEventListener("click", async () => {
+async function handleSalesforceAuthAction() {
     if (!salesforceHeaderConnect) return;
     const wasConnected = localSessionAuthenticated;
     if (wasConnected) {
@@ -241,9 +242,10 @@ salesforceHeaderConnect?.addEventListener("click", async () => {
         if (!wasConnected) setLocalAuthGateVisible(true);
         salesforceHeaderStatus?.setAttribute("title", error.message || i18n.t("salesforce.error"));
     }
-});
+}
 
-localAuthLogin?.addEventListener("click", () => salesforceHeaderConnect?.click());
+salesforceHeaderConnect?.addEventListener("click", handleSalesforceAuthAction);
+localAuthLogin?.addEventListener("click", handleSalesforceAuthAction);
 
 refreshSalesforceHeaderStatus();
 window.addEventListener("focus", refreshSalesforceHeaderStatus);

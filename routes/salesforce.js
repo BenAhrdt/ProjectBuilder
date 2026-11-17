@@ -232,7 +232,6 @@ function buildOverviewPdf(documents, project) {
 }
 
 async function synchronizeProjectDocuments(opportunityId, project, nodes, nodeArticles, selected) {
-    const exportData = buildProjectExportData(project, nodes, nodeArticles);
     const nodeIds = nodes.map(node => node.id);
     const articleIds = nodeArticles.map(nodeArticle => nodeArticle.id);
     const nodeLabels = nodeIds.length === 0 ? [] : database.projectNodeLabels.prepare(`
@@ -267,6 +266,17 @@ async function synchronizeProjectDocuments(opportunityId, project, nodes, nodeAr
         SELECT * FROM projectArticleLabelHidden
         WHERE projectNodeArticleId IN (${articleIds.map(() => "?").join(",")})
     `).all(...articleIds);
+    const exportData = buildProjectExportData(
+        project,
+        nodes,
+        nodeArticles,
+        nodeLabels,
+        articleLabels,
+        nodeLabelSettings,
+        nodeLabelHidden,
+        articleLabelSettings,
+        articleLabelHidden
+    );
     const baseName = String(project.name || "Projekt").replace(/[\\/:*?"<>|]/g, "_").slice(0, 100);
     const generators = {
         overview: async () => {

@@ -2,6 +2,14 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.69 - 17.11.2026
+
+### Behoben
+
+- Die nach Salesforce übertragene ProjectBuilder-Projektdatei enthält jetzt
+  auch Labels, Vererbungsregeln, ausgeblendete Labels und individuelle
+  Elementfarben.
+
 ## 1.5.68 - 17.11.2026
 
 ### Behoben

@@ -31,7 +31,8 @@ export function buildProjectFilePayload({
             sortOrder: node.sortOrder ?? 0, physicalQuantity: node.physicalQuantity ?? "kWh",
             deviceDesignation: node.deviceDesignation ?? "", dataCollectionLocation: node.dataCollectionLocation ?? "",
             fundingObject: node.fundingObject ?? "", responsibility: node.responsibility ?? "",
-            collectionFrequency: node.collectionFrequency ?? "", thirdPartyQuantity: node.thirdPartyQuantity ?? ""
+            collectionFrequency: node.collectionFrequency ?? "", thirdPartyQuantity: node.thirdPartyQuantity ?? "",
+            overviewColor: node.overviewColor ?? ""
         })),
         positions: positions.map(position => ({
             id: position.id, nodeId: position.nodeId ?? position.projectNodeId,

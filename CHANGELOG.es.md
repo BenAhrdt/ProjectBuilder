@@ -2,6 +2,14 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.69 - 17.11.2026
+
+### Corregido
+
+- El archivo de proyecto ProjectBuilder transferido a Salesforce ahora también
+  incluye etiquetas, reglas de herencia, etiquetas ocultas y colores
+  individuales de los elementos.
+
 ## 1.5.68 - 17.11.2026
 
 ### Corregido

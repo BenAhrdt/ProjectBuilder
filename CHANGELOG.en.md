@@ -2,6 +2,13 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.69 - 2026-11-17
+
+### Fixed
+
+- The ProjectBuilder project file uploaded to Salesforce now also includes
+  labels, inheritance settings, hidden labels and individual element colors.
+
 ## 1.5.68 - 2026-11-17
 
 ### Fixed

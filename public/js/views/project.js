@@ -6497,6 +6497,8 @@ function registerProjectOverview(
                         i18n.t("project.overviewDetailView"),
                     page:
                         i18n.t("project.overviewPage"),
+                    overviewPart:
+                        i18n.t("project.overviewPart"),
                     summaryFields:
                         i18n.t("project.overviewSummaryFields"),
                     summaryMeters:
@@ -6505,6 +6507,8 @@ function registerProjectOverview(
                         i18n.t("project.overviewSummaryPositions"),
                     directContent:
                         i18n.t("project.overviewDirectContent"),
+                    buildingOverview:
+                        i18n.t("project.overviewBuildingOverview"),
                     distributionOverview:
                         i18n.t("project.overviewDistributionOverview"),
                     prices:

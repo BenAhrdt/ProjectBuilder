@@ -2,6 +2,16 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.67 - 17.11.2026
+
+### Mejorado
+
+- El resumen general agrupa muchos edificios en páginas compactas con hasta
+  diez edificios por página.
+- Ahora aparece un resumen compacto del edificio antes de las páginas de
+  distribución y campo; las páginas de detalle muestran la ruta estructural
+  completa.
+
 ## 1.5.66 - 17.11.2026
 
 ### Corregido

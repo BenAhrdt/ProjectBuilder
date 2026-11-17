@@ -2,6 +2,15 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.67 - 17.11.2026
+
+### Verbessert
+
+- Die Gesamtübersicht verteilt viele Gebäude gebäudeweise auf kompakte Seiten
+  mit bis zu zehn Gebäuden pro Seite.
+- Vor den Verteilungs- und Feldseiten erscheint jetzt eine kompakte
+  Gebäudeübersicht; Detailseiten zeigen den vollständigen Strukturpfad.
+
 ## 1.5.66 - 17.11.2026
 
 ### Behoben

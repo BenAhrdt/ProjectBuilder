@@ -14,10 +14,12 @@ const labels = {
     overviewView: "Gesamtübersicht",
     detailView: "Detailseiten",
     page: "Seite",
+    overviewPart: "Teil",
     summaryFields: "Felder",
     summaryMeters: "Messstellen",
     summaryPositions: "Positionen",
     directContent: "Direkte Inhalte",
+    buildingOverview: "Gebäudeübersicht",
     distributionOverview: "Verteilungsübersicht",
     prices: "Preise",
     withoutPrices: "Ohne",
@@ -403,6 +405,32 @@ test(
         assert.ok(diagram.width > 3000);
         assert.ok(diagram.height < 2300);
         assert.match(diagram.svg, /project-overview-connectors/);
+
+        const documents =
+            buildOverviewDocuments({
+                project: { name: "Viele Gebäude" },
+                nodes: Array.from({ length: 54 }, (_, index) => ({
+                    id: index + 1,
+                    parentId: null,
+                    type: "building",
+                    name: `Gebäude ${index + 1}`,
+                    sortOrder: index
+                })),
+                labels
+            });
+
+        assert.equal(
+            documents.overviewPages.length,
+            6
+        );
+        assert.equal(
+            documents.printablePages.pageCount,
+            documents.overviewPages.length + documents.detailPages.length
+        );
+        assert.match(
+            documents.printablePages.html,
+            /Teil 1\//
+        );
     }
 );
 
@@ -465,11 +493,11 @@ test(
 
         assert.equal(
             documents.detailPages.length,
-            3
+            4
         );
         assert.equal(
             documents.printablePages.pageCount,
-            4
+            5
         );
         assert.match(
             documents.overviewDiagram.svg,
@@ -481,19 +509,27 @@ test(
         );
         assert.match(
             documents.detailPages[0].diagram.svg,
-            /Feld 1/
+            /NSHV/
         );
         assert.match(
             documents.detailPages[0].title,
-            /NSHV.*Verteilungsübersicht/
+            /Produktion.*Gebäudeübersicht/
         );
         assert.match(
             documents.detailPages[1].diagram.svg,
+            /Feld 1/
+        );
+        assert.match(
+            documents.detailPages[1].title,
+            /NSHV.*Verteilungsübersicht/
+        );
+        assert.match(
+            documents.detailPages[2].diagram.svg,
             /Kompressor/
         );
         assert.match(
             documents.printablePages.html,
-            /Seite 4 \/ 4/
+            /Seite 5 \/ 5/
         );
     }
 );
@@ -627,13 +663,15 @@ test(
                 labels
             });
 
-        assert.equal(documents.detailPages.length, 3);
-        assert.match(documents.detailPages[0].title, /Verteilungsübersicht/);
-        assert.match(documents.detailPages[0].diagram.svg, /Feld 1/);
-        assert.match(documents.detailPages[1].title, /Direkte Inhalte/);
-        assert.match(documents.detailPages[1].diagram.svg, /Messstelle direkt/);
-        assert.match(documents.detailPages[1].diagram.svg, /Direktes Ger/);
-        assert.match(documents.detailPages[2].diagram.svg, /Messstelle Feld/);
+        assert.equal(documents.detailPages.length, 4);
+        assert.match(documents.detailPages[0].title, /Gebäudeübersicht/);
+        assert.match(documents.detailPages[0].diagram.svg, /Verteilung/);
+        assert.match(documents.detailPages[1].title, /Verteilungsübersicht/);
+        assert.match(documents.detailPages[1].diagram.svg, /Feld 1/);
+        assert.match(documents.detailPages[2].title, /Direkte Inhalte/);
+        assert.match(documents.detailPages[2].diagram.svg, /Messstelle direkt/);
+        assert.match(documents.detailPages[2].diagram.svg, /Direktes Ger/);
+        assert.match(documents.detailPages[3].diagram.svg, /Messstelle Feld/);
     }
 );
 

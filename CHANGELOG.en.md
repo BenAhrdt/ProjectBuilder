@@ -2,6 +2,15 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.67 - 2026-11-17
+
+### Improved
+
+- The overall overview now groups many buildings into compact pages with up
+  to ten buildings per page.
+- A compact building overview now appears before the distribution and field
+  pages; detail pages show the complete structure path.
+
 ## 1.5.66 - 2026-11-17
 
 ### Fixed

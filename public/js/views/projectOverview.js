@@ -152,14 +152,30 @@ function buildOverviewDocuments({
         showPrices,
         priceMode
     };
+    const summaryTree =
+        buildSummaryTree(
+            fullTree,
+            labels
+        );
     const overviewDiagram =
         renderTreeDiagram(
-            buildSummaryTree(
-                fullTree,
-                labels
-            ),
+            summaryTree,
             labels,
             "vertical",
+            {
+                ...renderOptions,
+                overviewColors
+            }
+        );
+    const overviewPrintTree =
+        buildSummaryTree(
+            fullTree,
+            labels
+        );
+    const overviewPages =
+        buildOverviewPrintDiagrams(
+            overviewPrintTree,
+            labels,
             {
                 ...renderOptions,
                 overviewColors
@@ -185,10 +201,11 @@ function buildOverviewDocuments({
 
     return {
         overviewDiagram,
+        overviewPages,
         detailPages,
         printablePages:
             renderPrintablePages({
-                overviewDiagram,
+                overviewPages,
                 detailPages,
                 project,
                 labels,
@@ -1151,6 +1168,84 @@ function buildSummaryTree(
     return cloneSummaryNode(root);
 }
 
+function buildOverviewPrintDiagrams(
+    root,
+    labels,
+    options
+) {
+    const children =
+        root.children ?? [];
+    const maxWidth =
+        printPageLayout.width + 720;
+    const maxHeight =
+        printPageLayout.height + 250;
+    const maxBuildingsPerPage =
+        10;
+    const printOptions = {
+        ...options,
+        compactOverview: true
+    };
+
+    const renderPage =
+        pageChildren =>
+            renderTreeDiagram(
+                {
+                    ...root,
+                    children:
+                        pageChildren.map(cloneTree)
+                },
+                labels,
+                "vertical",
+                printOptions
+            );
+
+    if (children.length <= 1) {
+        return [
+            renderPage(children)
+        ];
+    }
+
+    const pages = [];
+    let pageChildren = [];
+
+    children.forEach(child => {
+        const candidateChildren = [
+            ...pageChildren,
+            child
+        ];
+        const candidate =
+            renderPage(candidateChildren);
+        const fitsPage =
+            candidate.width <= maxWidth
+            &&
+            candidate.height <= maxHeight
+            &&
+            candidateChildren.length <= maxBuildingsPerPage;
+
+        if (
+            pageChildren.length > 0
+            &&
+            !fitsPage
+        ) {
+            pages.push(
+                renderPage(pageChildren)
+            );
+            pageChildren = [child];
+            return;
+        }
+
+        pageChildren = candidateChildren;
+    });
+
+    if (pageChildren.length > 0) {
+        pages.push(
+            renderPage(pageChildren)
+        );
+    }
+
+    return pages;
+}
+
 function calculateTreePriceTotals(
     node
 ) {
@@ -1384,6 +1479,17 @@ function buildDetailPageTrees(
                     return;
                 }
 
+                addPage(
+                    buildBuildingOverviewNode(
+                        node,
+                        labels
+                    ),
+                    nextPath,
+                    labels.buildingOverview
+                        ??
+                        "Gebäudeübersicht"
+                );
+
                 const directChildren =
                     node.children.filter(child =>
                         child.type !== "panel"
@@ -1489,6 +1595,37 @@ function buildPanelOverviewNode(
     };
 }
 
+function buildBuildingOverviewNode(
+    building,
+    labels
+) {
+    const buildingStats =
+        getTreeStats(
+            building
+        );
+
+    return {
+        ...building,
+        meta:
+            formatTreeStats(
+                buildingStats,
+                labels
+            ),
+        articles: [],
+        children:
+            building.children.map(child => ({
+                ...child,
+                meta:
+                    formatTreeStats(
+                        getTreeStats(child),
+                        labels
+                    ),
+                articles: [],
+                children: []
+            }))
+    };
+}
+
 function containsNodeType(
     root,
     type
@@ -1518,18 +1655,20 @@ function cloneTree(
 }
 
 function renderPrintablePages({
-    overviewDiagram,
+    overviewPages = [],
     detailPages,
     project,
     labels
 }) {
     const pages = [
-        {
+        ...overviewPages.map((diagram, index) => ({
             title: labels.overviewView,
             breadcrumb:
-                project?.name ?? "",
-            diagram: overviewDiagram
-        },
+                `${project?.name ?? ""}${overviewPages.length > 1
+                    ? ` · ${labels.overviewPart ?? "Teil"} ${index + 1}/${overviewPages.length}`
+                    : ""}`,
+            diagram
+        })),
         ...detailPages
     ];
 
@@ -1717,6 +1856,8 @@ function renderTreeDiagram(
             options.priceMode === "discounted"
                 ? "discounted"
                 : "list",
+        compactOverview:
+            options.compactOverview === true,
         overviewColors:
             parseOverviewColors(options.overviewColors),
         priceLabel:
@@ -1738,7 +1879,10 @@ function renderTreeDiagram(
     const dimensions =
         orientation === "horizontal"
             ? layoutHorizontalTree(root)
-            : layoutVerticalTree(root);
+            : layoutVerticalTree(
+                root,
+                renderOptions
+            );
     const connectors = [];
     const cards = [];
 
@@ -1785,13 +1929,23 @@ function renderTreeDiagram(
 }
 
 function layoutVerticalTree(
-    root
+    root,
+    options = {}
 ) {
     if (
         root.type === "project"
-        && root.children.length > 8
+        && (
+            root.children.length > 8
+            || (
+                options.compactOverview
+                && root.children.length > 3
+            )
+        )
     ) {
-        return layoutWrappedOverviewTree(root);
+        return layoutWrappedOverviewTree(
+            root,
+            options
+        );
     }
 
     if (
@@ -1913,17 +2067,25 @@ function layoutVerticalTree(
                 nextTop
                 +
                 diagramLayout.margin,
-                220
+                options.compactOverview
+                    ? 170
+                    : 220
             )
     };
 }
 
 function layoutWrappedOverviewTree(
-    root
+    root,
+    options = {}
 ) {
+    const compact =
+        options.compactOverview === true;
     const childLayouts = root.children.map(child => ({
         child,
-        dimensions: layoutVerticalTree(child)
+        dimensions: layoutVerticalTree(
+            child,
+            options
+        )
     }));
     const columnCount = Math.min(
         8,
@@ -1951,8 +2113,8 @@ function layoutWrappedOverviewTree(
         );
     });
 
-    const wrappedGap = 40;
-    const rowGap = 56;
+    const wrappedGap = compact ? 24 : 40;
+    const rowGap = compact ? 20 : 56;
     const contentWidth = columnWidths.reduce(
         (total, width, index) => total + width + (index > 0 ? wrappedGap : 0),
         0
@@ -1960,7 +2122,7 @@ function layoutWrappedOverviewTree(
     const firstRowTop =
         diagramLayout.margin
         + root.height
-        + diagramLayout.horizontalGap;
+        + (compact ? 48 : diagramLayout.horizontalGap);
     const rowTops = [];
     let nextRowTop = firstRowTop;
 
@@ -1997,7 +2159,7 @@ function layoutWrappedOverviewTree(
 
     root.layoutMode = "wrapped-overview";
     root.wrappedOverviewRows = rowTops.map(top => ({
-        top: top - 24
+        top: top - (compact ? 16 : 24)
     }));
     root.wrappedOverviewTrunkX = diagramLayout.margin - 18;
     root.x =

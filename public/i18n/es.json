@@ -232,7 +232,7 @@
     "salesforce.headerConnect": "Iniciar sesión",
     "salesforce.headerLogout": "Cerrar sesión",
     "salesforce.headerLogoutTitle": "Cerrar sesión de Salesforce",
-    "salesforce.headerLogoutConfirm": "¿Desea eliminar realmente el inicio de sesión local de Salesforce?",
+    "salesforce.headerLogoutConfirm": "¿Realmente desea cerrar la sesión de Salesforce? ProjectBuilder ya no estará disponible sin conexión hasta que vuelva a iniciar sesión con Salesforce.",
     "salesforce.connectionRequiredTitle": "Se requiere iniciar sesión en Salesforce",
     "salesforce.connectionRequired": "Esta acción requiere iniciar sesión en Salesforce. ¿Conectar ahora?",
     "auth.requiredTitle": "Se requiere iniciar sesión en ProjectBuilder",

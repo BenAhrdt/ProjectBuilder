@@ -6,7 +6,7 @@ function errorText(value) {
 }
 
 export function isSalesforceAuthenticationError(error) {
-    return /Keine Salesforce-Anmeldung vorhanden|Salesforce (?:is )?not connected|No Salesforce (?:sign-in|login)|INVALID_SESSION_ID|session (?:expired|is invalid)|invalid session/i
+    return /Keine Salesforce-Anmeldung vorhanden|Salesforce (?:is )?not connected|No Salesforce (?:sign-in|login)|INVALID_SESSION_ID|session (?:expired|is invalid)|invalid session|no authorization|NamedOrgNotFoundError|TargetOrgNotSetError/i
         .test(errorText(error));
 }
 

@@ -672,6 +672,27 @@ router.post("/login", async (_req, res) => {
 
 router.post("/logout", async (_req, res) => {
     try {
+        try {
+            await salesforce.getStatus();
+        } catch (error) {
+            if (salesforce.isSalesforceAuthenticationError(error)) {
+                clearLocalSession(res);
+                res.status(401).json({
+                    success: false,
+                    code: "SALESFORCE_AUTH_REQUIRED",
+                    error: "Die Salesforce-Anmeldung ist nicht mehr gültig."
+                });
+                return;
+            }
+
+            res.status(503).json({
+                success: false,
+                code: "SALESFORCE_UNAVAILABLE",
+                error: "Abmelden ist ohne erreichbare Salesforce-Verbindung nicht möglich."
+            });
+            return;
+        }
+
         const result = await salesforce.logout();
         clearLocalSession(res);
         res.json(result);

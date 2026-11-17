@@ -130,7 +130,9 @@ function renderSalesforceHeaderStatus(state) {
     const connected = state === "connected";
     const notChecked = state === "not-checked";
     const offline = state === "offline";
-    const showHeaderAction = localSessionAuthenticated && !checking;
+    const showHeaderAction =
+        localSessionAuthenticated
+        && state === "connected";
     const actionLabel = localSessionAuthenticated
         ? i18n.t("salesforce.headerLogout")
         : i18n.t("salesforce.headerConnect");
@@ -220,6 +222,8 @@ headerPrimaryItems.forEach(item => {
 async function handleSalesforceAuthAction() {
     if (!salesforceHeaderConnect) return;
     const wasConnected = localSessionAuthenticated;
+    const currentState = salesforceHeaderStatus?.dataset.state;
+    if (wasConnected && currentState !== "connected") return;
     if (wasConnected) {
         const confirmed = await showConfirm(i18n.t("salesforce.headerLogoutConfirm"), {
             title: i18n.t("salesforce.headerLogoutTitle"),
@@ -229,15 +233,27 @@ async function handleSalesforceAuthAction() {
     }
 
     renderSalesforceHeaderStatus("checking");
+    let responseStatus = 0;
     try {
         const response = await fetch(
             wasConnected ? "/api/salesforce/logout" : "/api/salesforce/login",
             { method: "POST" }
         );
+        responseStatus = response.status;
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || i18n.t("salesforce.error"));
         window.location.reload();
     } catch (error) {
+        if (wasConnected && responseStatus === 401) {
+            localSessionAuthenticated = false;
+            setLocalAuthGateVisible(true);
+            renderSalesforceHeaderStatus("disconnected");
+            return;
+        }
+        if (wasConnected && (responseStatus === 0 || responseStatus === 503)) {
+            renderSalesforceHeaderStatus("offline");
+            return;
+        }
         renderSalesforceHeaderStatus(wasConnected ? "connected" : "disconnected");
         if (!wasConnected) setLocalAuthGateVisible(true);
         salesforceHeaderStatus?.setAttribute("title", error.message || i18n.t("salesforce.error"));

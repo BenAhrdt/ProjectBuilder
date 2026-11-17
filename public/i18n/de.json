@@ -232,7 +232,7 @@
     "salesforce.headerConnect": "Anmelden",
     "salesforce.headerLogout": "Abmelden",
     "salesforce.headerLogoutTitle": "Von Salesforce abmelden",
-    "salesforce.headerLogoutConfirm": "Möchten Sie die lokale Salesforce-Anmeldung wirklich entfernen?",
+    "salesforce.headerLogoutConfirm": "Möchten Sie sich wirklich von Salesforce abmelden? Danach ist ProjectBuilder offline nicht mehr nutzbar, bis Sie sich erneut mit Salesforce anmelden.",
     "salesforce.connectionRequiredTitle": "Salesforce-Anmeldung erforderlich",
     "salesforce.connectionRequired": "Für diese Aktion ist eine Salesforce-Anmeldung erforderlich. Jetzt mit Salesforce verbinden?",
     "auth.requiredTitle": "ProjectBuilder-Anmeldung erforderlich",

@@ -2,6 +2,17 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.66 - 17.11.2026
+
+### Behoben
+
+- Die Abmeldeaktion wird nur angezeigt, wenn Salesforce erreichbar und die
+  Anmeldung gültig ist. Bei einem Offline-Zustand bleibt ProjectBuilder lokal
+  nutzbar.
+- Ein abgelaufener Salesforce-Token führt wieder zur normalen Anmeldung.
+- Vor dem Abmelden weist eine Bestätigung darauf hin, dass die Anwendung danach
+  offline nicht mehr nutzbar ist.
+
 ## 1.5.65 - 17.11.2026
 
 ### Neu

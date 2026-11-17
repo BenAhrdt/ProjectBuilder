@@ -232,7 +232,7 @@
     "salesforce.headerConnect": "Sign in",
     "salesforce.headerLogout": "Sign out",
     "salesforce.headerLogoutTitle": "Sign out of Salesforce",
-    "salesforce.headerLogoutConfirm": "Do you really want to remove the local Salesforce sign-in?",
+    "salesforce.headerLogoutConfirm": "Do you really want to sign out of Salesforce? ProjectBuilder will no longer be usable offline until you sign in with Salesforce again.",
     "salesforce.connectionRequiredTitle": "Salesforce sign-in required",
     "salesforce.connectionRequired": "This action requires a Salesforce sign-in. Connect to Salesforce now?",
     "auth.requiredTitle": "ProjectBuilder sign-in required",

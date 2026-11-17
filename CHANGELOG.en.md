@@ -2,6 +2,16 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.66 - 2026-11-17
+
+### Fixed
+
+- The sign-out action is shown only when Salesforce is reachable and the
+  sign-in is valid. ProjectBuilder remains usable locally while offline.
+- An expired Salesforce token now returns to the normal sign-in screen.
+- A confirmation warns that the application will not be usable offline after
+  signing out.
+
 ## 1.5.65 - 2026-11-17
 
 ### Added

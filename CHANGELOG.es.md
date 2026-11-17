@@ -2,6 +2,18 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.66 - 17.11.2026
+
+### Corregido
+
+- La acción para cerrar sesión solo se muestra cuando Salesforce está
+  disponible y la sesión es válida. ProjectBuilder sigue funcionando localmente
+  sin conexión.
+- Un token de Salesforce caducado vuelve a mostrar la pantalla normal de inicio
+  de sesión.
+- Una confirmación avisa de que la aplicación no estará disponible sin conexión
+  después de cerrar sesión.
+
 ## 1.5.65 - 17.11.2026
 
 ### Nuevo

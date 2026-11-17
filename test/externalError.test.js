@@ -8,6 +8,7 @@ import {
 test("recognizes missing and expired Salesforce sessions", () => {
     assert.equal(isSalesforceAuthenticationError(new Error("Keine Salesforce-Anmeldung vorhanden.")), true);
     assert.equal(isSalesforceAuthenticationError("INVALID_SESSION_ID: Session expired or invalid"), true);
+    assert.equal(isSalesforceAuthenticationError("No authorization information found for this org"), true);
     assert.equal(isSalesforceAuthenticationError("We are down for maintenance"), false);
 });
 

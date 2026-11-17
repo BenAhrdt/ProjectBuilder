@@ -2,6 +2,13 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.68 - 17.11.2026
+
+### Corregido
+
+- El plano general transferido a Salesforce ahora utiliza las mismas páginas
+  actuales de resumen general y del edificio que la vista de impresión local.
+
 ## 1.5.67 - 17.11.2026
 
 ### Mejorado

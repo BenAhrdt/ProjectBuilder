@@ -2,6 +2,13 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.68 - 2026-11-17
+
+### Fixed
+
+- The overview plan uploaded to Salesforce now uses the same current overall
+  and building overview pages as the local print view.
+
 ## 1.5.67 - 2026-11-17
 
 ### Improved

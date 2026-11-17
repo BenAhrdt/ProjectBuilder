@@ -2,6 +2,13 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.68 - 17.11.2026
+
+### Behoben
+
+- Der an Salesforce übertragene Übersichtsplan verwendet jetzt dieselben
+  aktuellen Gesamt- und Gebäudeübersichtsseiten wie die lokale Druckansicht.
+
 ## 1.5.67 - 17.11.2026
 
 ### Verbessert

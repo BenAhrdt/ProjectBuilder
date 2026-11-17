@@ -94,9 +94,12 @@ function parseSavedProjectFileIds(value, files = []) {
 
 function overviewLabels() {
     return {
-        project: "Projekt", empty: "Leer", noStructure: "Keine Projektstruktur",
-        overviewView: "Übersichtsplan", detailView: "Detailansicht", page: "Seite",
+        title: "Übersichtsplan", project: "Projekt", empty: "Leer", noStructure: "Keine Projektstruktur",
+        overviewView: "Gesamtübersicht", detailView: "Detailansicht", page: "Seite",
+        overviewPart: "Teil",
         summaryFields: "Felder", summaryMeters: "Messgruppen", summaryPositions: "Positionen",
+        directContent: "Direkte Inhalte", buildingOverview: "Gebäudeübersicht",
+        distributionOverview: "Verteilungsübersicht",
         prices: "Preise", withoutPrices: "Ohne Preise", withPrices: "Mit Preisen",
         priceBasis: "Preisbasis", price: "Preis", listPrices: "Listenpreise",
         discountedPrices: "Rabattierte Preise",
@@ -179,8 +182,25 @@ function buildEffectiveProjectNodeLabels(nodes = [], labels = [], settings = [],
 }
 
 function buildOverviewPdf(documents, project) {
+    const overviewPages =
+        documents.overviewPages?.length > 0
+            ? documents.overviewPages.map((diagram, index, pages) => ({
+                title: "Gesamtübersicht",
+                breadcrumb:
+                    `${project.name ?? ""}${pages.length > 1
+                        ? ` · Teil ${index + 1}/${pages.length}`
+                        : ""}`,
+                diagram
+            }))
+            : [
+                {
+                    title: "Gesamtübersicht",
+                    breadcrumb: project.name ?? "",
+                    diagram: documents.overviewDiagram
+                }
+            ];
     const pages = [
-        { title: "Gesamtübersicht", breadcrumb: project.name ?? "", diagram: documents.overviewDiagram },
+        ...overviewPages,
         ...documents.detailPages
     ];
     const pdf = new PDFDocument({ autoFirstPage: false, compress: true });

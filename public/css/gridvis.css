@@ -1913,6 +1913,8 @@ body.gridvis-nav-open #below::before {
 #project-panel-structure .project-article-icon img {
     width: 32px;
     height: 32px;
+    object-fit: contain;
+    background: #fff;
 }
 
 #project-panel-structure .article-favorite-toggle {

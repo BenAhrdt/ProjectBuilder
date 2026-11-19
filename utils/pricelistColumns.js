@@ -11,6 +11,12 @@ const columnAliases = {
     listPrice: ["Preis_Listenpreis_Preis", "List price"],
     listPriceCurrency: ["Preis_Listenpreis_Währung", "List price currency", "Currency"],
     discountGroup: ["Rabattgruppe", "Price group", "Discount group"],
+    productImageFileName: [
+        "MIME_Produktbild WEB_Dateiname",
+        "Product image filename",
+        "Product image file name",
+        "Product image"
+    ],
     description: [
         "Text_Ausschreibungstext_Langtext (Text)",
         "Text_Tender Text",
@@ -66,6 +72,7 @@ function mapPricelistRow(row, columns) {
         listPrice: get("listPrice") ?? null,
         listPriceCurrency: get("listPriceCurrency") ?? "",
         discountGroup: get("discountGroup") ?? "",
+        productImageFileName: get("productImageFileName") ?? "",
         description: get("description") ?? ""
     };
 }

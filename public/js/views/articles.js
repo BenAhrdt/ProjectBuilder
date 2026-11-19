@@ -597,6 +597,17 @@ function escapeHtml(value) {
 function renderArticleNumber(article) {
 
     const liveAvailability = salesforceAvailability?.get(String(article.articleNumber));
+    const productImage = article.productImageUrl
+        ? `
+            <img
+                class="article-product-image"
+                src="${escapeHtml(article.productImageUrl)}"
+                alt=""
+                loading="lazy"
+                decoding="async"
+            >
+        `
+        : "";
     let storedCurrencies = [];
     try {
         storedCurrencies = JSON.parse(article.salesforceCurrencies || "[]");
@@ -624,8 +635,9 @@ function renderArticleNumber(article) {
 
     return `
         <div class="article-number-actions">
-            <span>
-                ${article.articleNumber ?? ""}
+            <span class="article-number-value">
+                ${productImage}
+                <span>${escapeHtml(article.articleNumber ?? "")}</span>
             </span>
             ${badge}
             <button

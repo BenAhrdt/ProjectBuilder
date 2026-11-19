@@ -17,6 +17,14 @@ import {
     SALES_ARTICLE_CATEGORIES
 } from "../utils/salesArticleCategory.js";
 import { normalizeDiscountGroup } from "../utils/discountGroups.js";
+import {
+    getArticleImageContentType,
+    getArticleImageFileName,
+    getArticleImageSourcePath,
+    getArticleImageUrl,
+    normalizeArticleImageFileName,
+    updateArticleImageMap
+} from "../utils/articleImages.js";
 
 const router = express.Router();
 
@@ -115,6 +123,9 @@ router.post(
 
                 return {
                     ...article,
+                    productImageFileName: normalizeArticleImageFileName(
+                        article.productImageFileName
+                    ),
                     existsInDatabase:
                         existingArticleNumbers.has(
                             article.articleNumber
@@ -278,6 +289,11 @@ router.post(
 
         }
 
+        const imageMappings = updateArticleImageMap([
+            ...validation.imported,
+            ...validation.updated
+        ]);
+
         res.json({
 
             success: true,
@@ -297,7 +313,9 @@ router.post(
             deletedExistingArticles,
 
             skipped:
-                validation.skipped
+                validation.skipped,
+
+            imageMappings
 
         });
     }
@@ -479,11 +497,44 @@ router.get("/", (req, res) => {
 
     res.json(articles.map(article => ({
         ...article,
+        productImageUrl: getArticleImageUrl(article.articleNumber),
         salesCategorySuggested: Number(article.salesCategoryManual) === 1
             ? article.salesCategory
             : inferSalesArticleCategory(article)
     })));
 
+});
+
+router.get("/:articleNumber/image", (req, res) => {
+    const article = database.articles.prepare(`
+        SELECT articleNumber
+        FROM articles
+        WHERE articleNumber = ?
+    `).get(req.params.articleNumber);
+    if (!article) {
+        return res.status(404).json({ ok: false, error: "Artikel nicht gefunden" });
+    }
+    const imageFileName = getArticleImageFileName(
+        req.params.articleNumber
+    );
+
+    if (!imageFileName) {
+        return res.status(404).json({ ok: false, error: "Produktbild nicht gefunden" });
+    }
+
+    const filePath = getArticleImageSourcePath(
+        req.params.articleNumber,
+        imageFileName
+    );
+    if (!filePath) {
+        return res.status(404).json({ ok: false, error: "Produktbild nicht gefunden" });
+    }
+
+    res.setHeader("Content-Type", getArticleImageContentType(imageFileName));
+    res.setHeader("Content-Disposition", "inline");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Cache-Control", "private, max-age=86400");
+    return res.sendFile(filePath);
 });
 
 // --------------------------------------------------

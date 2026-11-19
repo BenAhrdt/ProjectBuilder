@@ -2,6 +2,20 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.70 - 19.11.2026
+
+### Neu
+
+- Artikelbilder aus dem Feld `MIME_Produktbild WEB_Dateiname` werden in der
+  Artikelliste und im Projekt angezeigt.
+- Identische Bilddateien werden gemeinsam verwendet, damit der Installer
+  kleiner bleibt.
+
+### Behoben
+
+- Broschueren, Prospekte und andere Dokumentartikel erhalten kein automatisch
+  erkanntes Geraetefamilienbild mehr.
+
 ## 1.5.69 - 17.11.2026
 
 ### Behoben

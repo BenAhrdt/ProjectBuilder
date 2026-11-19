@@ -29,6 +29,7 @@ test("maps the existing German pricelist columns", () => {
         listPrice: 169,
         listPriceCurrency: "EUR",
         discountGroup: "PG1",
+        productImageFileName: "",
         description: "Langtext"
     });
 });
@@ -54,6 +55,7 @@ test("maps English pricelist columns and preserves their currency", () => {
         const article = mapPricelistRow(row, columns);
 
         assert.equal(article.articleNumber, "1401353");
+        assert.equal(article.productImageFileName, "");
         assert.equal(article.listPrice, 169);
         assert.equal(article.listPriceCurrency, currency);
         assert.equal(article.description, "Tender text");
@@ -70,4 +72,17 @@ test("matches column aliases independent of case and separators", () => {
 
     assert.equal(article.articleNumber, "12345");
     assert.equal(article.listPriceCurrency, "USD");
+});
+
+test("maps the product image filename from the German pricelist", () => {
+    const row = {
+        Artikelnummer: "0802440",
+        "MIME_Produktbild WEB_Dateiname": "0802440.png"
+    };
+    const columns = resolvePricelistColumns(Object.keys(row));
+
+    assert.equal(
+        mapPricelistRow(row, columns).productImageFileName,
+        "0802440.png"
+    );
 });

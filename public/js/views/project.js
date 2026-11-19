@@ -1900,6 +1900,7 @@ function renderArticleList(
                 </button>
 
                 <img
+                    class="${article.productImageUrl ? "article-product-image" : ""}"
                     src="${getArticleIcon(article)}"
                     alt=""
                     loading="lazy"
@@ -1976,6 +1977,7 @@ function renderFavoriteArticles(
 
                         <span class="project-article-favorite-icon">
                             <img
+                                class="${article.productImageUrl ? "article-product-image" : ""}"
                                 src="${getArticleIcon(article)}"
                                 alt=""
                             >
@@ -9106,6 +9108,14 @@ function getArticleIcon(
     article = {}
 ) {
 
+    if (article.productImageUrl) {
+        return article.productImageUrl;
+    }
+
+    if (isDocumentArticle(article)) {
+        return "/icons/article.png";
+    }
+
     if (
         isCt24CableArticle(
             article
@@ -9244,6 +9254,15 @@ function getArticleIcon(
     }
 
     return "/icons/article.png";
+
+}
+
+function isDocumentArticle(
+    article = {}
+) {
+
+    const text = getArticleSearchText(article, true);
+    return /\b(?:broschure|brochure|prospekt|prospectus|flyer|katalog|catalog|manual|handbuch|bedienungsanleitung|datenblatt|datasheet|data sheet|dokument|document)\b/.test(text);
 
 }
 

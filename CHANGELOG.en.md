@@ -2,6 +2,19 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.70 - 2026-11-19
+
+### Added
+
+- Product images from `MIME_Produktbild WEB_Dateiname` are now shown in the
+  article list and project views.
+- Identical image files are shared so the installer stays smaller.
+
+### Fixed
+
+- Brochures, prospectuses and other document articles no longer inherit an
+  automatic product-family image.
+
 ## 1.5.69 - 2026-11-17
 
 ### Fixed

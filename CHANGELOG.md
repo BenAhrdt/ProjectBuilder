@@ -2,6 +2,13 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.72 - 20.11.2026
+
+### Behoben
+
+- Salesforce-Artikel mit Sales Status `✅` oder Plant-Material-Status `Serie`
+  werden jetzt korrekt als zum Verkauf freigegeben erkannt.
+
 ## 1.5.71 - 20.11.2026
 
 ### Neu

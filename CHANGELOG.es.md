@@ -2,6 +2,13 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.72 - 20.11.2026
+
+### Corregido
+
+- Los articulos de Salesforce con estado de ventas `✅` o estado de material
+  `Serie` ahora se reconocen correctamente como aprobados para la venta.
+
 ## 1.5.71 - 20.11.2026
 
 ### Nuevo

@@ -23,6 +23,16 @@ test("does not flag active Salesforce articles without a date", () => {
     );
 });
 
+test("does not flag approved series articles", () => {
+    const status = buildSalesforceProductStatus({
+        salesStatus: "✅",
+        plantMaterialStatus: "Serie"
+    });
+
+    assert.equal(status.statusInfo.warning, false);
+    assert.equal(status.statusInfo.kind, "active");
+});
+
 test("flags an article when only the discontinuation date is present", () => {
     assert.equal(
         isSalesforceSalesStatusWarning({ discontinuationDate: "2027-09-01" }),

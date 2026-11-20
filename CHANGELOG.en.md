@@ -2,6 +2,13 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.72 - 2026-11-20
+
+### Fixed
+
+- Salesforce articles with sales status `✅` or plant-material status `Serie`
+  are now correctly recognized as approved for sale.
+
 ## 1.5.71 - 2026-11-20
 
 ### Added

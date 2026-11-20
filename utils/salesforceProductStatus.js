@@ -9,6 +9,8 @@ const NORMAL_SALES_STATUSES = new Set([
     "current",
     "aktuell",
     "approved",
+    "serie",
+    "series",
     "green",
     "true"
 ]);
@@ -32,7 +34,12 @@ const EXPIRING_STATUS_PARTS = [
 ];
 
 function normalizeStatus(value) {
-    return String(value ?? "")
+    const rawValue = String(value ?? "");
+    if (/[✅☑✔✓]/u.test(rawValue)) return "approved";
+    if (/[⚠]/u.test(rawValue)) return "warning";
+    if (/[⛔🚫]/u.test(rawValue)) return "blocked";
+
+    return rawValue
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
         .toLowerCase()

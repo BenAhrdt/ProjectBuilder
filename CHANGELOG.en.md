@@ -2,6 +2,15 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.74 - 2026-11-20
+
+### Improved
+
+- Article search now includes status messages, discontinuation dates, and the
+  visible text of status panels.
+- Salesforce status symbols retain their detailed lifecycle and distribution
+  channel information for display and search.
+
 ## 1.5.73 - 2026-11-20
 
 ### Improved

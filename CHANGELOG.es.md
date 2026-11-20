@@ -2,6 +2,15 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.74 - 20.11.2026
+
+### Mejorado
+
+- La búsqueda de artículos ahora incluye mensajes de estado, fechas de
+  discontinuación y el texto visible de los paneles de estado.
+- Los símbolos de estado de Salesforce conservan la información detallada del
+  ciclo de vida y del canal de distribución para mostrarla y buscarla.
+
 ## 1.5.73 - 20.11.2026
 
 ### Mejorado

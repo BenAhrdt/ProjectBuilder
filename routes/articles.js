@@ -403,6 +403,105 @@ function hasConcretePrice(price) {
 // Ausgabe
 // --------------------------------------------------
 
+function getSalesforceStatusDateSearchValues(value) {
+    const rawValue = String(value ?? "").trim();
+    const datePart = rawValue.slice(0, 10);
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(datePart);
+    if (!match) return rawValue ? [rawValue] : [];
+
+    const [, year, month, day] = match;
+    return [
+        rawValue,
+        `${day}.${month}.${year}`,
+        `${day}/${month}/${year}`,
+        `${year}.${month}.${day}`
+    ];
+}
+
+function normalizeArticleSearchText(value) {
+    return String(value ?? "")
+        .toLocaleLowerCase()
+        .replace(/[,:;()[\]{}]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function getArticleSearchText(article, statusInfo) {
+    const {
+        salesforceSalesStatus,
+        salesforceDiscontinuationDate,
+        ...articleFields
+    } = article;
+    const statusLabels = {
+        active: [
+            "Produkt ist zum Verkauf freigegeben",
+            "Product is approved for sale",
+            "El producto está aprobado para la venta"
+        ],
+        expiring: [
+            "Produktfreigabe läuft in absehbarer Zeit aus",
+            "Product approval will expire soon",
+            "La aprobación del producto caducará próximamente",
+            "Abgekündigt",
+            "Abkündigungsdatum",
+            "Discontinuation date"
+        ],
+        blocked: [
+            "Produkt ist nicht für den Verkauf freigegeben",
+            "nicht freigegeben",
+            "gesperrt",
+            "Product is not approved for sale",
+            "El producto no está aprobado para la venta",
+            "Abgekündigt",
+            "Blocked for offers",
+            "Einkaufssperre",
+            "Abkündigungsdatum",
+            "Discontinuation date"
+        ]
+    };
+    const statusSymbols = {
+        active: "✓ ✅",
+        expiring: "⚠ ⚠️",
+        blocked: "− ⛔"
+    };
+    const dateValues = getSalesforceStatusDateSearchValues(
+        salesforceDiscontinuationDate
+    );
+    const labeledDateValues = dateValues.flatMap(date => [
+        `Abkündigungsdatum ${date}`,
+        `Discontinuation date ${date}`,
+        `Fecha de discontinuación ${date}`
+    ]);
+
+    return normalizeArticleSearchText([
+        ...Object.values(articleFields),
+        ...(statusInfo.kind === "expiring" ? [] : [salesforceSalesStatus]),
+        ...dateValues,
+        ...labeledDateValues,
+        statusInfo.kind,
+        statusInfo.message,
+        ...(statusLabels[statusInfo.kind] ?? []),
+        statusSymbols[statusInfo.kind] ?? ""
+    ].filter(value => value !== null && value !== undefined).join(" "));
+}
+
+function mapArticleResponse(article) {
+    const statusInfo = getSalesforceSalesStatusInfo({
+        salesStatus: article.salesforceSalesStatus,
+        discontinuationDate: article.salesforceDiscontinuationDate
+    });
+
+    return {
+        ...article,
+        productImageUrl: getArticleImageUrl(article.articleNumber),
+        salesforceSalesStatusWarning: statusInfo.warning,
+        salesforceSalesStatusKind: statusInfo.kind,
+        salesCategorySuggested: Number(article.salesCategoryManual) === 1
+            ? article.salesCategory
+            : inferSalesArticleCategory(article)
+    };
+}
+
 router.get("/", (req, res) => {
 
     const search =
@@ -427,6 +526,63 @@ router.get("/", (req, res) => {
         hasPagination
             ? Math.max(Number.isFinite(requestedOffset) ? requestedOffset : 0, 0)
             : null;
+
+    const articleSelect = `
+        SELECT
+            articleNumber,
+            ean,
+            manufacturerType,
+            description,
+            discountGroup,
+            listPrice,
+            listPriceCurrency,
+            manufacturerName,
+            originCountry,
+            originRegion,
+            intrastatNumber,
+            quantityUnit,
+            salesforceProductId,
+            salesforcePricebookId,
+            salesforceActive,
+            salesforceFamily,
+            salesforceProductType,
+            salesforceSalesStatus,
+            salesforceDiscontinuationDate,
+            salesforceAvailabilityCheckedAt,
+            salesforceImportedAt,
+            salesforceCurrencies,
+            gridVisItems,
+            gridVisItemsManual,
+            salesCategory,
+            salesCategoryManual
+        FROM articles
+    `;
+
+    if (String(search).trim()) {
+        const allArticles = database.articles.prepare(`
+            ${articleSelect}
+            ORDER BY articleNumber
+        `).all();
+        const normalizedSearch = normalizeArticleSearchText(search);
+        const filteredArticles = allArticles.filter(article =>
+            getArticleSearchText(
+                article,
+                getSalesforceSalesStatusInfo({
+                    salesStatus: article.salesforceSalesStatus,
+                    discontinuationDate: article.salesforceDiscontinuationDate
+                })
+            ).includes(normalizedSearch)
+        );
+
+        if (hasPagination) {
+            res.setHeader("X-Total-Count", String(filteredArticles.length));
+        }
+
+        const visibleArticles = hasPagination
+            ? filteredArticles.slice(offset, offset + limit)
+            : filteredArticles;
+        return res.json(visibleArticles.map(mapArticleResponse));
+    }
 
     const whereClause = `
         WHERE
@@ -460,36 +616,7 @@ router.get("/", (req, res) => {
     const articles =
         database.articles.prepare(`
 
-            SELECT
-                articleNumber,
-                ean,
-                manufacturerType,
-                description,
-                discountGroup,
-                listPrice,
-                listPriceCurrency,
-                manufacturerName,
-                originCountry,
-                originRegion,
-                intrastatNumber,
-                quantityUnit,
-                salesforceProductId,
-                salesforcePricebookId,
-                salesforceActive,
-                salesforceFamily,
-                salesforceProductType,
-                salesforceSalesStatus,
-                salesforceDiscontinuationDate,
-                salesforceAvailabilityCheckedAt,
-                salesforceImportedAt,
-                salesforceCurrencies,
-                gridVisItems,
-                gridVisItemsManual,
-                salesCategory,
-                salesCategoryManual
-
-            FROM articles
-
+            ${articleSelect}
             ${whereClause}
 
             ORDER BY articleNumber
@@ -500,22 +627,7 @@ router.get("/", (req, res) => {
             ...(hasPagination ? { limit, offset } : {})
         });
 
-    res.json(articles.map(article => {
-        const statusInfo = getSalesforceSalesStatusInfo({
-            salesStatus: article.salesforceSalesStatus,
-            discontinuationDate: article.salesforceDiscontinuationDate
-        });
-
-        return {
-            ...article,
-            productImageUrl: getArticleImageUrl(article.articleNumber),
-            salesforceSalesStatusWarning: statusInfo.warning,
-            salesforceSalesStatusKind: statusInfo.kind,
-            salesCategorySuggested: Number(article.salesCategoryManual) === 1
-            ? article.salesCategory
-            : inferSalesArticleCategory(article)
-        };
-    }));
+    res.json(articles.map(mapArticleResponse));
 
 });
 

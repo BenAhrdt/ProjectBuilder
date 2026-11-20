@@ -46,6 +46,10 @@ function normalizeStatus(value) {
         .replace(/[^a-z0-9]+/g, "");
 }
 
+function isSalesforceStatusIndicator(value) {
+    return /^[\s✅☑✔✓⚠⛔🚫\uFE0F]+$/u.test(String(value ?? ""));
+}
+
 function getSalesforceSalesStatusInfo({
     salesStatus,
     discontinuationDate,
@@ -110,9 +114,12 @@ function buildSalesforceProductStatus(fields = {}) {
     const plantStatus = String(fields.plantMaterialStatus ?? "").trim();
     const distributionStatus = String(fields.distributionChannelStatus ?? "").trim();
     const rawSalesStatus = String(fields.salesStatus ?? "").trim();
-    const salesStatus = normalizeStatus(rawSalesStatus)
-        ? rawSalesStatus
-        : [plantStatus, distributionStatus].filter(Boolean).join(" / ");
+    const detailedStatus = [plantStatus, distributionStatus].filter(Boolean).join(" / ");
+    const salesStatus = detailedStatus && isSalesforceStatusIndicator(rawSalesStatus)
+        ? detailedStatus
+        : normalizeStatus(rawSalesStatus)
+            ? rawSalesStatus
+            : detailedStatus;
     const statusInfo = getSalesforceSalesStatusInfo({
         ...fields,
         salesStatus

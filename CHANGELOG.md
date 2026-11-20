@@ -2,6 +2,15 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.74 - 20.11.2026
+
+### Verbessert
+
+- Die Artikelsuche berücksichtigt jetzt auch Statusmeldungen, Abkündigungsdaten
+  und die sichtbaren Texte der Statusfelder.
+- Statussymbole aus Salesforce behalten ihre detaillierten Lebenszyklus- und
+  Vertriebskanalinformationen für Anzeige und Suche.
+
 ## 1.5.73 - 20.11.2026
 
 ### Verbessert

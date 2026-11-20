@@ -2,6 +2,15 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.73 - 2026-11-20
+
+### Improved
+
+- Approved articles now show only the green SF badge; warnings use a yellow or
+  red badge and the matching status panel.
+- Missing article images still reserve their slot but no longer show a visible
+  white placeholder.
+
 ## 1.5.72 - 2026-11-20
 
 ### Fixed

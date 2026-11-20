@@ -2,6 +2,15 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.73 - 20.11.2026
+
+### Mejorado
+
+- Los articulos aprobados ahora muestran solo la insignia SF verde; las
+  advertencias usan una insignia amarilla o roja y el panel correspondiente.
+- Las imagenes de articulo ausentes siguen reservando su espacio, pero ya no
+  muestran un marcador blanco visible.
+
 ## 1.5.72 - 20.11.2026
 
 ### Corregido

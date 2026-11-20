@@ -625,22 +625,19 @@ function renderArticleNumber(article) {
         && wasChecked
         && Number(article.salesforceActive) === 1
     );
-    const badge = isAvailable
-        ? `<span class="article-salesforce-badge article-salesforce-badge-available"
-                 title="${i18n.t("articles.salesforceAvailable").replace("{currencies}", currencies.join(", ") || "–")}">SF</span>`
-        : wasChecked
-            ? `<span class="article-salesforce-badge article-salesforce-badge-missing"
-                     title="${i18n.t("articles.salesforceMissing")}">SF</span>`
-            : "";
-    const salesStatusStateTitle = article.salesforceSalesStatusKind === "expiring"
-        ? i18n.t("articles.salesStatusExpiring")
-        : article.salesforceSalesStatusKind === "blocked"
-            ? i18n.t("articles.salesStatusNotForSale")
-            : i18n.t("articles.salesStatusWarning");
+    const salesStatusKind = article.salesforceSalesStatusKind || (
+        article.salesforceSalesStatusWarning ? "blocked" : "active"
+    );
+    const salesStatusMessageKey = salesStatusKind === "expiring"
+        ? "articles.salesStatusExpiring"
+        : salesStatusKind === "blocked"
+            ? "articles.salesStatusNotForSale"
+            : "articles.salesStatusApproved";
+    const salesStatusStateTitle = i18n.t(salesStatusMessageKey);
     const salesStatusWarningDate = formatSalesforceStatusDate(
         article.salesforceDiscontinuationDate
     );
-    const salesStatusWarningTitle = [
+    const salesStatusTitle = [
         salesStatusStateTitle,
         article.salesforceSalesStatus
             ? `${i18n.t("articles.salesforceSalesStatus")}: ${article.salesforceSalesStatus}`
@@ -649,14 +646,21 @@ function renderArticleNumber(article) {
             ? `${i18n.t("articles.discontinuationDate")}: ${salesStatusWarningDate}`
             : ""
     ].filter(Boolean).join(" · ");
-    const salesStatusWarning = article.salesforceSalesStatusWarning
-        ? `<span
-                class="article-sales-status-warning"
-                role="img"
-                aria-label="${escapeHtml(salesStatusWarningTitle)}"
-                title="${escapeHtml(salesStatusWarningTitle)}"
-            >⚠</span>`
-        : "";
+    const salesStatusBadgeClass = salesStatusKind === "expiring"
+        ? "article-salesforce-badge-status-expiring"
+        : salesStatusKind === "blocked"
+            ? "article-salesforce-badge-status-blocked"
+            : "article-salesforce-badge-status-active";
+    const badge = isAvailable
+        ? `<span class="article-salesforce-badge article-salesforce-badge-available ${salesStatusBadgeClass}"
+                 title="${escapeHtml([
+                     i18n.t("articles.salesforceAvailable").replace("{currencies}", currencies.join(", ") || "–"),
+                     salesStatusTitle
+                 ].filter(Boolean).join(" · "))}">SF</span>`
+        : wasChecked
+            ? `<span class="article-salesforce-badge article-salesforce-badge-missing"
+                     title="${i18n.t("articles.salesforceMissing")}">SF</span>`
+            : "";
 
     return `
         <div class="article-number-actions">
@@ -665,7 +669,6 @@ function renderArticleNumber(article) {
                 ${productImage}
             </span>
             ${badge}
-            ${salesStatusWarning}
             <button
                 class="article-delete-button"
                 type="button"
@@ -691,6 +694,7 @@ function renderSalesStatusInfo(article) {
     const kind = article.salesforceSalesStatusKind || (
         article.salesforceSalesStatusWarning ? "blocked" : "active"
     );
+    if (kind === "active" && !article.salesforceSalesStatusWarning) return "";
     const messageKey = kind === "expiring"
         ? "articles.salesStatusExpiring"
         : kind === "blocked"

@@ -2,6 +2,15 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.73 - 20.11.2026
+
+### Verbessert
+
+- Freigegebene Artikel zeigen nur noch das grüne SF-Badge; Warnungen werden
+  direkt über ein gelbes oder rotes Badge und die passende Statusbox angezeigt.
+- Fehlende Artikelbilder reservieren weiterhin ihren Platz, zeigen aber keinen
+  sichtbaren weißen Platzhalter mehr.
+
 ## 1.5.72 - 20.11.2026
 
 ### Behoben

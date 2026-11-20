@@ -147,20 +147,17 @@
     background: #168447;
 }
 
-.article-salesforce-badge-missing {
+.article-salesforce-badge-status-expiring {
+    background: #d9a400;
+    color: #3f2d00;
+}
+
+.article-salesforce-badge-status-blocked {
     background: #c4322b;
 }
 
-.article-sales-status-warning {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    color: #f4b740;
-    font-size: 18px;
-    font-weight: 800;
-    line-height: 1;
+.article-salesforce-badge-missing {
+    background: #c4322b;
 }
 
 .article-sales-status-info {
@@ -184,12 +181,6 @@
     border-color: #e7a8a8;
     background: #fff1f1;
     color: #8f1d1d;
-}
-
-.article-sales-status-info-active {
-    border-color: #a8d5b7;
-    background: #effaf2;
-    color: #176b31;
 }
 
 .article-sales-status-info-symbol {
@@ -314,7 +305,7 @@
 
     padding: 4px 8px;
 
-    grid-column: 4;
+    grid-column: 3;
 
     width: 100%;
 
@@ -352,7 +343,7 @@
 
     align-items: center;
 
-    grid-template-columns: minmax(0, 1fr) 20px 20px 74px;
+    grid-template-columns: minmax(0, 1fr) 20px 74px;
 
     gap: 8px;
 
@@ -383,6 +374,7 @@
 
 .article-product-image-placeholder {
     display: block;
+    background: transparent;
 }
 
 @media (max-width: 1100px) {

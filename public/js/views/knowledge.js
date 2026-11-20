@@ -637,7 +637,9 @@ function showComparisonArticleInfoCard(articleElement, pointerPosition = null) {
         [i18n.t("articles.origin"), origin],
         [i18n.t("articles.intrastatNumber"), article.intrastatNumber],
         [i18n.t("articles.salesforceFamily"), article.salesforceFamily],
-        [i18n.t("articles.productType"), article.salesforceProductType]
+        [i18n.t("articles.productType"), article.salesforceProductType],
+        [i18n.t("articles.salesforceSalesStatus"), article.salesforceSalesStatus],
+        [i18n.t("articles.discontinuationDate"), formatKnowledgeSalesforceDate(article.salesforceDiscontinuationDate)]
     ].filter(([, value]) => value !== "" && value !== null && value !== undefined);
 
     const card = document.createElement("aside");
@@ -682,6 +684,22 @@ function showComparisonArticleInfoCard(articleElement, pointerPosition = null) {
 
 function formatComparisonQuantity(value) {
     return Number(value ?? 0).toLocaleString(i18n.getCurrentLanguage(), { maximumFractionDigits: 2 });
+}
+
+function formatKnowledgeSalesforceDate(value) {
+    const rawValue = String(value ?? "").trim();
+    if (!rawValue) return "";
+
+    const datePart = rawValue.slice(0, 10);
+    const date = new Date(`${datePart}T00:00:00Z`);
+    if (Number.isNaN(date.getTime())) return rawValue;
+
+    return new Intl.DateTimeFormat(i18n.getCurrentLanguage(), {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        timeZone: "UTC"
+    }).format(date);
 }
 
 function formatComparisonArticlePrice(value, currency) {

@@ -1866,6 +1866,7 @@ function renderArticleList(
             <div class="project-article-number">
 
                 ${article.articleNumber}
+                ${renderSalesStatusWarning(article)}
 
             </div>
 
@@ -1987,6 +1988,7 @@ function renderFavoriteArticles(
 
                             <strong>
                                 ${article.articleNumber}
+                                ${renderSalesStatusWarning(article)}
                             </strong>
 
                             <span>
@@ -2013,6 +2015,20 @@ function renderFavoriteArticles(
 
     `;
 
+}
+
+function renderSalesStatusWarning(article) {
+    if (!article?.salesforceSalesStatusWarning) return "";
+
+    const label = i18n.t("articles.salesStatusWarning");
+    return `
+        <span
+            class="sales-status-warning"
+            role="img"
+            aria-label="${escapeAttribute(label)}"
+            title="${escapeAttribute(label)}"
+        >⚠</span>
+    `;
 }
 
 function areArticleFavoritesCollapsed() {
@@ -3544,6 +3560,7 @@ function renderNodeArticle(
                     <span class="node-article-number">
 
                         ${articleNumber}
+                        ${renderSalesStatusWarning(fullArticle)}
 
                     </span>
 
@@ -11596,7 +11613,9 @@ function showArticleInfoCard(
         [i18n.t("articles.origin"), origin],
         [i18n.t("articles.intrastatNumber"), article.intrastatNumber],
         [i18n.t("articles.salesforceFamily"), article.salesforceFamily],
-        [i18n.t("articles.productType"), article.salesforceProductType]
+        [i18n.t("articles.productType"), article.salesforceProductType],
+        [i18n.t("articles.salesforceSalesStatus"), article.salesforceSalesStatus],
+        [i18n.t("articles.discontinuationDate"), formatSalesforceDate(article.salesforceDiscontinuationDate)]
     ].filter(([, value]) => value !== "" && value !== null && value !== undefined);
 
     const card = document.createElement("aside");
@@ -11647,6 +11666,22 @@ function showArticleInfoCard(
     );
     requestAnimationFrame(() => card.classList.add("visible"));
 
+}
+
+function formatSalesforceDate(value) {
+    const rawValue = String(value ?? "").trim();
+    if (!rawValue) return "";
+
+    const datePart = rawValue.slice(0, 10);
+    const date = new Date(`${datePart}T00:00:00Z`);
+    if (Number.isNaN(date.getTime())) return rawValue;
+
+    return new Intl.DateTimeFormat(i18n.getCurrentLanguage(), {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        timeZone: "UTC"
+    }).format(date);
 }
 
 function formatArticleInfoPrice(value, currency) {

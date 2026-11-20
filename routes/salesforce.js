@@ -31,6 +31,7 @@ import { logCustomerDiscountChange } from "../utils/customerDiscountHistory.js";
 import { buildOverviewDocuments } from "../public/js/views/projectOverview.js";
 import { getProjectFilePath } from "../utils/projectFiles.js";
 import { clearLocalSession, createLocalSession } from "../utils/localAuth.js";
+import { buildSalesforceProductStatus } from "../utils/salesforceProductStatus.js";
 
 const router = express.Router();
 
@@ -816,7 +817,12 @@ router.post("/articles/import", async (req, res) => {
         }
 
         const pricebook = await salesforce.getSalesPricebook(pricebookId);
-        const entries = await salesforce.getPricebookProducts(pricebook.Id, currencyIsoCode);
+        const entries = await salesforce.getPricebookProducts(
+            pricebook.Id,
+            currencyIsoCode,
+            null
+        );
+        const lifecycleFields = await salesforce.getProduct2LifecycleFields();
         const pricingGroups = await salesforce.getProductPricingGroups(
             entries.map(entry => entry.Product2.Id), "1100", "10"
         );
@@ -825,13 +831,19 @@ router.post("/articles/import", async (req, res) => {
                 .map(article => String(article.articleNumber))
         );
         const importedAt = new Date().toISOString();
+        const hasDiscontinuationDateField = Boolean(
+            lifecycleFields.discontinuationDate
+            || lifecycleFields.plantMaterialStatusValidFrom
+            || lifecycleFields.distributionChannelStatusValidFrom
+        );
         const upsert = database.articles.prepare(`
             INSERT INTO articles (
                 articleNumber, ean, manufacturerType, manufacturerName,
                 originCountry, originRegion, intrastatNumber, quantity, quantityUnit,
                 listPrice, listPriceCurrency, discountGroup, description,
                 salesforceProductId, salesforcePricebookId, salesforceActive,
-                salesforceFamily, salesforceProductType, salesforceLastModifiedAt,
+                salesforceFamily, salesforceProductType, salesforceSalesStatus,
+                salesforceDiscontinuationDate, salesforceLastModifiedAt,
                 salesforceImportedAt, salesforceAvailabilityCheckedAt,
                 salesforceCurrencies, gridVisItems, gridVisItemsManual, discountGroupManual
             ) VALUES (
@@ -839,7 +851,8 @@ router.post("/articles/import", async (req, res) => {
                 '', '', '', NULL, @quantityUnit,
                 @listPrice, @listPriceCurrency, @discountGroup, @description,
                 @salesforceProductId, @salesforcePricebookId, 1,
-                @salesforceFamily, @salesforceProductType, @salesforceLastModifiedAt,
+                @salesforceFamily, @salesforceProductType, @salesforceSalesStatus,
+                @salesforceDiscontinuationDate, @salesforceLastModifiedAt,
                 @salesforceImportedAt, @salesforceImportedAt,
                 @salesforceCurrencies, @gridVisItems, 0, 0
             )
@@ -864,6 +877,12 @@ router.post("/articles/import", async (req, res) => {
                 salesforceActive = excluded.salesforceActive,
                 salesforceFamily = excluded.salesforceFamily,
                 salesforceProductType = excluded.salesforceProductType,
+                ${lifecycleFields.salesStatus
+                    ? "salesforceSalesStatus = excluded.salesforceSalesStatus,"
+                    : ""}
+                ${hasDiscontinuationDateField
+                    ? "salesforceDiscontinuationDate = excluded.salesforceDiscontinuationDate,"
+                    : ""}
                 salesforceLastModifiedAt = excluded.salesforceLastModifiedAt,
                 salesforceImportedAt = excluded.salesforceImportedAt,
                 salesforceAvailabilityCheckedAt = excluded.salesforceAvailabilityCheckedAt,
@@ -879,29 +898,76 @@ router.post("/articles/import", async (req, res) => {
             `).run();
             for (const record of records) upsert.run(record);
         });
-        transaction(entries.map(entry => ({
-            articleNumber: String(entry.Product2.ProductCode),
-            manufacturerType: entry.Product2.Name ?? "",
-            quantityUnit: entry.Product2.QuantityUnitOfMeasure ?? "",
+        transaction(entries.map(entry => {
+            const product = entry.Product2 ?? {};
+            const getProductField = fieldName => fieldName ? product[fieldName] : null;
+            const getKnownProductField = (fieldName, fallbackFieldName) =>
+                getProductField(fieldName) ?? product[fallbackFieldName] ?? null;
+            const getProductFieldLabel = (fieldName, fieldKey, fallbackFieldName) => {
+                const value = getKnownProductField(fieldName, fallbackFieldName);
+                const knownLabels = {
+                    plantMaterialStatus: { "50": "Abgekündigt" },
+                    distributionChannelStatus: { "93": "Blocked for offers" }
+                };
+                return lifecycleFields.picklistLabels?.[fieldKey]?.[String(value)]
+                    ?? knownLabels[fieldKey]?.[String(value)]
+                    ?? value;
+            };
+            const plantMaterialStatusValidFrom = getKnownProductField(
+                lifecycleFields.plantMaterialStatusValidFrom,
+                "PlantMaterialStatusValidFrom__c"
+            ) ?? "";
+            const distributionChannelStatusValidFrom = getKnownProductField(
+                lifecycleFields.distributionChannelStatusValidFrom,
+                "DistributionChannelStatusValidFrom__c"
+            ) ?? "";
+            const productStatus = buildSalesforceProductStatus({
+                salesStatus: getProductFieldLabel(
+                    lifecycleFields.salesStatus,
+                    "salesStatus",
+                    "SalesStatus__c"
+                ),
+                discontinuationDate: getProductField(lifecycleFields.discontinuationDate),
+                plantMaterialStatus: getProductFieldLabel(
+                    lifecycleFields.plantMaterialStatus,
+                    "plantMaterialStatus",
+                    "PlantMaterialStatus__c"
+                ),
+                plantMaterialStatusValidFrom,
+                distributionChannelStatus: getProductFieldLabel(
+                    lifecycleFields.distributionChannelStatus,
+                    "distributionChannelStatus",
+                    "DistributionChannelStatus__c"
+                ),
+                distributionChannelStatusValidFrom
+            });
+
+            return {
+            articleNumber: String(product.ProductCode),
+            manufacturerType: product.Name ?? "",
+            quantityUnit: product.QuantityUnitOfMeasure ?? "",
             listPrice: Number(entry.UnitPrice),
             listPriceCurrency: entry.CurrencyIsoCode,
             discountGroup: (() => {
                 const value = String(pricingGroups.get(String(entry.Product2.Id)) ?? "").trim();
                 return normalizeDiscountGroup(value);
             })(),
-            description: entry.Product2.Description ?? "",
-            salesforceProductId: entry.Product2.Id,
+            description: product.Description ?? "",
+            salesforceProductId: product.Id,
             salesforcePricebookId: pricebook.Id,
-            salesforceFamily: entry.Product2.Family ?? "",
-            salesforceProductType: entry.Product2.ProductType__c ?? "",
-            salesforceLastModifiedAt: entry.Product2.LastModifiedDate ?? entry.LastModifiedDate,
+            salesforceFamily: product.Family ?? "",
+            salesforceProductType: product.ProductType__c ?? "",
+            salesforceSalesStatus: productStatus.salesStatus,
+            salesforceDiscontinuationDate: productStatus.discontinuationDate,
+            salesforceLastModifiedAt: product.LastModifiedDate ?? entry.LastModifiedDate,
             salesforceImportedAt: importedAt,
             salesforceCurrencies: JSON.stringify([entry.CurrencyIsoCode]),
             gridVisItems: inferGridVisItems({
-                manufacturerType: entry.Product2.Name,
-                description: entry.Product2.Description
+                manufacturerType: product.Name,
+                description: product.Description
             })
-        })));
+            };
+        }));
 
         saveSetting("salesforcePricebookId", pricebook.Id);
         saveSetting("salesforcePricebookName", pricebook.Name);

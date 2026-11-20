@@ -2,6 +2,20 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.71 - 20.11.2026
+
+### Nuevo
+
+- El estado de ventas de Salesforce y la fecha de discontinuacion se importan
+  con los articulos y se muestran en la lista con un icono de advertencia.
+- La advertencia tambien aparece en proyectos, favoritos y comparaciones
+  tecnicas.
+
+### Corregido
+
+- Las fechas de discontinuacion de los campos de validez de material y canal
+  de distribucion ahora se guardan al actualizar articulos existentes.
+
 ## 1.5.70 - 19.11.2026
 
 ### Nuevo

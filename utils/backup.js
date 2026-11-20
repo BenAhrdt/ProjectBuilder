@@ -19,7 +19,8 @@ const tableColumns = {
         "originCountry", "originRegion", "intrastatNumber", "quantity",
         "quantityUnit", "listPrice", "listPriceCurrency", "discountGroup", "description",
         "salesforceProductId", "salesforcePricebookId", "salesforceActive",
-        "salesforceFamily", "salesforceProductType", "salesforceLastModifiedAt",
+        "salesforceFamily", "salesforceProductType", "salesforceSalesStatus",
+        "salesforceDiscontinuationDate", "salesforceLastModifiedAt",
         "salesforceImportedAt", "salesforceAvailabilityCheckedAt", "salesforceCurrencies",
         "gridVisItems", "gridVisItemsManual", "discountGroupManual",
         "salesCategory", "salesCategoryManual"

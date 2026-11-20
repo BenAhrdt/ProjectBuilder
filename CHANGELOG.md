@@ -2,6 +2,21 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.71 - 20.11.2026
+
+### Neu
+
+- Salesforce-Sales-Status und Abkuendigungsdatum werden beim Artikelimport
+  uebernommen und in der Artikelliste mit Warnsymbol und Statusinformation
+  angezeigt.
+- Die Warnung erscheint auch in Projekten, Favoriten und Technik-Vergleichen.
+
+### Behoben
+
+- Abkuendigungsdaten aus den Plant-Material- und Distribution-Channel-
+  Gueltigkeitsfeldern werden auch beim Aktualisieren bestehender Artikel
+  gespeichert.
+
 ## 1.5.70 - 19.11.2026
 
 ### Neu

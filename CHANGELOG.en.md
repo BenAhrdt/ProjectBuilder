@@ -2,6 +2,19 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.71 - 2026-11-20
+
+### Added
+
+- Salesforce sales status and discontinuation dates are imported with articles
+  and shown in the article list with a warning icon and status information.
+- The warning is also shown in projects, favorites and technical comparisons.
+
+### Fixed
+
+- Discontinuation dates from the plant-material and distribution-channel
+  valid-from fields are now saved when existing articles are updated.
+
 ## 1.5.70 - 2026-11-19
 
 ### Added

@@ -47,6 +47,8 @@ for (const [name, definition] of [
     ["salesforceActive", "INTEGER"],
     ["salesforceFamily", "TEXT"],
     ["salesforceProductType", "TEXT"],
+    ["salesforceSalesStatus", "TEXT"],
+    ["salesforceDiscontinuationDate", "TEXT"],
     ["salesforceLastModifiedAt", "TEXT"],
     ["salesforceImportedAt", "TEXT"],
     ["salesforceAvailabilityCheckedAt", "TEXT"],

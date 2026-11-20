@@ -607,7 +607,7 @@ function renderArticleNumber(article) {
                 decoding="async"
             >
         `
-        : "";
+        : `<span class="article-product-image article-product-image-placeholder" aria-hidden="true"></span>`;
     let storedCurrencies = [];
     try {
         storedCurrencies = JSON.parse(article.salesforceCurrencies || "[]");
@@ -632,14 +632,40 @@ function renderArticleNumber(article) {
             ? `<span class="article-salesforce-badge article-salesforce-badge-missing"
                      title="${i18n.t("articles.salesforceMissing")}">SF</span>`
             : "";
+    const salesStatusStateTitle = article.salesforceSalesStatusKind === "expiring"
+        ? i18n.t("articles.salesStatusExpiring")
+        : article.salesforceSalesStatusKind === "blocked"
+            ? i18n.t("articles.salesStatusNotForSale")
+            : i18n.t("articles.salesStatusWarning");
+    const salesStatusWarningDate = formatSalesforceStatusDate(
+        article.salesforceDiscontinuationDate
+    );
+    const salesStatusWarningTitle = [
+        salesStatusStateTitle,
+        article.salesforceSalesStatus
+            ? `${i18n.t("articles.salesforceSalesStatus")}: ${article.salesforceSalesStatus}`
+            : "",
+        salesStatusWarningDate
+            ? `${i18n.t("articles.discontinuationDate")}: ${salesStatusWarningDate}`
+            : ""
+    ].filter(Boolean).join(" · ");
+    const salesStatusWarning = article.salesforceSalesStatusWarning
+        ? `<span
+                class="article-sales-status-warning"
+                role="img"
+                aria-label="${escapeHtml(salesStatusWarningTitle)}"
+                title="${escapeHtml(salesStatusWarningTitle)}"
+            >⚠</span>`
+        : "";
 
     return `
         <div class="article-number-actions">
             <span class="article-number-value">
-                ${productImage}
                 <span>${escapeHtml(article.articleNumber ?? "")}</span>
+                ${productImage}
             </span>
             ${badge}
+            ${salesStatusWarning}
             <button
                 class="article-delete-button"
                 type="button"
@@ -649,8 +675,57 @@ function renderArticleNumber(article) {
                 ${i18n.t("articles.remove")}
             </button>
         </div>
+        ${renderSalesStatusInfo(article)}
     `;
 
+}
+
+function renderSalesStatusInfo(article) {
+    const hasStatus = Boolean(
+        article.salesforceSalesStatus
+        || article.salesforceDiscontinuationDate
+        || article.salesforceSalesStatusWarning
+    );
+    if (!hasStatus) return "";
+
+    const kind = article.salesforceSalesStatusKind || (
+        article.salesforceSalesStatusWarning ? "blocked" : "active"
+    );
+    const messageKey = kind === "expiring"
+        ? "articles.salesStatusExpiring"
+        : kind === "blocked"
+            ? "articles.salesStatusNotForSale"
+            : "articles.salesStatusApproved";
+    const symbol = kind === "expiring" ? "⚠" : kind === "blocked" ? "−" : "✓";
+    const status = String(article.salesforceSalesStatus ?? "").trim();
+    const date = formatSalesforceStatusDate(article.salesforceDiscontinuationDate);
+
+    return `
+        <div class="article-sales-status-info article-sales-status-info-${kind}">
+            <span class="article-sales-status-info-symbol" aria-hidden="true">${symbol}</span>
+            <span class="article-sales-status-info-content">
+                <strong>${escapeHtml(i18n.t(messageKey))}</strong>
+                ${status ? `<span>${escapeHtml(status)}</span>` : ""}
+                ${date ? `<span>${escapeHtml(i18n.t("articles.discontinuationDate"))}: ${escapeHtml(date)}</span>` : ""}
+            </span>
+        </div>
+    `;
+}
+
+function formatSalesforceStatusDate(value) {
+    const rawValue = String(value ?? "").trim();
+    if (!rawValue) return "";
+
+    const datePart = rawValue.slice(0, 10);
+    const date = new Date(`${datePart}T00:00:00Z`);
+    if (Number.isNaN(date.getTime())) return rawValue;
+
+    return new Intl.DateTimeFormat(i18n.getCurrentLanguage(), {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        timeZone: "UTC"
+    }).format(date);
 }
 
 async function checkSalesforceAvailability() {

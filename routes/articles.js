@@ -16,6 +16,7 @@ import {
     inferSalesArticleCategory,
     SALES_ARTICLE_CATEGORIES
 } from "../utils/salesArticleCategory.js";
+import { getSalesforceSalesStatusInfo } from "../utils/salesforceProductStatus.js";
 import { normalizeDiscountGroup } from "../utils/discountGroups.js";
 import {
     getArticleImageContentType,
@@ -441,6 +442,8 @@ router.get("/", (req, res) => {
             OR listPrice LIKE @search
             OR listPriceCurrency LIKE @search
             OR discountGroup LIKE @search
+            OR salesforceSalesStatus LIKE @search
+            OR salesforceDiscontinuationDate LIKE @search
             OR description LIKE @search
     `;
 
@@ -475,6 +478,8 @@ router.get("/", (req, res) => {
                 salesforceActive,
                 salesforceFamily,
                 salesforceProductType,
+                salesforceSalesStatus,
+                salesforceDiscontinuationDate,
                 salesforceAvailabilityCheckedAt,
                 salesforceImportedAt,
                 salesforceCurrencies,
@@ -495,13 +500,22 @@ router.get("/", (req, res) => {
             ...(hasPagination ? { limit, offset } : {})
         });
 
-    res.json(articles.map(article => ({
-        ...article,
-        productImageUrl: getArticleImageUrl(article.articleNumber),
-        salesCategorySuggested: Number(article.salesCategoryManual) === 1
+    res.json(articles.map(article => {
+        const statusInfo = getSalesforceSalesStatusInfo({
+            salesStatus: article.salesforceSalesStatus,
+            discontinuationDate: article.salesforceDiscontinuationDate
+        });
+
+        return {
+            ...article,
+            productImageUrl: getArticleImageUrl(article.articleNumber),
+            salesforceSalesStatusWarning: statusInfo.warning,
+            salesforceSalesStatusKind: statusInfo.kind,
+            salesCategorySuggested: Number(article.salesCategoryManual) === 1
             ? article.salesCategory
             : inferSalesArticleCategory(article)
-    })));
+        };
+    }));
 
 });
 

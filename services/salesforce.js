@@ -15,6 +15,7 @@ let cachedTokenConnection = null;
 let cachedCoreConnection = null;
 let loginPromise = null;
 let cachedQuoteDescription = null;
+let cachedProduct2LifecycleFields = null;
 
 function salesforceErrorMessage(errors, fallback) {
     const list = Array.isArray(errors) ? errors : [errors];
@@ -656,12 +657,127 @@ export async function getActivePricebooks() {
     }));
 }
 
-export async function getPricebookProducts(pricebookId, currencyIsoCode) {
-    return queryAll(`
+function normalizeFieldName(value) {
+    return String(value ?? "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "");
+}
+
+function resolveProduct2Field(fields, apiNames, labels, fragments = []) {
+    const normalizedApiNames = new Set(apiNames.map(normalizeFieldName));
+    const normalizedLabels = new Set(labels.map(normalizeFieldName));
+    const normalizedFragments = fragments.map(normalizeFieldName);
+    const matchesFragment = value => normalizedFragments.some(fragment => value.includes(fragment));
+    const apiMatch = fields.find(field => {
+        const name = normalizeFieldName(field.name);
+        return normalizedApiNames.has(name) || matchesFragment(name);
+    });
+    const labelMatch = fields.find(field => {
+        const label = normalizeFieldName(field.label);
+        return normalizedLabels.has(label) || matchesFragment(label);
+    });
+    const name = apiMatch?.name ?? labelMatch?.name ?? null;
+    return /^[A-Za-z0-9_]+$/.test(name ?? "") ? name : null;
+}
+
+export async function getProduct2LifecycleFields() {
+    if (cachedProduct2LifecycleFields) return cachedProduct2LifecycleFields;
+
+    try {
+        const description = await describe("Product2");
+        const fields = Array.isArray(description?.fields) ? description.fields : [];
+        cachedProduct2LifecycleFields = {
+            salesStatus: resolveProduct2Field(
+                fields,
+                ["SalesStatus__c", "Sales_Status__c", "SalesStatus"],
+                ["Sales Status"],
+                ["salesstatus"]
+            ),
+            discontinuationDate: resolveProduct2Field(
+                fields,
+                [
+                    "DiscontinuationDate__c",
+                    "Discontinuation_Date__c",
+                    "Abkundigungsdatum__c",
+                    "Abkuendigungsdatum__c",
+                    "Discontinuation__c",
+                    "EndOfSaleDate__c",
+                    "EndOfLifeDate__c"
+                ],
+                ["Abkündigungsdatum", "Discontinuation Date", "End of Sale Date", "End of Life Date"],
+                ["discontinuationdate", "abkuendigungsdatum", "abkundigungsdatum", "endofsale", "endoflife"]
+            ),
+            plantMaterialStatus: resolveProduct2Field(
+                fields,
+                ["PlantMaterialStatus__c", "Plant_Material_Status__c", "PlantMaterialStatus"],
+                ["Plant Material Status", "PlantMaterialStatus"]
+            ),
+            plantMaterialStatusValidFrom: resolveProduct2Field(
+                fields,
+                ["PlantMaterialStatusValidFrom__c", "Plant_Material_Status_Valid_From__c", "PlantMaterialStatusValidFrom"],
+                ["PlantMaterialStatusValidFrom", "Plant Material Status Valid From"]
+            ),
+            distributionChannelStatus: resolveProduct2Field(
+                fields,
+                ["DistributionChannelStatus__c", "Distribution_Channel_Status__c", "DistributionChannelStatus"],
+                ["Distribution Channel Status", "DistributionChannelStatus"]
+            ),
+            distributionChannelStatusValidFrom: resolveProduct2Field(
+                fields,
+                ["DistributionChannelStatusValidFrom__c", "Distribution_Channel_Status_Valid_From__c", "DistributionChannelStatusValidFrom"],
+                ["Distribution Channel Status Valid From", "DistributionChannelStatusValidFrom"]
+            )
+        };
+        cachedProduct2LifecycleFields.picklistLabels = {};
+        for (const key of ["salesStatus", "plantMaterialStatus", "distributionChannelStatus"]) {
+            const field = fields.find(item => item.name === cachedProduct2LifecycleFields[key]);
+            const values = Array.isArray(field?.picklistValues) ? field.picklistValues : [];
+            if (values.length) {
+                cachedProduct2LifecycleFields.picklistLabels[key] = Object.fromEntries(
+                    values
+                        .filter(value => value?.value !== undefined)
+                        .map(value => [String(value.value), String(value.label ?? value.value)])
+                );
+            }
+        }
+    } catch {
+        cachedProduct2LifecycleFields = { salesStatus: null, discontinuationDate: null };
+    }
+
+    return cachedProduct2LifecycleFields;
+}
+
+export async function getPricebookProducts(
+    pricebookId,
+    currencyIsoCode,
+    lifecycleFields = null
+) {
+    lifecycleFields = lifecycleFields ?? await getProduct2LifecycleFields();
+    const lifecycleSelect = [
+        lifecycleFields?.salesStatus,
+        lifecycleFields?.discontinuationDate,
+        lifecycleFields?.plantMaterialStatus,
+        lifecycleFields?.plantMaterialStatusValidFrom,
+        lifecycleFields?.distributionChannelStatus,
+        lifecycleFields?.distributionChannelStatusValidFrom,
+        "SalesStatus__c",
+        "PlantMaterialStatus__c",
+        "PlantMaterialStatusValidFrom__c",
+        "DistributionChannelStatus__c",
+        "DistributionChannelStatusValidFrom__c"
+    ]
+        .filter(Boolean)
+        .filter((field, index, fields) => fields.indexOf(field) === index)
+        .map(field => `Product2.${field}`)
+        .join(",\n            ");
+
+    const entries = await queryAll(`
         SELECT Id, UnitPrice, CurrencyIsoCode, LastModifiedDate,
             Product2.Id, Product2.ProductCode, Product2.Name, Product2.Description,
             Product2.Family, Product2.QuantityUnitOfMeasure, Product2.ProductType__c,
-            Product2.IsActive, Product2.LastModifiedDate
+            Product2.IsActive, Product2.LastModifiedDate${lifecycleSelect ? `,\n            ${lifecycleSelect}` : ""}
         FROM PricebookEntry
         WHERE Pricebook2Id = '${escapeSoql(pricebookId)}'
           AND CurrencyIsoCode = '${escapeSoql(currencyIsoCode)}'
@@ -669,6 +785,137 @@ export async function getPricebookProducts(pricebookId, currencyIsoCode) {
           AND Product2.IsActive = true
         ORDER BY Product2.ProductCode
     `);
+
+    if (!entries.length || lifecycleFields.salesStatus) {
+        return entries;
+    }
+
+    try {
+        const productIds = [...new Set(entries.map(entry => String(entry.Product2?.Id ?? "")).filter(Boolean))];
+        const customRecords = [];
+        for (let offset = 0; offset < productIds.length; offset += 100) {
+            const values = productIds.slice(offset, offset + 100)
+                .map(value => `'${escapeSoql(value)}'`)
+                .join(", ");
+            customRecords.push(...await queryAll(`
+                SELECT Id, FIELDS(CUSTOM)
+                FROM Product2
+                WHERE Id IN (${values})
+            `));
+        }
+
+        const distributionRecords = [];
+        for (let offset = 0; offset < productIds.length; offset += 100) {
+            const values = productIds.slice(offset, offset + 100)
+                .map(value => `'${escapeSoql(value)}'`)
+                .join(", ");
+            distributionRecords.push(...await queryAll(`
+                SELECT FIELDS(CUSTOM)
+                FROM DistributionChain__c
+                WHERE Product__c IN (${values})
+                  AND SalesOrganisation__c = '1100'
+                  AND DistributionChannel__c = '10'
+            `));
+        }
+
+        const customFields = [...new Set(
+            customRecords.flatMap(record => Object.keys(record))
+        )]
+            .map(name => ({ name, label: name }));
+        const distributionFields = [...new Set(
+            distributionRecords.flatMap(record => Object.keys(record))
+        )]
+            .map(name => ({ name, label: name }));
+        const discoveredFields = {
+            salesStatus: resolveProduct2Field(
+                customFields,
+                ["SalesStatus__c", "Sales_Status__c", "SalesStatus"],
+                ["Sales Status"],
+                ["salesstatus"]
+            ),
+            discontinuationDate: resolveProduct2Field(
+                customFields,
+                [
+                    "DiscontinuationDate__c",
+                    "Discontinuation_Date__c",
+                    "Abkundigungsdatum__c",
+                    "Abkuendigungsdatum__c",
+                    "Discontinuation__c",
+                    "EndOfSaleDate__c",
+                    "EndOfLifeDate__c"
+                ],
+                ["Abkündigungsdatum", "Discontinuation Date", "End of Sale Date", "End of Life Date"],
+                ["discontinuationdate", "abkuendigungsdatum", "abkundigungsdatum", "endofsale", "endoflife"]
+            ),
+            plantMaterialStatus: resolveProduct2Field(
+                customFields,
+                ["PlantMaterialStatus__c", "Plant_Material_Status__c", "PlantMaterialStatus"],
+                ["Plant Material Status", "PlantMaterialStatus"]
+            ),
+            plantMaterialStatusValidFrom: resolveProduct2Field(
+                customFields,
+                ["PlantMaterialStatusValidFrom__c", "Plant_Material_Status_Valid_From__c", "PlantMaterialStatusValidFrom"],
+                ["PlantMaterialStatusValidFrom", "Plant Material Status Valid From"]
+            ),
+            distributionChannelStatus: resolveProduct2Field(
+                customFields,
+                ["DistributionChannelStatus__c", "Distribution_Channel_Status__c", "DistributionChannelStatus"],
+                ["Distribution Channel Status", "DistributionChannelStatus"]
+            ),
+            distributionChannelStatusValidFrom: resolveProduct2Field(
+                customFields,
+                ["DistributionChannelStatusValidFrom__c", "Distribution_Channel_Status_Valid_From__c", "DistributionChannelStatusValidFrom"],
+                ["Distribution Channel Status Valid From", "DistributionChannelStatusValidFrom"]
+            )
+        };
+        const discoveredDistributionFields = {
+            distributionChannelStatus: resolveProduct2Field(
+                distributionFields,
+                ["DistributionChannelStatus__c", "Distribution_Channel_Status__c", "DistributionChannelStatus"],
+                ["Distribution Channel Status", "DistributionChannelStatus"]
+            ),
+            distributionChannelStatusValidFrom: resolveProduct2Field(
+                distributionFields,
+                ["DistributionChannelStatusValidFrom__c", "Distribution_Channel_Status_Valid_From__c", "DistributionChannelStatusValidFrom"],
+                ["Distribution Channel Status Valid From", "DistributionChannelStatusValidFrom"]
+            )
+        };
+        lifecycleFields = {
+            ...lifecycleFields,
+            salesStatus: lifecycleFields.salesStatus ?? discoveredFields.salesStatus,
+            discontinuationDate: lifecycleFields.discontinuationDate ?? discoveredFields.discontinuationDate,
+            plantMaterialStatus: lifecycleFields.plantMaterialStatus ?? discoveredFields.plantMaterialStatus,
+            plantMaterialStatusValidFrom: lifecycleFields.plantMaterialStatusValidFrom
+                ?? discoveredFields.plantMaterialStatusValidFrom,
+            distributionChannelStatus: lifecycleFields.distributionChannelStatus
+                ?? discoveredFields.distributionChannelStatus
+                ?? discoveredDistributionFields.distributionChannelStatus,
+            distributionChannelStatusValidFrom: lifecycleFields.distributionChannelStatusValidFrom
+                ?? discoveredFields.distributionChannelStatusValidFrom
+                ?? discoveredDistributionFields.distributionChannelStatusValidFrom
+        };
+        cachedProduct2LifecycleFields = lifecycleFields;
+
+        const recordsById = new Map(customRecords.map(record => [String(record.Id), record]));
+        const distributionByProductId = new Map(
+            distributionRecords.map(record => [String(record.Product__c), record])
+        );
+        return entries.map(entry => {
+            const customFieldsForProduct = recordsById.get(String(entry.Product2?.Id ?? ""));
+            const distributionFieldsForProduct = distributionByProductId.get(String(entry.Product2?.Id ?? ""));
+            if (!customFieldsForProduct && !distributionFieldsForProduct) return entry;
+            return {
+                ...entry,
+                Product2: {
+                    ...entry.Product2,
+                    ...customFieldsForProduct,
+                    ...distributionFieldsForProduct
+                }
+            };
+        });
+    } catch {
+        return entries;
+    }
 }
 
 export async function getProductPricingGroups(productIds, salesOrganisation = "1100", distributionChannel = "10") {

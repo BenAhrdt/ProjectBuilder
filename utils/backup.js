@@ -46,11 +46,14 @@ const tableColumns = {
     ],
     faqEntries: [
         "id", "externalId", "question", "answer", "category", "articleReferences", "deviceTypes",
-        "tags", "source", "active", "sortOrder", "updatedAt"
+        "tags", "source", "active", "sortOrder", "createdAt", "updatedAt"
     ],
     technicalData: [
         "id", "active", "articleNumber", "deviceType", "category", "parameter", "value",
-        "unit", "source", "notes", "updatedAt"
+        "unit", "source", "notes", "createdAt", "updatedAt"
+    ],
+    knowledgeArchive: [
+        "id", "entryType", "recordJson", "archivedAt", "createdAt", "updatedAt"
     ]
 };
 
@@ -131,10 +134,12 @@ function createBackup(selectionInput = {}) {
     if (selection.knowledge) {
         const faq = selectAll("faqEntries");
         const technical = selectAll("technicalData");
+        const archive = selectAll("knowledgeArchive");
         sections.knowledge = {
-            count: faq.length + technical.length,
+            count: faq.length + technical.length + archive.length,
             faq,
-            technical
+            technical,
+            archive
         };
     }
 
@@ -185,6 +190,8 @@ function inspectBackup(input) {
             projects: Array.isArray(backup.sections.projects?.projects),
             knowledge: Array.isArray(backup.sections.knowledge?.faq)
                 && Array.isArray(backup.sections.knowledge?.technical)
+                && (backup.sections.knowledge?.archive === undefined
+                    || Array.isArray(backup.sections.knowledge.archive))
         },
         counts: {
             articles: backup.sections.articles?.data?.length ?? 0,
@@ -363,9 +370,13 @@ function restoreBackup(input, selectionInput = {}) {
             const knowledgeSection = backup.sections.knowledge;
             backupDatabase.prepare("DELETE FROM faqEntries").run();
             backupDatabase.prepare("DELETE FROM technicalData").run();
+            backupDatabase.prepare("DELETE FROM knowledgeArchive").run();
             insertRows(backupDatabase, "faqEntries", knowledgeSection.faq);
             insertRows(backupDatabase, "technicalData", knowledgeSection.technical);
-            result.knowledge = knowledgeSection.faq.length + knowledgeSection.technical.length;
+            insertRows(backupDatabase, "knowledgeArchive", knowledgeSection.archive ?? []);
+            result.knowledge = knowledgeSection.faq.length
+                + knowledgeSection.technical.length
+                + (knowledgeSection.archive?.length ?? 0);
         }
 
         return result;

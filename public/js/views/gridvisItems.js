@@ -139,7 +139,7 @@ function renderShell() {
                     id: "renewal",
                     title: i18n.t("gridvisItems.renewalTitle"),
                     description: i18n.t("gridvisItems.renewalDescription"),
-                    formula: "[(Items Bestand × Rest-AZR) + (Items Verlängerung × Jahre × 365)] / Items Bestand",
+                    formula: "[(Bestehende Items × Rest-AZR) + (Verlängerungs-Items × Jahre × 365)] / Bestehende Items",
                     fields: [
                         renderInput("gridvis-renewal-existing-items", i18n.t("gridvisItems.existingItems"), "Items"),
                         renderInput("gridvis-renewal-existing-azr", i18n.t("gridvisItems.existingAzr"), "Tage"),

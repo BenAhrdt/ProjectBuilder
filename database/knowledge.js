@@ -5,6 +5,7 @@ import {
 
 const faqEntries = getDatabaseProxy();
 const technicalData = getDatabaseProxy();
+const knowledgeArchive = getDatabaseProxy();
 
 function initializeKnowledge(database) {
     database.exec(`
@@ -20,6 +21,7 @@ function initializeKnowledge(database) {
             source TEXT,
             active INTEGER NOT NULL DEFAULT 1,
             sortOrder INTEGER NOT NULL DEFAULT 0,
+            createdAt TEXT,
             updatedAt TEXT NOT NULL
         );
 
@@ -37,17 +39,34 @@ function initializeKnowledge(database) {
             unit TEXT,
             source TEXT,
             notes TEXT,
+            createdAt TEXT,
             updatedAt TEXT NOT NULL
         );
 
         CREATE INDEX IF NOT EXISTS technicalDataSearchIndex
         ON technicalData(articleNumber, deviceType, category, parameter);
+
+        CREATE TABLE IF NOT EXISTS knowledgeArchive (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            entryType TEXT NOT NULL,
+            recordJson TEXT NOT NULL,
+            archivedAt TEXT NOT NULL,
+            createdAt TEXT,
+            updatedAt TEXT
+        );
+
+        CREATE INDEX IF NOT EXISTS knowledgeArchiveTypeIndex
+        ON knowledgeArchive(entryType, archivedAt);
     `);
 
     const faqColumns = new Set(database.prepare("PRAGMA table_info(faqEntries)").all().map(column => column.name));
     if (!faqColumns.has("externalId")) database.exec("ALTER TABLE faqEntries ADD COLUMN externalId TEXT");
+    if (!faqColumns.has("createdAt")) database.exec("ALTER TABLE faqEntries ADD COLUMN createdAt TEXT");
+    database.prepare("UPDATE faqEntries SET createdAt = COALESCE(NULLIF(createdAt, ''), updatedAt) WHERE createdAt IS NULL OR createdAt = ''").run();
     const technicalColumns = new Set(database.prepare("PRAGMA table_info(technicalData)").all().map(column => column.name));
     if (!technicalColumns.has("active")) database.exec("ALTER TABLE technicalData ADD COLUMN active INTEGER NOT NULL DEFAULT 1");
+    if (!technicalColumns.has("createdAt")) database.exec("ALTER TABLE technicalData ADD COLUMN createdAt TEXT");
+    database.prepare("UPDATE technicalData SET createdAt = COALESCE(NULLIF(createdAt, ''), updatedAt) WHERE createdAt IS NULL OR createdAt = ''").run();
 }
 
 registerDatabaseInitializer(initializeKnowledge);
@@ -55,5 +74,6 @@ initializeKnowledge(faqEntries);
 
 export {
     faqEntries,
-    technicalData
+    technicalData,
+    knowledgeArchive
 };

@@ -2,6 +2,33 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.75 - 22.11.2026
+
+### Neu
+
+- FAQ und technische Daten können bearbeitet, neu angelegt, archiviert und aus
+  dem Archiv wiederhergestellt werden. Das Archiv wird bei Bedarf automatisch
+  als eigenes Excel-Blatt angelegt und nach Salesforce zurückgeschrieben.
+- Mehrfachwerte wie Artikelnummern, Geräte, Suchbegriffe und Quellen werden im
+  Bearbeitungsdialog als Chips verwaltet.
+- Parallele Änderungen an unterschiedlichen FAQ-Feldern oder technischen
+  Merkmalen werden automatisch zusammengeführt. Nur echte Überschneidungen
+  öffnen einen Vergleich zwischen lokaler und Salesforce-Version.
+- Die Excel-Datei erhält pro Zeile die Zeitstempel `Erstellt am` und
+  `Zuletzt geändert`. Ältere Dateien ohne diese Spalten bleiben kompatibel.
+- Verfügbare Updates zeigen jetzt die Änderungen aus den Release Notes direkt
+  im Update-Dialog an.
+
+### Verbessert
+
+- FAQ-Einträge werden nach der letzten Änderung sortiert; neue Einträge werden
+  vier Wochen lang mit „Neu“ gekennzeichnet.
+- Technische Daten zeigen zusätzlich den Artikelnamen aus dem Artikelstamm und
+  behalten den ursprünglichen Gerätetyp aus der Excel-Datei.
+- Quellen werden auch bei technischen Merkmalen als Chips angezeigt.
+- Die Verlängerungsberechnung der GridVis-Items berücksichtigt die Item-Anzahl
+  des Verlängerungspakets.
+
 ## 1.5.74 - 20.11.2026
 
 ### Verbessert

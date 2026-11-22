@@ -49,10 +49,11 @@ export function calculateMismatchedRenewal({
         throw new RangeError("Die Anzahl der bestehenden Items muss größer als 0 sein.");
     }
 
-    const renewalDays = years * GRIDVIS_DAYS_PER_YEAR;
+    const renewalPackageDays = years * GRIDVIS_DAYS_PER_YEAR;
+    const weightedRenewalDays = (renewedItems * renewalPackageDays) / currentItems;
     return {
-        renewalDays,
-        azrDays: ((currentItems * currentAzr) + (renewedItems * renewalDays)) / currentItems
+        renewalDays: weightedRenewalDays,
+        azrDays: currentAzr + weightedRenewalDays
     };
 }
 

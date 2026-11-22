@@ -2,6 +2,32 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.75 - 2026-11-22
+
+### Added
+
+- FAQ and technical data can be edited, created, archived, and restored from
+  the archive. The archive sheet is created automatically when needed and is
+  written back to Salesforce.
+- Multi-value fields such as article numbers, devices, search terms, and
+  sources are managed as chips in the editor.
+- Parallel changes to different FAQ fields or technical characteristics are
+  merged automatically. Only real overlaps open a comparison of the local and
+  Salesforce versions.
+- The workbook now stores `Created at` and `Last changed` timestamps per row;
+  older files without these columns remain compatible.
+- Available updates now show the release notes directly in the update dialog.
+
+### Improved
+
+- FAQ entries are sorted by their last change; new entries receive a “New”
+  label for four weeks.
+- Technical data also shows the article name from the article master while
+  retaining the original device type from Excel.
+- Sources are displayed as chips for technical characteristics as well.
+- GridVis item renewal calculations now account for the item count in the
+  renewal package.
+
 ## 1.5.74 - 2026-11-20
 
 ### Improved

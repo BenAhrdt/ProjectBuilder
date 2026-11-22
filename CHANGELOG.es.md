@@ -2,6 +2,33 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.75 - 22.11.2026
+
+### Nuevo
+
+- Las preguntas frecuentes y los datos técnicos se pueden editar, crear,
+  archivar y restaurar. La hoja de archivo se crea automáticamente cuando es
+  necesaria y se vuelve a guardar en Salesforce.
+- Los valores múltiples, como números de artículo, dispositivos, términos de
+  búsqueda y fuentes, se gestionan como chips en el editor.
+- Los cambios paralelos en campos diferentes se combinan automáticamente. Solo
+  las modificaciones realmente solapadas muestran una comparación entre la
+  versión local y la de Salesforce.
+- El libro de Excel guarda ahora las marcas de tiempo de creación y última
+  modificación por fila; los archivos antiguos siguen siendo compatibles.
+- Las actualizaciones disponibles muestran ahora las notas de versión en el
+  diálogo de actualización.
+
+### Mejorado
+
+- Las preguntas frecuentes se ordenan por la última modificación y las nuevas
+  reciben la etiqueta «Nuevo» durante cuatro semanas.
+- Los datos técnicos muestran también el nombre del artículo y conservan el
+  tipo de dispositivo original de Excel.
+- Las fuentes también se muestran como chips en las características técnicas.
+- El cálculo de renovación de elementos GridVis tiene en cuenta la cantidad de
+  elementos del paquete de renovación.
+
 ## 1.5.74 - 20.11.2026
 
 ### Mejorado

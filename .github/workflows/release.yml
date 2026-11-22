@@ -58,13 +58,21 @@ jobs:
           $version = node -p "require('./package.json').version"
           $installer = "release/ProjectBuilder-Setup-$version.exe"
           $blockmap = "$installer.blockmap"
+          $changelog = Get-Content CHANGELOG.md -Raw
+          $pattern = "(?ms)^##\s+$([regex]::Escape($version))\s+-[^\r\n]*(?:\r?\n)(.*?)(?=^##\s+|\z)"
+          $match = [regex]::Match($changelog, $pattern)
+          if (-not $match.Success) {
+            throw "Kein Changelog-Abschnitt für Version $version gefunden."
+          }
+          $releaseNotes = "## $version`n`n$($match.Groups[1].Value.Trim())"
+          Set-Content -Path release-notes.md -Value $releaseNotes -Encoding utf8
 
           gh release view $env:RELEASE_TAG *> $null
           if ($LASTEXITCODE -ne 0) {
             for ($attempt = 1; $attempt -le 4; $attempt++) {
               gh release create $env:RELEASE_TAG `
                 --title $version `
-                --generate-notes
+                --notes-file release-notes.md
               if ($LASTEXITCODE -eq 0) { break }
               if ($attempt -eq 4) { throw "Release konnte nach vier Versuchen nicht angelegt werden." }
               Start-Sleep -Seconds (5 * $attempt)

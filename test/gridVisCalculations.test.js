@@ -26,7 +26,19 @@ test("berechnet die Verlängerung mit abweichender Item-Anzahl", () => {
             renewalItems: 2500,
             renewalYears: 1
         }),
-        { renewalDays: 365, azrDays: 456.25 }
+        { renewalDays: 456.25, azrDays: 456.25 }
+    );
+});
+
+test("gewichtet die Verlängerung anhand der Item-Anzahl", () => {
+    assert.deepEqual(
+        calculateMismatchedRenewal({
+            existingItems: 50,
+            existingAzrDays: 0,
+            renewalItems: 100,
+            renewalYears: 1
+        }),
+        { renewalDays: 730, azrDays: 730 }
     );
 });
 

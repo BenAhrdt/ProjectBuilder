@@ -21,6 +21,8 @@ const nativeTexts = {
         updateAvailable: "Update verfügbar",
         updateMessage: version => `ProjectBuilder ${version} ist verfügbar.`,
         updateDetail: "Soll das Update jetzt heruntergeladen werden? Ihre Datenbank bleibt unverändert.",
+        changesTitle: "Änderungen in dieser Version",
+        changesUnavailable: "Die vollständigen Änderungen können nach dem Update im Changelog geöffnet werden.",
         download: "Herunterladen",
         later: "Später",
         updateReady: "Update bereit",
@@ -33,6 +35,8 @@ const nativeTexts = {
         updateAvailable: "Update available",
         updateMessage: version => `ProjectBuilder ${version} is available.`,
         updateDetail: "Would you like to download the update now? Your database will remain unchanged.",
+        changesTitle: "Changes in this version",
+        changesUnavailable: "The complete changes can be viewed in the changelog after the update.",
         download: "Download",
         later: "Later",
         updateReady: "Update ready",
@@ -45,6 +49,8 @@ const nativeTexts = {
         updateAvailable: "Actualización disponible",
         updateMessage: version => `ProjectBuilder ${version} está disponible.`,
         updateDetail: "¿Desea descargar la actualización ahora? La base de datos no se modificará.",
+        changesTitle: "Cambios de esta versión",
+        changesUnavailable: "Los cambios completos se pueden consultar en el registro de cambios después de la actualización.",
         download: "Descargar",
         later: "Más tarde",
         updateReady: "Actualización lista",
@@ -66,6 +72,28 @@ function sendUpdateStatus(status) {
     }
 }
 
+function getReleaseNotesText(info) {
+    const releaseNotes = info?.releaseNotes;
+    const notes = Array.isArray(releaseNotes)
+        ? releaseNotes.map(note => typeof note === "string" ? note : note?.note || note?.releaseNotes || "").filter(Boolean).join("\n\n")
+        : typeof releaseNotes === "string"
+            ? releaseNotes
+            : releaseNotes?.note || releaseNotes?.releaseNotes || "";
+    const normalized = String(notes)
+        .replace(/<[^>]+>/g, "")
+        .replace(/\r\n/g, "\n")
+        .trim();
+    if (!normalized) return "";
+    return normalized.length > 5000 ? `${normalized.slice(0, 5000).trim()}\n…` : normalized;
+}
+
+function getUpdateDetail(texts, info, baseDetail) {
+    const releaseNotes = getReleaseNotesText(info);
+    return releaseNotes
+        ? `${baseDetail}\n\n${texts.changesTitle}:\n${releaseNotes}`
+        : `${baseDetail}\n\n${texts.changesUnavailable}`;
+}
+
 async function checkForUpdates() {
     if (!app.isPackaged || process.platform !== "win32") return;
 
@@ -80,11 +108,12 @@ async function checkForUpdates() {
     autoUpdater.on("update-available", async info => {
         updateDialogPromise = (async () => {
             const texts = getNativeTexts();
+            const releaseNotes = getReleaseNotesText(info);
             const result = await dialog.showMessageBox(mainWindow, {
                 type: "info",
                 title: texts.updateAvailable,
                 message: texts.updateMessage(info.version),
-                detail: texts.updateDetail,
+                detail: getUpdateDetail(texts, info, texts.updateDetail),
                 buttons: [texts.download, texts.later],
                 defaultId: 0,
                 cancelId: 1,
@@ -97,6 +126,7 @@ async function checkForUpdates() {
                     state: "downloading",
                     percent: 0,
                     version: info.version,
+                    releaseNotes,
                     error: null
                 });
                 try {
@@ -123,18 +153,20 @@ async function checkForUpdates() {
     autoUpdater.on("update-downloaded", async info => {
         updateReadyDialogPromise = (async () => {
             const texts = getNativeTexts();
+            const releaseNotes = getReleaseNotesText(info);
             mainWindow?.setProgressBar(-1);
             sendUpdateStatus({
                 state: "ready",
                 percent: 100,
                 version: info.version,
+                releaseNotes,
                 error: null
             });
             const result = await dialog.showMessageBox(mainWindow, {
                 type: "info",
                 title: texts.updateReady,
                 message: texts.downloaded(info.version),
-                detail: texts.restartDetail,
+                detail: getUpdateDetail(texts, info, texts.restartDetail),
                 buttons: [texts.restart, texts.later],
                 defaultId: 0,
                 cancelId: 1,

@@ -1,4 +1,6 @@
 import * as i18n from "../utils/i18n.js";
+import { showConfirm } from "../utils/modal.js";
+import { showSalesforceProgress, finishSalesforceProgress } from "../utils/salesforceProgress.js";
 
 await i18n.loadLanguage();
 
@@ -6,8 +8,11 @@ const view = document.getElementById("view");
 let activeSection = "faq";
 let faqEntries = [];
 let technicalEntries = [];
+let archiveEntries = [];
 let articleEntries = [];
+let knowledgeRemoteModifiedAt = null;
 let selectedFilter = "";
+let showArchive = false;
 let comparisonSearch = "";
 let selectedComparisonArticleKeys = [];
 const comparisonArticleInfoDelay = 700;
@@ -24,13 +29,18 @@ function escapeHtml(value) {
 
 function renderViewContent() {
     const isComparison = activeSection === "comparison";
-    const entries = activeSection === "faq" ? faqEntries : technicalEntries;
+    const isArchive = showArchive && !isComparison;
+    const entries = isArchive
+        ? archiveEntries.filter(entry => entry.archiveEntryType === activeSection)
+        : activeSection === "faq" ? faqEntries : technicalEntries;
     const filterOptions = isComparison ? [] : getFilterOptions(entries);
-    const activeLabel = activeSection === "faq"
-        ? i18n.t("knowledge.faq")
-        : activeSection === "technical"
-            ? i18n.t("knowledge.technical")
-            : i18n.t("knowledge.comparison");
+    const activeLabel = isArchive
+        ? `${activeSection === "faq" ? i18n.t("knowledge.faq") : i18n.t("knowledge.technical")} – ${i18n.t("knowledge.archiveView")}`
+        : activeSection === "faq"
+            ? i18n.t("knowledge.faq")
+            : activeSection === "technical"
+                ? i18n.t("knowledge.technical")
+                : i18n.t("knowledge.comparison");
     const entryCount = isComparison
         ? `${getComparisonArticles().length} ${i18n.t("knowledge.articles")}`
         : `${entries.length} ${i18n.t("knowledge.entries")}`;
@@ -64,6 +74,16 @@ function renderViewContent() {
                     </div>
                 `}
                 <div class="knowledge-toolbar-actions">
+                    ${isComparison ? "" : `
+                        <button id="knowledge-archive-toggle" type="button" class="knowledge-secondary">
+                            ${escapeHtml(i18n.t(isArchive ? "knowledge.activeView" : "knowledge.archiveView"))}
+                        </button>
+                    `}
+                    ${isComparison || isArchive ? "" : `
+                        <button id="knowledge-new-button" type="button" class="knowledge-primary">
+                            ${i18n.t("knowledge.new")}
+                        </button>
+                    `}
                     <button id="knowledge-salesforce-sync-button" type="button" class="knowledge-secondary">
                         ${i18n.t("knowledge.salesforceSync")}
                     </button>
@@ -91,6 +111,7 @@ function renderViewContent() {
         button.addEventListener("click", () => {
             activeSection = button.dataset.knowledgeSection;
             selectedFilter = "";
+            showArchive = false;
             renderViewContent();
         });
     });
@@ -100,6 +121,15 @@ function renderViewContent() {
             selectedFilter = event.target.value;
             renderFilteredEntries();
         });
+        document.getElementById("knowledge-archive-toggle").addEventListener("click", () => {
+            showArchive = !showArchive;
+            selectedFilter = "";
+            renderViewContent();
+        });
+        document.getElementById("knowledge-new-button")?.addEventListener("click", () => {
+            openKnowledgeEditor(activeSection);
+        });
+        bindKnowledgeEntryActions();
     }
     document.getElementById("knowledge-import-button").addEventListener("click", () => {
         document.getElementById("knowledge-import-file").click();
@@ -134,7 +164,9 @@ function getFilterOptions(entries) {
 
 function getFilteredEntries() {
     const search = String(document.getElementById("knowledge-search")?.value || "").trim().toLocaleLowerCase();
-    const entries = activeSection === "faq" ? faqEntries : technicalEntries;
+    const entries = showArchive
+        ? archiveEntries.filter(entry => entry.archiveEntryType === activeSection)
+        : activeSection === "faq" ? faqEntries : technicalEntries;
     return entries.filter(entry => {
         const values = activeSection === "faq"
             ? [entry.question, entry.answer, entry.category, entry.articleReferences, entry.deviceTypes, entry.tags, entry.source]
@@ -148,6 +180,7 @@ function getFilteredEntries() {
 function renderFilteredEntries() {
     const list = document.getElementById("knowledge-list");
     if (list) list.innerHTML = renderEntries(getFilteredEntries());
+    bindKnowledgeEntryActions();
     const count = document.querySelector(".knowledge-list-header span");
     if (count) count.textContent = `${getFilteredEntries().length} ${i18n.t("knowledge.entries")}`;
 }
@@ -158,7 +191,7 @@ function renderEntries(entries) {
         return `<div class="knowledge-empty">${i18n.t(activeSection === "faq" ? "knowledge.noFaq" : "knowledge.noTechnical")}</div>`;
     }
     return activeSection === "faq"
-        ? entries.map(renderFaqEntry).join("")
+        ? entries.map(showArchive ? renderArchivedFaqEntry : renderFaqEntry).join("")
         : `<div class="knowledge-table-wrapper"><table class="knowledge-table">
             <thead><tr>
                 <th>${i18n.t("knowledge.articleNumber")}</th>
@@ -167,8 +200,9 @@ function renderEntries(entries) {
                 <th>${i18n.t("knowledge.value")}</th>
                 <th>${i18n.t("knowledge.unit")}</th>
                 <th>${i18n.t("knowledge.source")}</th>
+                <th>${i18n.t("knowledge.actions")}</th>
             </tr></thead>
-            <tbody>${entries.map(renderTechnicalEntry).join("")}</tbody>
+            <tbody>${entries.map(showArchive ? renderArchivedTechnicalEntry : renderTechnicalEntry).join("")}</tbody>
         </table></div>`;
 }
 
@@ -742,10 +776,17 @@ function positionComparisonArticleInfoCard(card, articleElement, pointerPosition
 function renderFaqEntry(entry) {
     const context = [entry.category, entry.articleReferences, entry.deviceTypes].filter(Boolean).join(" · ");
     return `
-        <details class="knowledge-faq-entry">
+        <details class="knowledge-faq-entry" data-knowledge-entry-id="${escapeHtml(entry.id)}">
             <summary>
-                <span class="knowledge-faq-question">${escapeHtml(entry.question)}</span>
+                <span class="knowledge-faq-question-wrap">
+                    <span class="knowledge-faq-question">${escapeHtml(entry.question)}</span>
+                    ${isNewKnowledgeEntry(entry) ? `<span class="knowledge-new-badge">${escapeHtml(i18n.t("knowledge.newLabel"))}</span>` : ""}
+                </span>
                 ${context ? `<span class="knowledge-faq-context">${escapeHtml(context)}</span>` : ""}
+                <span class="knowledge-entry-actions">
+                    <button type="button" class="knowledge-row-action" data-knowledge-edit="faq" data-knowledge-id="${escapeHtml(entry.id)}">${escapeHtml(i18n.t("knowledge.edit"))}</button>
+                    <button type="button" class="knowledge-row-action knowledge-row-action-archive" data-knowledge-archive="faq" data-knowledge-id="${escapeHtml(entry.id)}">${escapeHtml(i18n.t("knowledge.archive"))}</button>
+                </span>
             </summary>
             <div class="knowledge-faq-answer">${escapeHtml(entry.answer)}</div>
             ${entry.tags || entry.source ? `<div class="knowledge-faq-meta">
@@ -757,14 +798,672 @@ function renderFaqEntry(entry) {
 }
 
 function renderTechnicalEntry(entry) {
+    const articleName = getKnowledgeArticleName(entry);
     return `<tr>
         <td>${escapeHtml(entry.articleNumber)}</td>
-        <td>${escapeHtml(entry.deviceType)}</td>
+        <td>${renderKnowledgeDeviceLabel(entry, articleName)}</td>
         <td><strong>${escapeHtml(entry.parameter)}</strong>${entry.category ? `<small>${escapeHtml(entry.category)}</small>` : ""}</td>
         <td>${escapeHtml(entry.value)}${entry.notes ? `<small>${escapeHtml(entry.notes)}</small>` : ""}</td>
         <td>${escapeHtml(entry.unit)}</td>
         <td>${escapeHtml(entry.source)}</td>
+        <td class="knowledge-entry-actions-cell">
+            <button type="button" class="knowledge-row-action" data-knowledge-edit="technical" data-knowledge-id="${escapeHtml(entry.id)}">${escapeHtml(i18n.t("knowledge.edit"))}</button>
+            <button type="button" class="knowledge-row-action knowledge-row-action-archive" data-knowledge-archive="technical" data-knowledge-id="${escapeHtml(entry.id)}">${escapeHtml(i18n.t("knowledge.archive"))}</button>
+        </td>
     </tr>`;
+}
+
+function renderArchivedFaqEntry(entry) {
+    const context = [entry.category, entry.articleReferences, entry.deviceTypes].filter(Boolean).join(" · ");
+    return `
+        <details class="knowledge-faq-entry knowledge-archived-entry">
+            <summary>
+                <span class="knowledge-faq-question-wrap">
+                    <span class="knowledge-faq-question">${escapeHtml(entry.question)}</span>
+                    <span class="knowledge-archived-badge">${escapeHtml(i18n.t("knowledge.archived"))}</span>
+                </span>
+                ${context ? `<span class="knowledge-faq-context">${escapeHtml(context)}</span>` : ""}
+                <span class="knowledge-entry-actions">
+                    <button type="button" class="knowledge-row-action" data-knowledge-restore="${escapeHtml(entry.archiveId)}">
+                        ${escapeHtml(i18n.t("knowledge.restore"))}
+                    </button>
+                </span>
+            </summary>
+            <div class="knowledge-faq-answer">${escapeHtml(entry.answer)}</div>
+            <div class="knowledge-faq-meta">
+                ${entry.tags ? `<span><strong>${i18n.t("knowledge.tags")}:</strong> ${escapeHtml(entry.tags)}</span>` : ""}
+                ${entry.source ? `<span><strong>${i18n.t("knowledge.source")}:</strong> ${escapeHtml(entry.source)}</span>` : ""}
+                <span><strong>${i18n.t("knowledge.archivedAt")}:</strong> ${escapeHtml(formatKnowledgeArchiveDate(entry.archivedAt))}</span>
+            </div>
+        </details>
+    `;
+}
+
+function renderArchivedTechnicalEntry(entry) {
+    const articleName = getKnowledgeArticleName(entry);
+    return `<tr class="knowledge-archived-entry">
+        <td>${escapeHtml(entry.articleNumber)}</td>
+        <td>${renderKnowledgeDeviceLabel(entry, articleName)}</td>
+        <td><strong>${escapeHtml(entry.parameter)}</strong>${entry.category ? `<small>${escapeHtml(entry.category)}</small>` : ""}</td>
+        <td>${escapeHtml(entry.value)}${entry.notes ? `<small>${escapeHtml(entry.notes)}</small>` : ""}</td>
+        <td>${escapeHtml(entry.unit)}</td>
+        <td>${escapeHtml(entry.source)}${entry.archivedAt ? `<small>${escapeHtml(formatKnowledgeArchiveDate(entry.archivedAt))}</small>` : ""}</td>
+        <td class="knowledge-entry-actions-cell">
+            <button type="button" class="knowledge-row-action" data-knowledge-restore="${escapeHtml(entry.archiveId)}">
+                ${escapeHtml(i18n.t("knowledge.restore"))}
+            </button>
+        </td>
+    </tr>`;
+}
+
+function getKnowledgeArticle(entry) {
+    const articleNumber = String(entry?.articleNumber || "").split(/[;,]/)[0].trim();
+    if (!articleNumber) return null;
+    return articleEntries.find(article => String(article.articleNumber || "").trim() === articleNumber) || null;
+}
+
+function getKnowledgeArticleName(entry) {
+    const article = getKnowledgeArticle(entry);
+    return String(article?.manufacturerType || article?.name || "").trim();
+}
+
+function renderKnowledgeDeviceLabel(entry, articleName = getKnowledgeArticleName(entry)) {
+    const deviceType = String(entry?.deviceType || "").trim();
+    if (!articleName || articleName === deviceType) return escapeHtml(deviceType);
+    return `<strong class="knowledge-article-name">${escapeHtml(articleName)}</strong><small class="knowledge-device-type">${escapeHtml(deviceType)}</small>`;
+}
+
+function formatKnowledgeArchiveDate(value) {
+    return formatKnowledgeSalesforceDate(value) || String(value || "");
+}
+
+function isNewKnowledgeEntry(entry) {
+    const createdAt = Date.parse(entry.createdAt || entry.updatedAt || "");
+    if (!Number.isFinite(createdAt)) return false;
+    const age = Date.now() - createdAt;
+    return age >= 0 && age <= 28 * 24 * 60 * 60 * 1000;
+}
+
+function bindKnowledgeEntryActions() {
+    document.querySelectorAll("[data-knowledge-edit]").forEach(button => {
+        button.addEventListener("click", event => {
+            event.preventDefault();
+            event.stopPropagation();
+            const entryType = button.dataset.knowledgeEdit;
+            const id = Number(button.dataset.knowledgeId);
+            if (entryType === "faq") {
+                openFaqEditor(faqEntries.find(entry => Number(entry.id) === id) || null);
+            } else {
+                openTechnicalEditor(technicalEntries.find(entry => Number(entry.id) === id) || null);
+            }
+        });
+    });
+    document.querySelectorAll("[data-knowledge-archive]").forEach(button => {
+        button.addEventListener("click", async event => {
+            event.preventDefault();
+            event.stopPropagation();
+            await archiveKnowledgeEntry(button.dataset.knowledgeArchive, Number(button.dataset.knowledgeId));
+        });
+    });
+    document.querySelectorAll("[data-knowledge-restore]").forEach(button => {
+        button.addEventListener("click", async event => {
+            event.preventDefault();
+            event.stopPropagation();
+            await restoreKnowledgeEntry(Number(button.dataset.knowledgeRestore));
+        });
+    });
+}
+
+function closeKnowledgeEditor(overlay) {
+    overlay?.remove();
+}
+
+function showKnowledgeMutationStatus(result) {
+    const status = document.getElementById("knowledge-status");
+    if (!status) return;
+    status.classList.remove("is-error", "is-warning");
+    if (result.synced) {
+        status.textContent = i18n.t("knowledge.savedAndSynced");
+        return;
+    }
+    status.textContent = [
+        i18n.t("knowledge.savedLocally"),
+        result.syncError || i18n.t("knowledge.syncPending")
+    ].filter(Boolean).join(" ");
+    status.classList.add(result.conflict ? "is-error" : "is-warning");
+}
+
+function rememberKnowledgeRemoteVersion(result) {
+    if (result?.remoteModifiedAt) knowledgeRemoteModifiedAt = result.remoteModifiedAt;
+    else if (result?.localModifiedAt) knowledgeRemoteModifiedAt = result.localModifiedAt;
+}
+
+const faqConflictFields = [
+    ["question", "knowledge.question"],
+    ["answer", "knowledge.answer"],
+    ["category", "knowledge.category"],
+    ["articleReferences", "knowledge.articleReferences"],
+    ["deviceTypes", "knowledge.deviceTypes"],
+    ["tags", "knowledge.tags"],
+    ["source", "knowledge.source"],
+    ["active", "knowledge.active"]
+];
+
+function conflictText(value) {
+    if (typeof value === "boolean") return value ? "Ja" : "Nein";
+    const normalized = String(value ?? "").trim();
+    return normalized || i18n.t("knowledge.conflictEmpty");
+}
+
+function conflictValuesEqual(left, right) {
+    if (left === right) return true;
+    if (typeof left === "boolean" || typeof right === "boolean") {
+        return Boolean(left === true || left === 1 || left === "1") === Boolean(right === true || right === 1 || right === "1");
+    }
+    return String(left ?? "").trim() === String(right ?? "").trim();
+}
+
+function renderConflictField(field, localValue, remoteValue, remoteAvailable) {
+    const different = remoteAvailable && !conflictValuesEqual(localValue, remoteValue);
+    return `
+        <div class="knowledge-conflict-field ${different ? "is-different" : ""}">
+            <div class="knowledge-conflict-field-header">
+                <strong>${escapeHtml(i18n.t(field[1]))}</strong>
+                <select data-conflict-choice="${escapeHtml(field[0])}">
+                    <option value="local">${escapeHtml(i18n.t("knowledge.conflictChoiceLocal"))}</option>
+                    <option value="remote" ${remoteAvailable ? "" : "disabled"}>${escapeHtml(i18n.t("knowledge.conflictChoiceRemote"))}</option>
+                </select>
+            </div>
+            <div class="knowledge-conflict-values">
+                <div><span>${escapeHtml(i18n.t("knowledge.conflictLocal"))}</span><p>${escapeHtml(conflictText(localValue))}</p></div>
+                <div><span>${escapeHtml(i18n.t("knowledge.conflictRemote"))}</span><p>${escapeHtml(remoteAvailable ? conflictText(remoteValue) : i18n.t("knowledge.conflictNoRemote"))}</p></div>
+            </div>
+        </div>
+    `;
+}
+
+function technicalConflictKey(entry) {
+    return [entry?.category, entry?.parameter, entry?.unit]
+        .map(value => String(value || "").trim().toLocaleLowerCase())
+        .join("\u001f");
+}
+
+function technicalConflictEntries(payload, result) {
+    const localEntries = Array.isArray(payload?.entries) ? payload.entries : [];
+    const baselineEntries = Array.isArray(payload?.baselineEntries) ? payload.baselineEntries : [];
+    const remoteEntries = Array.isArray(result?.remoteEntries?.technical) ? result.remoteEntries.technical : [];
+    const articleNumber = String(localEntries[0]?.articleNumber || "").trim();
+    const deviceType = String(localEntries[0]?.deviceType || "").trim();
+    const filteredRemote = remoteEntries.filter(entry => articleNumber
+        ? String(entry.articleNumber || "").trim() === articleNumber
+        : String(entry.deviceType || "").trim() === deviceType);
+    const rows = new Map();
+    localEntries.forEach(entry => rows.set(`local:${technicalConflictKey(entry)}`, { local: entry, remote: null }));
+    baselineEntries.forEach(entry => {
+        const stillPresent = localEntries.some(local => String(local.id || "") && String(local.id) === String(entry.id));
+        if (!stillPresent) rows.set(`baseline:${technicalConflictKey(entry)}`, { local: null, baseline: entry, remote: null });
+    });
+    filteredRemote.forEach(entry => {
+        const key = `remote:${technicalConflictKey(entry)}`;
+        const sameLocal = localEntries.find(local => technicalConflictKey(local) === technicalConflictKey(entry));
+        if (sameLocal) {
+            rows.delete(`local:${technicalConflictKey(sameLocal)}`);
+            rows.set(`same:${technicalConflictKey(entry)}`, { local: sameLocal, remote: entry });
+        } else {
+            const baselineKey = `baseline:${technicalConflictKey(entry)}`;
+            if (rows.has(baselineKey)) {
+                rows.get(baselineKey).remote = entry;
+            } else {
+                rows.set(key, { local: null, remote: entry });
+            }
+        }
+    });
+    return [...rows.values()];
+}
+
+function renderTechnicalConflictRow(row, index) {
+    const localAvailable = Boolean(row.local);
+    const localChoiceAvailable = localAvailable || Boolean(row.baseline);
+    const remoteAvailable = Boolean(row.remote);
+    const localLabel = row.local
+        ? [row.local.parameter, row.local.value, row.local.unit].filter(Boolean).join(" · ")
+        : i18n.t("knowledge.conflictNoLocal");
+    const remoteLabel = row.remote
+        ? [row.remote.parameter, row.remote.value, row.remote.unit].filter(Boolean).join(" · ")
+        : i18n.t("knowledge.conflictNoRemote");
+    const different = localAvailable && remoteAvailable && !conflictValuesEqual(localLabel, remoteLabel);
+    return `
+        <div class="knowledge-conflict-field knowledge-conflict-technical-row ${different ? "is-different" : ""}">
+            <div class="knowledge-conflict-field-header">
+                <strong>${escapeHtml(i18n.t("knowledge.characteristics"))} ${index + 1}</strong>
+                <select data-conflict-technical-choice="${index}">
+                    <option value="local" ${localChoiceAvailable ? "" : "disabled"}>${escapeHtml(i18n.t("knowledge.conflictChoiceLocal"))}</option>
+                    <option value="remote" ${remoteAvailable ? "" : "disabled"} ${!localAvailable && remoteAvailable ? "selected" : ""}>${escapeHtml(i18n.t("knowledge.conflictChoiceRemote"))}</option>
+                </select>
+            </div>
+            <div class="knowledge-conflict-values">
+                <div><span>${escapeHtml(i18n.t("knowledge.conflictLocal"))}</span><p>${escapeHtml(localLabel)}</p></div>
+                <div><span>${escapeHtml(i18n.t("knowledge.conflictRemote"))}</span><p>${escapeHtml(remoteLabel)}</p></div>
+            </div>
+        </div>
+    `;
+}
+
+function findConflictFaq(payload, result) {
+    const remoteEntries = Array.isArray(result?.remoteEntries?.faq) ? result.remoteEntries.faq : [];
+    return remoteEntries.find(entry => payload.externalId && entry.externalId === payload.externalId)
+        || remoteEntries.find(entry => payload.question && entry.question === payload.question)
+        || null;
+}
+
+function openKnowledgeConflict({ url, method, payload, result }) {
+    const operation = result.operation || (url.includes("/faq") ? "faq" : "technical");
+    const isFaq = operation === "faq";
+    const remoteFaq = isFaq ? findConflictFaq(payload, result) : null;
+    const technicalRows = isFaq ? [] : technicalConflictEntries(payload, result);
+    const overlay = document.createElement("div");
+    overlay.className = "knowledge-editor-backdrop";
+    overlay.innerHTML = `
+        <form class="knowledge-editor knowledge-conflict-editor" role="dialog" aria-modal="true">
+            <div class="knowledge-editor-header">
+                <h2>${escapeHtml(i18n.t("knowledge.conflictTitle"))}</h2>
+                <button type="button" class="knowledge-editor-close" data-action="cancel" aria-label="${escapeHtml(i18n.t("common.close"))}">×</button>
+            </div>
+            <div class="knowledge-editor-body">
+                <p class="knowledge-conflict-description">${escapeHtml(i18n.t("knowledge.conflictDescription"))}</p>
+                ${isFaq
+                    ? `<div class="knowledge-conflict-list">${faqConflictFields.map(field => renderConflictField(field, payload[field[0]], remoteFaq?.[field[0]], Boolean(remoteFaq))).join("")}</div>`
+                    : `<div class="knowledge-conflict-list">${technicalRows.length ? technicalRows.map(renderTechnicalConflictRow).join("") : `<p>${escapeHtml(i18n.t("knowledge.conflictNoTechnical"))}</p>`}</div>`}
+                <p class="knowledge-editor-error" data-role="editor-error" role="alert"></p>
+            </div>
+            <div class="knowledge-editor-actions">
+                <button type="button" class="knowledge-secondary" data-action="cancel">${escapeHtml(i18n.t("common.cancel"))}</button>
+                <button type="submit" class="knowledge-primary">${escapeHtml(i18n.t("knowledge.conflictResolve"))}</button>
+            </div>
+        </form>
+    `;
+    const form = overlay.querySelector("form");
+    overlay.querySelectorAll('[data-action="cancel"]').forEach(button => button.addEventListener("click", () => closeKnowledgeEditor(overlay)));
+    overlay.addEventListener("mousedown", event => {
+        if (event.target === overlay) closeKnowledgeEditor(overlay);
+    });
+    form.addEventListener("submit", event => {
+        event.preventDefault();
+        let merged;
+        if (isFaq) {
+            merged = { ...payload };
+            faqConflictFields.forEach(([key]) => {
+                const choice = form.querySelector(`[data-conflict-choice="${key}"]`)?.value;
+                if (choice === "remote" && remoteFaq) merged[key] = remoteFaq[key];
+            });
+        } else {
+            const rowsByIndex = form.querySelectorAll("[data-conflict-technical-choice]");
+            const removedIds = new Set(Array.isArray(payload.removedIds) ? payload.removedIds.map(String) : []);
+            const entries = [];
+            technicalRows.forEach((row, index) => {
+                const choice = rowsByIndex[index]?.value || (row.local ? "local" : "remote");
+                const selected = choice === "remote" ? row.remote : row.local;
+                if (selected) {
+                    const localId = row.local?.id || "";
+                    entries.push({ ...selected, id: localId || selected.id || "" });
+                } else if (row.local?.id || row.baseline?.id) {
+                    removedIds.add(String(row.local?.id || row.baseline.id));
+                }
+            });
+            merged = { ...payload, entries, removedIds: [...removedIds] };
+        }
+        merged.force = true;
+        merged.baselineRemoteModifiedAt = result.remoteModifiedAt || payload.baselineRemoteModifiedAt || "";
+        submitKnowledgeMutation({ overlay, url, method, payload: merged });
+    });
+    document.body.appendChild(overlay);
+}
+
+async function submitKnowledgeMutation({ overlay, url, method, payload }) {
+    const form = overlay.querySelector("form");
+    const submitButton = form?.querySelector("[type=submit]");
+    const errorElement = form?.querySelector("[data-role=editor-error]");
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = i18n.t("knowledge.saving");
+    }
+    if (errorElement) errorElement.textContent = "";
+    try {
+        const response = await fetch(url, {
+            method,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const result = await response.json().catch(() => ({}));
+        if (result.conflict) {
+            closeKnowledgeEditor(overlay);
+            openKnowledgeConflict({ url, method, payload, result });
+            return;
+        }
+        if (!result.success) throw new Error(result.error || i18n.t("knowledge.saveFailed"));
+        rememberKnowledgeRemoteVersion(result);
+        closeKnowledgeEditor(overlay);
+        await loadEntries();
+        renderViewContent();
+        showKnowledgeMutationStatus(result);
+    } catch (error) {
+        if (errorElement) errorElement.textContent = error.message || i18n.t("knowledge.saveFailed");
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = i18n.t("knowledge.save");
+        }
+    }
+}
+
+function openKnowledgeEditor(section) {
+    if (section === "faq") openFaqEditor();
+    if (section === "technical") openTechnicalEditor();
+}
+
+function splitKnowledgeChipValues(value, separator = /[;,]/) {
+    return [...new Set(String(value || "")
+        .split(separator)
+        .map(item => item.trim())
+        .filter(Boolean))];
+}
+
+function renderKnowledgeChipField({ name, label, value, separator = "default", field = "" }) {
+    const separatorPattern = separator === "semicolon" ? /;/ : /[;,]/;
+    const values = splitKnowledgeChipValues(value, separatorPattern);
+    return `
+        <div class="knowledge-chip-field" data-chip-field data-chip-name="${escapeHtml(name)}" data-chip-separator="${escapeHtml(separator)}">
+            <span class="knowledge-chip-field-label">${escapeHtml(label)}</span>
+            <div class="knowledge-chip-list" data-chip-list>
+                ${values.map(item => `
+                    <span class="knowledge-chip">
+                        <span class="knowledge-chip-text">${escapeHtml(item)}</span>
+                        <button type="button" class="knowledge-chip-remove" data-chip-remove aria-label="${escapeHtml(i18n.t("knowledge.remove"))}">−</button>
+                    </span>
+                `).join("")}
+            </div>
+            <div class="knowledge-chip-add-row">
+                <input type="text" data-chip-input placeholder="${escapeHtml(i18n.t("knowledge.addPlaceholder"))}">
+                <button type="button" class="knowledge-secondary" data-chip-add>${escapeHtml(i18n.t("knowledge.add"))}</button>
+            </div>
+            <input type="hidden" name="${escapeHtml(name)}" value="${escapeHtml(values.join("; "))}" data-chip-hidden ${field ? `data-field="${escapeHtml(field)}"` : ""}>
+        </div>
+    `;
+}
+
+function bindKnowledgeChipFields(overlay) {
+    overlay.querySelectorAll("[data-chip-field]").forEach(field => {
+        const list = field.querySelector("[data-chip-list]");
+        const input = field.querySelector("[data-chip-input]");
+        const hidden = field.querySelector("[data-chip-hidden]");
+        const separator = field.dataset.chipSeparator === "semicolon" ? /;/ : /[;,]/;
+        const render = values => {
+            const uniqueValues = [...new Set(values.map(item => String(item || "").trim()).filter(Boolean))];
+            list.innerHTML = uniqueValues.map(item => `
+                <span class="knowledge-chip">
+                    <span class="knowledge-chip-text">${escapeHtml(item)}</span>
+                    <button type="button" class="knowledge-chip-remove" data-chip-remove aria-label="${escapeHtml(i18n.t("knowledge.remove"))}">−</button>
+                </span>
+            `).join("");
+            hidden.value = uniqueValues.join("; ");
+        };
+        const currentValues = () => [...list.querySelectorAll(".knowledge-chip-text")].map(element => element.textContent);
+        const addValues = rawValue => {
+            const values = splitKnowledgeChipValues(rawValue, separator);
+            if (!values.length) return;
+            render([...currentValues(), ...values]);
+            input.value = "";
+            input.focus();
+        };
+        field.querySelector("[data-chip-add]").addEventListener("click", () => addValues(input.value));
+        input.addEventListener("keydown", event => {
+            if (event.key === "Enter" || event.key === ";") {
+                event.preventDefault();
+                addValues(input.value);
+            }
+        });
+        list.addEventListener("click", event => {
+            const removeButton = event.target.closest("[data-chip-remove]");
+            if (!removeButton) return;
+            event.preventDefault();
+            const chip = removeButton.closest(".knowledge-chip");
+            const removedValue = chip?.querySelector(".knowledge-chip-text")?.textContent;
+            render(currentValues().filter(value => value !== removedValue));
+        });
+    });
+}
+
+function openFaqEditor(entry = null) {
+    const overlay = document.createElement("div");
+    overlay.className = "knowledge-editor-backdrop";
+    overlay.innerHTML = `
+        <form class="knowledge-editor knowledge-faq-editor" role="dialog" aria-modal="true">
+            <div class="knowledge-editor-header">
+                <h2>${escapeHtml(entry ? i18n.t("knowledge.editFaq") : i18n.t("knowledge.newFaq"))}</h2>
+                <button type="button" class="knowledge-editor-close" data-action="cancel" aria-label="${escapeHtml(i18n.t("common.close"))}">×</button>
+            </div>
+            <div class="knowledge-editor-body">
+                <label><span>${escapeHtml(i18n.t("knowledge.question"))}</span><input name="question" required value="${escapeHtml(entry?.question)}"></label>
+                <label><span>${escapeHtml(i18n.t("knowledge.answer"))}</span><textarea name="answer" required rows="7">${escapeHtml(entry?.answer)}</textarea></label>
+                <div class="knowledge-editor-grid">
+                    <label><span>${escapeHtml(i18n.t("knowledge.category"))}</span><input name="category" value="${escapeHtml(entry?.category)}"></label>
+                    ${renderKnowledgeChipField({ name: "articleReferences", label: i18n.t("knowledge.articleReferences"), value: entry?.articleReferences })}
+                    ${renderKnowledgeChipField({ name: "deviceTypes", label: i18n.t("knowledge.deviceTypes"), value: entry?.deviceTypes })}
+                    ${renderKnowledgeChipField({ name: "tags", label: i18n.t("knowledge.tags"), value: entry?.tags })}
+                    ${renderKnowledgeChipField({ name: "source", label: i18n.t("knowledge.source"), value: entry?.source, separator: "semicolon" })}
+                    <label class="knowledge-editor-checkbox"><input type="checkbox" name="active" ${entry?.active === 0 ? "" : "checked"}> <span>${escapeHtml(i18n.t("knowledge.active"))}</span></label>
+                </div>
+                <p class="knowledge-editor-error" data-role="editor-error" role="alert"></p>
+            </div>
+            <div class="knowledge-editor-actions">
+                <button type="button" class="knowledge-secondary" data-action="cancel">${escapeHtml(i18n.t("common.cancel"))}</button>
+                <button type="submit" class="knowledge-primary">${escapeHtml(i18n.t("knowledge.save"))}</button>
+            </div>
+        </form>
+    `;
+    const form = overlay.querySelector("form");
+    bindKnowledgeChipFields(overlay);
+    overlay.querySelectorAll('[data-action="cancel"]').forEach(button => button.addEventListener("click", () => closeKnowledgeEditor(overlay)));
+    overlay.addEventListener("mousedown", event => {
+        if (event.target === overlay) closeKnowledgeEditor(overlay);
+    });
+    form.addEventListener("submit", event => {
+        event.preventDefault();
+        const values = Object.fromEntries(new FormData(form));
+        values.active = form.elements.active.checked;
+        values.externalId = entry?.externalId || "";
+        values.id = entry?.id || "";
+        values.baselineRemoteModifiedAt = knowledgeRemoteModifiedAt || "";
+        values.baselineEntry = entry ? { ...entry } : null;
+        submitKnowledgeMutation({
+            overlay,
+            url: entry ? `/api/knowledge/faq/${entry.id}` : "/api/knowledge/faq",
+            method: entry ? "PUT" : "POST",
+            payload: values
+        });
+    });
+    document.body.appendChild(overlay);
+    form.elements.question.focus();
+}
+
+function technicalGroupForEntry(entry) {
+    if (!entry) return [];
+    const articleNumber = String(entry.articleNumber || "").trim();
+    if (articleNumber) {
+        return technicalEntries.filter(item => String(item.articleNumber || "").trim() === articleNumber);
+    }
+    return technicalEntries.filter(item => String(item.deviceType || "").trim() === String(entry.deviceType || "").trim());
+}
+
+function renderTechnicalEditorRow(entry = {}) {
+    return `
+        <div class="knowledge-technical-editor-row" data-technical-row>
+            <input type="hidden" data-field="id" value="${escapeHtml(entry.id)}">
+            <input type="hidden" data-field="category" value="${escapeHtml(entry.category)}">
+            <label><span>${escapeHtml(i18n.t("knowledge.parameter"))}</span><input data-field="parameter" required value="${escapeHtml(entry.parameter)}"></label>
+            <label><span>${escapeHtml(i18n.t("knowledge.value"))}</span><input data-field="value" required value="${escapeHtml(entry.value)}"></label>
+            <label><span>${escapeHtml(i18n.t("knowledge.unit"))}</span><input data-field="unit" value="${escapeHtml(entry.unit)}"></label>
+            ${renderKnowledgeChipField({ name: "source", field: "source", label: i18n.t("knowledge.source"), value: entry.source, separator: "semicolon" })}
+            <label><span>${escapeHtml(i18n.t("knowledge.notes"))}</span><input data-field="notes" value="${escapeHtml(entry.notes)}"></label>
+            <button type="button" class="knowledge-row-action knowledge-row-action-archive" data-action="remove-technical-row">${escapeHtml(i18n.t("knowledge.archive"))}</button>
+        </div>
+    `;
+}
+
+function openTechnicalEditor(entry = null) {
+    const rows = entry ? technicalGroupForEntry(entry) : [{}];
+    const articleName = getKnowledgeArticleName(entry);
+    const overlay = document.createElement("div");
+    overlay.className = "knowledge-editor-backdrop";
+    overlay.innerHTML = `
+        <form class="knowledge-editor knowledge-technical-editor" role="dialog" aria-modal="true">
+            <div class="knowledge-editor-header">
+                <h2>${escapeHtml(entry ? i18n.t("knowledge.editTechnical") : i18n.t("knowledge.newTechnical"))}</h2>
+                <button type="button" class="knowledge-editor-close" data-action="cancel" aria-label="${escapeHtml(i18n.t("common.close"))}">×</button>
+            </div>
+            <div class="knowledge-editor-body">
+                <div class="knowledge-editor-grid">
+                    <label><span>${escapeHtml(i18n.t("knowledge.articleNumber"))}</span><input name="articleNumber" value="${escapeHtml(entry?.articleNumber)}" ${entry ? "readonly" : ""}>${articleName ? `<small class="knowledge-article-name-hint">${escapeHtml(i18n.t("knowledge.articleName"))}: ${escapeHtml(articleName)}</small>` : ""}</label>
+                    <label><span>${escapeHtml(i18n.t("knowledge.deviceType"))}</span><input name="deviceType" value="${escapeHtml(entry?.deviceType)}"></label>
+                </div>
+                <div class="knowledge-technical-editor-heading">
+                    <strong>${escapeHtml(i18n.t("knowledge.characteristics"))}</strong>
+                    <button type="button" class="knowledge-secondary" data-action="add-technical-row">${escapeHtml(i18n.t("knowledge.addCharacteristic"))}</button>
+                </div>
+                <div class="knowledge-technical-editor-rows" data-role="technical-rows">
+                    ${rows.map(renderTechnicalEditorRow).join("")}
+                </div>
+                <p class="knowledge-editor-error" data-role="editor-error" role="alert"></p>
+            </div>
+            <div class="knowledge-editor-actions">
+                <button type="button" class="knowledge-secondary" data-action="cancel">${escapeHtml(i18n.t("common.cancel"))}</button>
+                <button type="submit" class="knowledge-primary">${escapeHtml(i18n.t("knowledge.save"))}</button>
+            </div>
+        </form>
+    `;
+    const form = overlay.querySelector("form");
+    form._removedTechnicalIds = new Set();
+    form._baselineTechnicalEntries = rows.map(row => ({ ...row }));
+    bindKnowledgeChipFields(overlay);
+    overlay.querySelectorAll('[data-action="cancel"]').forEach(button => button.addEventListener("click", () => closeKnowledgeEditor(overlay)));
+    overlay.addEventListener("mousedown", event => {
+        if (event.target === overlay) closeKnowledgeEditor(overlay);
+    });
+    const bindTechnicalRowActions = () => {
+        overlay.querySelectorAll('[data-action="remove-technical-row"]').forEach(button => {
+            if (button.dataset.bound === "true") return;
+            button.dataset.bound = "true";
+            button.addEventListener("click", () => {
+                const row = button.closest("[data-technical-row]");
+                const id = row?.querySelector('[data-field="id"]')?.value;
+                if (id) form._removedTechnicalIds.add(id);
+                row?.remove();
+            });
+        });
+    };
+    overlay.querySelector('[data-action="add-technical-row"]').addEventListener("click", () => {
+        const rowsContainer = overlay.querySelector('[data-role="technical-rows"]');
+        rowsContainer.insertAdjacentHTML("beforeend", renderTechnicalEditorRow());
+        bindKnowledgeChipFields(rowsContainer.lastElementChild);
+        bindTechnicalRowActions();
+    });
+    bindTechnicalRowActions();
+    form.addEventListener("submit", event => {
+        event.preventDefault();
+        const articleNumber = form.elements.articleNumber.value.trim();
+        const deviceType = form.elements.deviceType.value.trim();
+        const entries = [...overlay.querySelectorAll("[data-technical-row]")].map(row => ({
+            id: row.querySelector('[data-field="id"]')?.value || "",
+            articleNumber,
+            deviceType,
+            category: row.querySelector('[data-field="category"]')?.value.trim() || "",
+            parameter: row.querySelector('[data-field="parameter"]')?.value.trim() || "",
+            value: row.querySelector('[data-field="value"]')?.value.trim() || "",
+            unit: row.querySelector('[data-field="unit"]')?.value.trim() || "",
+            source: row.querySelector('[data-field="source"]')?.value.trim() || "",
+            notes: row.querySelector('[data-field="notes"]')?.value.trim() || ""
+        })).filter(item => item.id || item.parameter || item.value);
+        submitKnowledgeMutation({
+            overlay,
+            url: "/api/knowledge/technical/group",
+            method: "POST",
+            payload: {
+                entries,
+                removedIds: [...form._removedTechnicalIds],
+                baselineEntries: form._baselineTechnicalEntries,
+                baselineRemoteModifiedAt: knowledgeRemoteModifiedAt || ""
+            }
+        });
+    });
+    document.body.appendChild(overlay);
+    form.elements.articleNumber.focus();
+}
+
+async function archiveKnowledgeEntry(entryType, id) {
+    const confirmed = await showConfirm(i18n.t("knowledge.archiveConfirm"), {
+        title: i18n.t("knowledge.archiveGlobalTitle")
+    });
+    if (!confirmed) return;
+    try {
+        const response = await fetch("/api/knowledge/archive", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ entryType, id, baselineRemoteModifiedAt: knowledgeRemoteModifiedAt || "" })
+        });
+        const result = await response.json().catch(() => ({}));
+        rememberKnowledgeRemoteVersion(result);
+        if (result.conflict) {
+            const status = document.getElementById("knowledge-status");
+            if (status) {
+                status.textContent = i18n.t("knowledge.conflictDescription");
+                status.classList.add("is-error");
+            }
+            return;
+        }
+        if (!result.success) throw new Error(result.error || i18n.t("knowledge.archiveFailed"));
+        await loadEntries();
+        renderViewContent();
+        showKnowledgeMutationStatus(result);
+    } catch (error) {
+        const status = document.getElementById("knowledge-status");
+        if (status) {
+            status.textContent = error.message || i18n.t("knowledge.archiveFailed");
+            status.classList.add("is-error");
+        }
+    }
+}
+
+async function restoreKnowledgeEntry(archiveId) {
+    const confirmed = await showConfirm(i18n.t("knowledge.restoreConfirm"), {
+        title: i18n.t("knowledge.restoreGlobalTitle")
+    });
+    if (!confirmed) return;
+    try {
+        const response = await fetch(`/api/knowledge/archive/${encodeURIComponent(archiveId)}/restore`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ baselineRemoteModifiedAt: knowledgeRemoteModifiedAt || "" })
+        });
+        const result = await response.json().catch(() => ({}));
+        rememberKnowledgeRemoteVersion(result);
+        if (result.conflict) {
+            const status = document.getElementById("knowledge-status");
+            if (status) {
+                status.textContent = i18n.t("knowledge.conflictDescription");
+                status.classList.add("is-error");
+            }
+            return;
+        }
+        if (!result.success) throw new Error(result.error || i18n.t("knowledge.restoreFailed"));
+        await loadEntries();
+        renderViewContent();
+        showKnowledgeMutationStatus(result);
+    } catch (error) {
+        const status = document.getElementById("knowledge-status");
+        if (status) {
+            status.textContent = error.message || i18n.t("knowledge.restoreFailed");
+            status.classList.add("is-error");
+        }
+    }
 }
 
 async function importWorkbook(file) {
@@ -850,53 +1549,66 @@ async function refreshSalesforceKnowledge() {
         button.disabled = true;
         button.textContent = i18n.t("knowledge.salesforceSyncRunning");
     }
-    const result = await checkSalesforceKnowledge({ force: true });
-    if (result.updated) {
-        try {
-            await loadEntries();
-            renderViewContent();
-        } catch (error) {
-            const status = document.getElementById("knowledge-status");
-            if (status) {
-                status.textContent = error.message || i18n.t("knowledge.loadFailed");
-                status.classList.add("is-error");
+    const progress = showSalesforceProgress("sync");
+    try {
+        const result = await checkSalesforceKnowledge({ force: true });
+        rememberKnowledgeRemoteVersion(result);
+        if (result.updated) {
+            try {
+                await loadEntries();
+                renderViewContent();
+            } catch (error) {
+                const status = document.getElementById("knowledge-status");
+                if (status) {
+                    status.textContent = error.message || i18n.t("knowledge.loadFailed");
+                    status.classList.add("is-error");
+                }
+                return;
             }
-            const nextButton = document.getElementById("knowledge-salesforce-sync-button");
-            if (nextButton) {
-                nextButton.disabled = false;
-                nextButton.textContent = i18n.t("knowledge.salesforceSync");
-            }
-            return;
         }
-    }
-    showSalesforceSyncStatus(result, { manual: true });
-    const nextButton = document.getElementById("knowledge-salesforce-sync-button");
-    if (nextButton) {
-        nextButton.disabled = false;
-        nextButton.textContent = i18n.t("knowledge.salesforceSync");
+        showSalesforceSyncStatus(result, { manual: true });
+    } finally {
+        await finishSalesforceProgress(progress);
+        const nextButton = document.getElementById("knowledge-salesforce-sync-button");
+        if (nextButton) {
+            nextButton.disabled = false;
+            nextButton.textContent = i18n.t("knowledge.salesforceSync");
+        }
     }
 }
 
 async function loadEntries() {
-    const [faqResponse, technicalResponse, articlesResponse] = await Promise.all([
+    const [faqResponse, technicalResponse, archiveResponse, articlesResponse] = await Promise.all([
         fetch("/api/knowledge?type=faq"),
         fetch("/api/knowledge?type=technical"),
+        fetch("/api/knowledge/archive"),
         fetch("/api/articles")
     ]);
-    if (!faqResponse.ok || !technicalResponse.ok || !articlesResponse.ok) throw new Error(i18n.t("knowledge.loadFailed"));
+    if (!faqResponse.ok || !technicalResponse.ok || !archiveResponse.ok || !articlesResponse.ok) throw new Error(i18n.t("knowledge.loadFailed"));
     faqEntries = await faqResponse.json();
     technicalEntries = await technicalResponse.json();
+    const archiveRows = await archiveResponse.json();
+    archiveEntries = archiveRows.map(row => ({
+        ...(row.record || {}),
+        archiveId: row.id,
+        archiveEntryType: row.entryType,
+        archivedAt: row.archivedAt
+    }));
     articleEntries = await articlesResponse.json();
 }
 
 export async function renderView() {
     view.innerHTML = `<div class="knowledge-loading">${i18n.t("knowledge.loading")}</div>`;
+    const progress = showSalesforceProgress("sync");
     try {
         const salesforceSync = await checkSalesforceKnowledge();
+        rememberKnowledgeRemoteVersion(salesforceSync);
         await loadEntries();
+        await finishSalesforceProgress(progress);
         renderViewContent();
         showSalesforceSyncStatus(salesforceSync);
     } catch (error) {
+        await finishSalesforceProgress(progress);
         view.innerHTML = `<div class="knowledge-loading knowledge-loading-error">${escapeHtml(error.message || i18n.t("knowledge.loadFailed"))}</div>`;
     }
 }

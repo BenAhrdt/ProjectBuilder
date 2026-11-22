@@ -418,16 +418,21 @@ async function preflightKnowledgeMutation(req, operation = "") {
     const canMergeByEntry = ["faq", "technical"].includes(operation);
     if (canMergeByEntry || remoteIsNewer) {
         const remoteEntries = parseKnowledgeWorkbookBuffer(remote.data, remote.modifiedAt);
-        const conflict = detectKnowledgeMutationConflict(operation, req.body || {}, remoteEntries);
-        if (conflict) {
-            return {
-                remote,
-                expectedModifiedAt,
-                forced,
-                conflict: true,
-                remoteEntries,
-                conflictFields: conflict.fields
-            };
+        // A force request is the explicit result of the conflict dialog. The
+        // selected local/remote values must be written now instead of opening
+        // the same conflict dialog again.
+        if (!forced) {
+            const conflict = detectKnowledgeMutationConflict(operation, req.body || {}, remoteEntries);
+            if (conflict) {
+                return {
+                    remote,
+                    expectedModifiedAt,
+                    forced,
+                    conflict: true,
+                    remoteEntries,
+                    conflictFields: conflict.fields
+                };
+            }
         }
         if (canMergeByEntry) {
             return { remote, expectedModifiedAt, forced, autoMerge: true, remoteEntries };

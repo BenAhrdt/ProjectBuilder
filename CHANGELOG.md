@@ -2,6 +2,16 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.79 - 22.11.2026
+
+### Behoben
+
+- Eine bestätigte Auswahl von „Meine Änderung verwenden“ im Konfliktdialog wird
+  jetzt direkt übernommen und nicht erneut als Konflikt gemeldet.
+- Die Release Notes werden beim Update für den ersten Start der neuen Version
+  vorgemerkt und nach dem Neustart einmalig angezeigt. Der Browser wird erst
+  nach dem erfolgreichen Neustart der neuen Anwendung geöffnet.
+
 ## 1.5.78 - 22.11.2026
 
 ### Behoben

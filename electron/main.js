@@ -15,6 +15,11 @@ let projectBuilderUrl = "";
 let updateStatus = { state: "idle", percent: 0 };
 let appLanguage = "de";
 let browserModeEnabled = false;
+let updateInstallRequested = false;
+
+function pendingUpdateNotesPath() {
+    return path.join(app.getPath("userData"), "pending-update-notes.json");
+}
 
 const nativeTexts = {
     de: {
@@ -28,6 +33,8 @@ const nativeTexts = {
         updateReady: "Update bereit",
         downloaded: version => `ProjectBuilder ${version} wurde heruntergeladen.`,
         restartDetail: "Die Anwendung kann jetzt neu gestartet und aktualisiert werden.",
+        updateInstalled: "Update installiert",
+        updateInstalledMessage: version => `ProjectBuilder ${version} wurde aktualisiert.`,
         restart: "Jetzt neu starten",
         backupFolder: "Backup-Ordner auswählen"
     },
@@ -42,6 +49,8 @@ const nativeTexts = {
         updateReady: "Update ready",
         downloaded: version => `ProjectBuilder ${version} has been downloaded.`,
         restartDetail: "The application can now be restarted and updated.",
+        updateInstalled: "Update installed",
+        updateInstalledMessage: version => `ProjectBuilder ${version} has been updated.`,
         restart: "Restart now",
         backupFolder: "Select backup folder"
     },
@@ -56,6 +65,8 @@ const nativeTexts = {
         updateReady: "Actualización lista",
         downloaded: version => `ProjectBuilder ${version} se ha descargado.`,
         restartDetail: "La aplicación ya se puede reiniciar y actualizar.",
+        updateInstalled: "Actualización instalada",
+        updateInstalledMessage: version => `ProjectBuilder ${version} se ha actualizado.`,
         restart: "Reiniciar ahora",
         backupFolder: "Seleccionar carpeta de copia de seguridad"
     }
@@ -92,6 +103,43 @@ function getUpdateDetail(texts, info, baseDetail) {
     return releaseNotes
         ? `${baseDetail}\n\n${texts.changesTitle}:\n${releaseNotes}`
         : `${baseDetail}\n\n${texts.changesUnavailable}`;
+}
+
+async function rememberPendingUpdateNotes(info) {
+    const releaseNotes = getReleaseNotesText(info);
+    try {
+        await fs.promises.writeFile(pendingUpdateNotesPath(), JSON.stringify({
+            version: info?.version || "",
+            releaseNotes
+        }), "utf8");
+    } catch (error) {
+        console.error("Update-Hinweis konnte nicht gespeichert werden:", error);
+    }
+}
+
+async function showPendingUpdateNotes() {
+    const markerPath = pendingUpdateNotesPath();
+    let pending;
+    try {
+        pending = JSON.parse(await fs.promises.readFile(markerPath, "utf8"));
+    } catch {
+        return;
+    }
+    if (!pending?.version || pending.version !== app.getVersion()) return;
+
+    const texts = getNativeTexts();
+    await dialog.showMessageBox(mainWindow, {
+        type: "info",
+        title: texts.updateInstalled,
+        message: texts.updateInstalledMessage(pending.version),
+        detail: pending.releaseNotes
+            ? `${texts.changesTitle}:\n${pending.releaseNotes}`
+            : texts.changesUnavailable,
+        buttons: ["OK"],
+        defaultId: 0,
+        noLink: true
+    });
+    await fs.promises.unlink(markerPath).catch(() => {});
 }
 
 async function checkForUpdates() {
@@ -154,6 +202,7 @@ async function checkForUpdates() {
         updateReadyDialogPromise = (async () => {
             const texts = getNativeTexts();
             const releaseNotes = getReleaseNotesText(info);
+            await rememberPendingUpdateNotes(info);
             mainWindow?.setProgressBar(-1);
             sendUpdateStatus({
                 state: "ready",
@@ -173,7 +222,10 @@ async function checkForUpdates() {
                 noLink: true
             });
 
-            if (result.response === 0) autoUpdater.quitAndInstall(false, true);
+            if (result.response === 0) {
+                updateInstallRequested = true;
+                autoUpdater.quitAndInstall(false, true);
+            }
         })();
         await updateReadyDialogPromise;
     });
@@ -187,6 +239,7 @@ async function checkForUpdates() {
     await autoUpdater.checkForUpdates();
     await updateDialogPromise;
     await updateReadyDialogPromise;
+    return updateInstallRequested;
 }
 
 async function createWindow() {
@@ -246,8 +299,13 @@ async function createWindow() {
 
     await mainWindow.loadURL(projectBuilderUrl);
     setTimeout(async () => {
-        await checkForUpdates().catch(console.error);
-        if (browserModeEnabled && mainWindow && !mainWindow.isDestroyed()) {
+        const installingUpdate = await checkForUpdates().catch(error => {
+            console.error(error);
+            return false;
+        });
+        if (installingUpdate || updateInstallRequested || app.isQuitting) return;
+        await showPendingUpdateNotes();
+        if (browserModeEnabled && mainWindow && !mainWindow.isDestroyed() && !app.isQuitting) {
             await shell.openExternal(projectBuilderUrl);
             mainWindow.minimize();
         }

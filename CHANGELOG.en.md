@@ -2,6 +2,16 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.79 - 2026-11-22
+
+### Fixed
+
+- A confirmed “Use my change” choice in the conflict dialog is now applied
+  directly instead of being reported as a conflict again.
+- Release notes are stored for the first start of the new version and shown
+  once after restart. The browser is opened only after the new application has
+  started successfully.
+
 ## 1.5.78 - 2026-11-22
 
 ### Fixed

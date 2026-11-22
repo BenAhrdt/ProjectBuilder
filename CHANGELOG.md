@@ -2,6 +2,16 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.77 - 22.11.2026
+
+### Behoben
+
+- Beim parallelen Speichern wird jetzt immer der aktuelle Salesforce-Stand als
+  Zusammenführungsbasis verwendet, auch wenn der Salesforce-Dateizeitstempel
+  bei sehr schnellen Änderungen unverändert bleibt. Dadurch werden Änderungen
+  an anderen FAQ-Einträgen oder Feldern nicht mehr durch eine alte Browseransicht
+  überschrieben.
+
 ## 1.5.76 - 22.11.2026
 
 ### Neu

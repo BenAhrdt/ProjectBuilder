@@ -415,22 +415,26 @@ async function preflightKnowledgeMutation(req, operation = "") {
     const expectedModifiedAt = text(req.body?.baselineRemoteModifiedAt) || getSalesforceLastModifiedAt();
     const remoteIsNewer = Boolean(expectedModifiedAt && remote.modifiedAt
         && isRemoteVersionNewer(remote.modifiedAt, expectedModifiedAt));
-    if (!remoteIsNewer) return { remote, expectedModifiedAt, forced };
-
-    const remoteEntries = parseKnowledgeWorkbookBuffer(remote.data, remote.modifiedAt);
-    const conflict = detectKnowledgeMutationConflict(operation, req.body || {}, remoteEntries);
-    if (conflict) {
-        return {
-            remote,
-            expectedModifiedAt,
-            forced,
-            conflict: true,
-            remoteEntries,
-            conflictFields: conflict.fields
-        };
+    const canMergeByEntry = ["faq", "technical"].includes(operation);
+    if (canMergeByEntry || remoteIsNewer) {
+        const remoteEntries = parseKnowledgeWorkbookBuffer(remote.data, remote.modifiedAt);
+        const conflict = detectKnowledgeMutationConflict(operation, req.body || {}, remoteEntries);
+        if (conflict) {
+            return {
+                remote,
+                expectedModifiedAt,
+                forced,
+                conflict: true,
+                remoteEntries,
+                conflictFields: conflict.fields
+            };
+        }
+        if (canMergeByEntry) {
+            return { remote, expectedModifiedAt, forced, autoMerge: true, remoteEntries };
+        }
     }
 
-    return { remote, expectedModifiedAt, forced, autoMerge: true, remoteEntries };
+    return { remote, expectedModifiedAt, forced };
 }
 
 function respondWithKnowledgeConflict(res, preflight, operation, request) {

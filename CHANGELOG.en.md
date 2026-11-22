@@ -2,6 +2,15 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.77 - 2026-11-22
+
+### Fixed
+
+- Parallel saves now always use the current Salesforce state as the merge base,
+  even when the Salesforce file timestamp remains unchanged during very fast
+  edits. Changes in other FAQ entries or fields are no longer overwritten by
+  an older browser view.
+
 ## 1.5.76 - 2026-11-22
 
 ### Added

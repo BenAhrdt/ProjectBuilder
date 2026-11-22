@@ -2,6 +2,15 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.77 - 22.11.2026
+
+### Corregido
+
+- Los guardados paralelos utilizan ahora siempre el estado actual de Salesforce
+  como base de combinación, incluso si la marca de tiempo del archivo no cambia
+  durante modificaciones muy rápidas. Los cambios en otras preguntas o campos
+  ya no se sobrescriben con una vista antigua del navegador.
+
 ## 1.5.76 - 22.11.2026
 
 ### Nuevo

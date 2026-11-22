@@ -1110,7 +1110,17 @@ router.put("/faq/:id", async (req, res) => {
             remote: preflight.remote,
             force: preflight.forced,
             autoMerge: preflight.autoMerge,
-            mutation: { operation: "faq", request: { ...payload, id } }
+            mutation: {
+                operation: "faq",
+                request: {
+                    ...payload,
+                    id,
+                    // The conflict check uses the browser's opening state to
+                    // identify only fields changed by this browser. Keep the
+                    // same baseline for the actual workbook merge as well.
+                    baselineEntry: body.baselineEntry || null
+                }
+            }
         });
     } catch (error) {
         res.status(400).json({ success: false, error: error.message || "FAQ konnte nicht gespeichert werden." });

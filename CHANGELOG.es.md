@@ -2,6 +2,15 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.78 - 22.11.2026
+
+### Corregido
+
+- La combinación de FAQ conserva ahora también el estado de referencia cargado
+  al abrir el editor durante la escritura real del libro. Un guardado posterior
+  desde una ventana antigua ya no sobrescribe cambios de Salesforce cuando ese
+  campo no fue modificado en la ventana antigua.
+
 ## 1.5.77 - 22.11.2026
 
 ### Corregido

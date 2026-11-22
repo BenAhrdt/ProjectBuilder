@@ -2,6 +2,14 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.78 - 2026-11-22
+
+### Fixed
+
+- The FAQ merge now also carries the opening baseline into the actual workbook
+  write. A later save from an older browser window no longer overwrites changes
+  already in Salesforce when that field was not changed in the older window.
+
 ## 1.5.77 - 2026-11-22
 
 ### Fixed

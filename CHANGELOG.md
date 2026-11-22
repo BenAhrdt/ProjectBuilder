@@ -2,6 +2,15 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.78 - 22.11.2026
+
+### Behoben
+
+- Beim FAQ-Merge wird der beim Öffnen geladene Ausgangsstand jetzt auch beim
+  eigentlichen Schreiben der Excel-Datei berücksichtigt. Dadurch überschreibt
+  ein späteres Speichern aus einem alten Browserfenster keine Änderungen aus
+  Salesforce mehr, wenn das betreffende Feld dort nicht geändert wurde.
+
 ## 1.5.77 - 22.11.2026
 
 ### Behoben

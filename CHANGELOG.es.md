@@ -2,6 +2,14 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.76 - 22.11.2026
+
+### Nuevo
+
+- Parche de prueba para verificar la visualización de las notas de versión en
+  el diálogo de actualización. Los cambios se muestran antes de la descarga y
+  antes del reinicio.
+
 ## 1.5.75 - 22.11.2026
 
 ### Nuevo

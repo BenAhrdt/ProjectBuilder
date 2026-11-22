@@ -2,6 +2,13 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.76 - 2026-11-22
+
+### Added
+
+- Test patch for verifying the release-notes display in the update dialog.
+  The changes for this version are shown before download and before restart.
+
 ## 1.5.75 - 2026-11-22
 
 ### Added

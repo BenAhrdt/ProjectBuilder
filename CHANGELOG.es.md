@@ -2,6 +2,20 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.81 - 23.11.2026
+
+### Nuevo
+
+- Las fuentes de FAQ y datos técnicos ahora se pueden mantener con un texto
+  mostrado y un enlace separados. Sin texto mostrado se muestra el propio enlace;
+  sin enlace, el texto se mantiene como texto normal.
+
+### Mejorado
+
+- Las fuentes de texto y las URL existentes siguen siendo compatibles. Las
+  fuentes enlazadas se muestran como enlaces externos seguros en las vistas
+  activas y archivadas.
+
 ## 1.5.80 - 23.11.2026
 
 ### Nuevo

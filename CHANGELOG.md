@@ -2,6 +2,19 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.81 - 23.11.2026
+
+### Neu
+
+- FAQ- und Technik-Quellen können jetzt mit einem separaten Anzeigetext und Link
+  gepflegt werden. Ohne Anzeigetext wird der Link selbst angezeigt; ohne Link
+  bleibt der Anzeigetext normaler Text.
+
+### Verbessert
+
+- Bestehende reine Textquellen und URLs bleiben kompatibel. Verlinkte Quellen
+  werden in aktiven und archivierten Ansichten als sichere externe Links angezeigt.
+
 ## 1.5.80 - 23.11.2026
 
 ### Neu

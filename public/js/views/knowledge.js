@@ -853,7 +853,7 @@ function renderFaqEntry(entry) {
             <div class="knowledge-faq-answer">${escapeHtml(entry.answer)}</div>
             ${entry.tags || entry.source ? `<div class="knowledge-faq-meta">
                 ${entry.tags ? `<span><strong>${i18n.t("knowledge.tags")}:</strong> ${escapeHtml(entry.tags)}</span>` : ""}
-                ${entry.source ? `<span><strong>${i18n.t("knowledge.source")}:</strong> ${escapeHtml(entry.source)}</span>` : ""}
+                ${entry.source ? `<span><strong>${i18n.t("knowledge.source")}:</strong> ${renderKnowledgeSources(entry.source)}</span>` : ""}
             </div>` : ""}
         </details>
     `;
@@ -867,7 +867,7 @@ function renderTechnicalEntry(entry) {
         <td><strong>${escapeHtml(entry.parameter)}</strong>${entry.category ? `<small>${escapeHtml(entry.category)}</small>` : ""}</td>
         <td>${escapeHtml(entry.value)}${entry.notes ? `<small>${escapeHtml(entry.notes)}</small>` : ""}</td>
         <td>${escapeHtml(entry.unit)}</td>
-        <td>${escapeHtml(entry.source)}</td>
+        <td>${renderKnowledgeSources(entry.source)}</td>
         <td class="knowledge-entry-actions-cell">
             <button type="button" class="knowledge-row-action" data-knowledge-edit="technical" data-knowledge-id="${escapeHtml(entry.id)}">${escapeHtml(i18n.t("knowledge.edit"))}</button>
             <button type="button" class="knowledge-row-action knowledge-row-action-archive" data-knowledge-archive="technical" data-knowledge-id="${escapeHtml(entry.id)}">${escapeHtml(i18n.t("knowledge.archive"))}</button>
@@ -894,7 +894,7 @@ function renderArchivedFaqEntry(entry) {
             <div class="knowledge-faq-answer">${escapeHtml(entry.answer)}</div>
             <div class="knowledge-faq-meta">
                 ${entry.tags ? `<span><strong>${i18n.t("knowledge.tags")}:</strong> ${escapeHtml(entry.tags)}</span>` : ""}
-                ${entry.source ? `<span><strong>${i18n.t("knowledge.source")}:</strong> ${escapeHtml(entry.source)}</span>` : ""}
+                ${entry.source ? `<span><strong>${i18n.t("knowledge.source")}:</strong> ${renderKnowledgeSources(entry.source)}</span>` : ""}
                 <span><strong>${i18n.t("knowledge.archivedAt")}:</strong> ${escapeHtml(formatKnowledgeArchiveDate(entry.archivedAt))}</span>
             </div>
         </details>
@@ -909,7 +909,7 @@ function renderArchivedTechnicalEntry(entry) {
         <td><strong>${escapeHtml(entry.parameter)}</strong>${entry.category ? `<small>${escapeHtml(entry.category)}</small>` : ""}</td>
         <td>${escapeHtml(entry.value)}${entry.notes ? `<small>${escapeHtml(entry.notes)}</small>` : ""}</td>
         <td>${escapeHtml(entry.unit)}</td>
-        <td>${escapeHtml(entry.source)}${entry.archivedAt ? `<small>${escapeHtml(formatKnowledgeArchiveDate(entry.archivedAt))}</small>` : ""}</td>
+        <td>${renderKnowledgeSources(entry.source)}${entry.archivedAt ? `<small>${escapeHtml(formatKnowledgeArchiveDate(entry.archivedAt))}</small>` : ""}</td>
         <td class="knowledge-entry-actions-cell">
             <button type="button" class="knowledge-row-action" data-knowledge-restore="${escapeHtml(entry.archiveId)}">
                 ${escapeHtml(i18n.t("knowledge.restore"))}
@@ -944,6 +944,43 @@ function isNewKnowledgeEntry(entry) {
     if (!Number.isFinite(createdAt)) return false;
     const age = Date.now() - createdAt;
     return age >= 0 && age <= 28 * 24 * 60 * 60 * 1000;
+}
+
+function getKnowledgeSourceUrl(value) {
+    const source = String(value || "").trim();
+    if (!source) return "";
+    const candidate = /^www\./i.test(source) ? `https://${source}` : source;
+    try {
+        const url = new URL(candidate);
+        return ["http:", "https:"].includes(url.protocol) ? url.href : "";
+    } catch {
+        return "";
+    }
+}
+
+function parseKnowledgeSourceValue(value) {
+    const source = String(value || "").trim();
+    const markdownMatch = source.match(/^\[([\s\S]*)\]\((.+)\)$/);
+    if (markdownMatch && getKnowledgeSourceUrl(markdownMatch[2])) {
+        return {
+            text: markdownMatch[1],
+            link: markdownMatch[2]
+        };
+    }
+    return getKnowledgeSourceUrl(source)
+        ? { text: "", link: source }
+        : { text: source, link: "" };
+}
+
+function renderKnowledgeSources(value) {
+    const sources = splitKnowledgeChipValues(value, /;/).map(parseKnowledgeSourceValue);
+    if (!sources.length) return "";
+    return `<span class="knowledge-source-list">${sources.map(source => {
+        const url = getKnowledgeSourceUrl(source.link);
+        return url
+            ? `<a class="knowledge-source-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(source.text || source.link)}</a>`
+            : `<span>${escapeHtml(source.text)}</span>`;
+    }).join("<span class=\"knowledge-source-separator\">;</span>")}</span>`;
 }
 
 function bindKnowledgeEntryActions() {
@@ -1275,6 +1312,90 @@ function renderKnowledgeChipField({ name, label, value, separator = "default", f
     `;
 }
 
+function serializeKnowledgeSourceValue({ text = "", link = "" }) {
+    const normalizedText = String(text || "").trim();
+    const normalizedLink = String(link || "").trim();
+    if (!normalizedText && !normalizedLink) return "";
+    if (!normalizedLink) return normalizedText;
+    if (!normalizedText) return normalizedLink;
+    return `[${normalizedText}](${normalizedLink})`;
+}
+
+function renderKnowledgeSourceEditorRow(source = {}, pending = false) {
+    return `
+        <div class="knowledge-source-editor-row${pending ? " knowledge-source-editor-row-pending" : ""}" data-source-row ${pending ? 'data-source-pending="true"' : ""}>
+            <label>
+                <span>${escapeHtml(i18n.t("knowledge.sourceText"))}</span>
+                <input type="text" data-source-text value="${escapeHtml(source.text)}" placeholder="${escapeHtml(i18n.t("knowledge.sourceTextPlaceholder"))}">
+            </label>
+            <label>
+                <span>${escapeHtml(i18n.t("knowledge.sourceLink"))}</span>
+                <input type="url" data-source-link value="${escapeHtml(source.link)}" placeholder="${escapeHtml(i18n.t("knowledge.sourceLinkPlaceholder"))}">
+            </label>
+            ${pending
+                ? `<button type="button" class="knowledge-secondary" data-source-add>${escapeHtml(i18n.t("knowledge.sourceAdd"))}</button>`
+                : `<button type="button" class="knowledge-chip-remove knowledge-source-remove" data-source-remove aria-label="${escapeHtml(i18n.t("knowledge.remove"))}">−</button>`}
+        </div>
+    `;
+}
+
+function renderKnowledgeSourceField({ name, label, value, field = "" }) {
+    const sources = splitKnowledgeChipValues(value, /;/).map(parseKnowledgeSourceValue);
+    return `
+        <div class="knowledge-source-field" data-source-field>
+            <span class="knowledge-chip-field-label">${escapeHtml(label)}</span>
+            <div class="knowledge-source-editor-list" data-source-list>
+                ${sources.map(source => renderKnowledgeSourceEditorRow(source)).join("")}
+            </div>
+            ${renderKnowledgeSourceEditorRow({}, true)}
+            <input type="hidden" name="${escapeHtml(name)}" value="${escapeHtml(sources.map(serializeKnowledgeSourceValue).filter(Boolean).join("; "))}" data-source-hidden ${field ? `data-field="${escapeHtml(field)}"` : ""}>
+        </div>
+    `;
+}
+
+function bindKnowledgeSourceFields(overlay) {
+    overlay.querySelectorAll("[data-source-field]").forEach(field => {
+        if (field.dataset.sourceBound === "true") return;
+        field.dataset.sourceBound = "true";
+        const list = field.querySelector("[data-source-list]");
+        const pendingRow = field.querySelector('[data-source-row][data-source-pending="true"]');
+        const hidden = field.querySelector("[data-source-hidden]");
+        const getRows = () => [...list.querySelectorAll("[data-source-row]")];
+        const readRow = row => ({
+            text: row.querySelector("[data-source-text]")?.value || "",
+            link: row.querySelector("[data-source-link]")?.value || ""
+        });
+        const sync = () => {
+            hidden.value = getRows().map(readRow).map(serializeKnowledgeSourceValue).filter(Boolean).join("; ");
+        };
+        const addPendingSource = () => {
+            const source = readRow(pendingRow);
+            if (!source.text.trim() && !source.link.trim()) return;
+            list.insertAdjacentHTML("beforeend", renderKnowledgeSourceEditorRow(source));
+            pendingRow.querySelector("[data-source-text]").value = "";
+            pendingRow.querySelector("[data-source-link]").value = "";
+            sync();
+            pendingRow.querySelector("[data-source-text]").focus();
+        };
+        pendingRow.querySelector("[data-source-add]").addEventListener("click", addPendingSource);
+        pendingRow.querySelectorAll("input").forEach(input => input.addEventListener("keydown", event => {
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            addPendingSource();
+        }));
+        field.addEventListener("input", event => {
+            if (event.target.matches("[data-source-text], [data-source-link]")) sync();
+        });
+        field.addEventListener("click", event => {
+            const removeButton = event.target.closest("[data-source-remove]");
+            if (!removeButton) return;
+            removeButton.closest("[data-source-row]")?.remove();
+            sync();
+        });
+        sync();
+    });
+}
+
 function bindKnowledgeChipFields(overlay) {
     overlay.querySelectorAll("[data-chip-field]").forEach(field => {
         const list = field.querySelector("[data-chip-list]");
@@ -1334,7 +1455,7 @@ function openFaqEditor(entry = null) {
                     ${renderKnowledgeChipField({ name: "articleReferences", label: i18n.t("knowledge.articleReferences"), value: entry?.articleReferences })}
                     ${renderKnowledgeChipField({ name: "deviceTypes", label: i18n.t("knowledge.deviceTypes"), value: entry?.deviceTypes })}
                     ${renderKnowledgeChipField({ name: "tags", label: i18n.t("knowledge.tags"), value: entry?.tags })}
-                    ${renderKnowledgeChipField({ name: "source", label: i18n.t("knowledge.source"), value: entry?.source, separator: "semicolon" })}
+                    ${renderKnowledgeSourceField({ name: "source", label: i18n.t("knowledge.source"), value: entry?.source })}
                     <label class="knowledge-editor-checkbox"><input type="checkbox" name="active" ${entry?.active === 0 ? "" : "checked"}> <span>${escapeHtml(i18n.t("knowledge.active"))}</span></label>
                 </div>
                 <p class="knowledge-editor-error" data-role="editor-error" role="alert"></p>
@@ -1347,6 +1468,7 @@ function openFaqEditor(entry = null) {
     `;
     const form = overlay.querySelector("form");
     bindKnowledgeChipFields(overlay);
+    bindKnowledgeSourceFields(overlay);
     overlay.querySelectorAll('[data-action="cancel"]').forEach(button => button.addEventListener("click", () => closeKnowledgeEditor(overlay)));
     overlay.addEventListener("mousedown", event => {
         if (event.target === overlay) closeKnowledgeEditor(overlay);
@@ -1387,7 +1509,7 @@ function renderTechnicalEditorRow(entry = {}) {
             <label><span>${escapeHtml(i18n.t("knowledge.parameter"))}</span><input data-field="parameter" required value="${escapeHtml(entry.parameter)}"></label>
             <label><span>${escapeHtml(i18n.t("knowledge.value"))}</span><input data-field="value" required value="${escapeHtml(entry.value)}"></label>
             <label><span>${escapeHtml(i18n.t("knowledge.unit"))}</span><input data-field="unit" value="${escapeHtml(entry.unit)}"></label>
-            ${renderKnowledgeChipField({ name: "source", field: "source", label: i18n.t("knowledge.source"), value: entry.source, separator: "semicolon" })}
+            ${renderKnowledgeSourceField({ name: "source", field: "source", label: i18n.t("knowledge.source"), value: entry.source })}
             <label><span>${escapeHtml(i18n.t("knowledge.notes"))}</span><input data-field="notes" value="${escapeHtml(entry.notes)}"></label>
             <button type="button" class="knowledge-row-action knowledge-row-action-archive" data-action="remove-technical-row">${escapeHtml(i18n.t("knowledge.archive"))}</button>
         </div>
@@ -1439,6 +1561,7 @@ function openTechnicalEditor(entry = null, options = {}) {
     form._removedTechnicalIds = new Set();
     form._baselineTechnicalEntries = rows.map(row => ({ ...row }));
     bindKnowledgeChipFields(overlay);
+    bindKnowledgeSourceFields(overlay);
     overlay.querySelectorAll('[data-action="cancel"]').forEach(button => button.addEventListener("click", () => closeKnowledgeEditor(overlay)));
     overlay.addEventListener("mousedown", event => {
         if (event.target === overlay) closeKnowledgeEditor(overlay);
@@ -1459,6 +1582,7 @@ function openTechnicalEditor(entry = null, options = {}) {
         const rowsContainer = overlay.querySelector('[data-role="technical-rows"]');
         rowsContainer.insertAdjacentHTML("beforeend", renderTechnicalEditorRow());
         bindKnowledgeChipFields(rowsContainer.lastElementChild);
+        bindKnowledgeSourceFields(rowsContainer.lastElementChild);
         bindTechnicalRowActions();
     });
     bindTechnicalRowActions();

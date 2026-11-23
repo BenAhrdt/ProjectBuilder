@@ -2,6 +2,19 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.81 - 2026-11-23
+
+### Added
+
+- FAQ and technical-data sources can now be maintained with a separate display
+  text and link. Without display text, the link itself is shown; without a link,
+  the display text remains plain text.
+
+### Improved
+
+- Existing plain-text sources and URLs remain compatible. Linked sources are
+  shown as safe external links in active and archived views.
+
 ## 1.5.80 - 2026-11-23
 
 ### Added

@@ -2,6 +2,13 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.82 - 2026-11-23
+
+### Fixed
+
+- The remove button in the source editor is now clearly visible and centered
+  beside its source row.
+
 ## 1.5.81 - 2026-11-23
 
 ### Added

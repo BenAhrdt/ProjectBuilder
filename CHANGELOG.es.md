@@ -2,6 +2,13 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.82 - 23.11.2026
+
+### Corregido
+
+- El botón para eliminar del editor de fuentes ahora se muestra claramente y
+  queda centrado junto a su fila de fuente.
+
 ## 1.5.81 - 23.11.2026
 
 ### Nuevo

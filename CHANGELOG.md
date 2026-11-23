@@ -2,6 +2,13 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.82 - 23.11.2026
+
+### Behoben
+
+- Der Entfernen-Button im Quelleneditor wird jetzt sichtbar dargestellt und
+  mittig neben der jeweiligen Quellenzeile ausgerichtet.
+
 ## 1.5.81 - 23.11.2026
 
 ### Neu

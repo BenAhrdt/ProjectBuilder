@@ -2,6 +2,24 @@
 
 Aquí se documentan todos los cambios importantes de ProjectBuilder.
 
+## 1.5.80 - 23.11.2026
+
+### Nuevo
+
+- Las celdas de comparación se pueden editar directamente después de confirmar.
+  Para características ausentes, el editor se abre con el artículo y la
+  característica ya rellenados.
+- El libro de Excel registra `Tipo de cambio` y `Modificado por` para las filas
+  nuevas, editadas y archivadas de FAQ/datos técnicos.
+
+### Corregido
+
+- Las ediciones paralelas desde varias pestañas también detectan ahora cambios
+  de Salesforce cuando la segunda pestaña no modificó ningún campo local. En
+  ese caso la versión de Salesforce queda preseleccionada y no se sobrescribe
+  silenciosamente con una vista antigua.
+- Los datos técnicos siguen sin mostrar la etiqueta `Nuevo` en la aplicación.
+
 ## 1.5.79 - 22.11.2026
 
 ### Corregido

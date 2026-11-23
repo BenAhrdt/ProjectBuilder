@@ -16,6 +16,7 @@ let cachedCoreConnection = null;
 let loginPromise = null;
 let cachedQuoteDescription = null;
 let cachedProduct2LifecycleFields = null;
+let cachedSalesforceIdentity = null;
 
 function salesforceErrorMessage(errors, fallback) {
     const list = Array.isArray(errors) ? errors : [errors];
@@ -255,6 +256,7 @@ export function loginWithBrowser() {
         await authInfo.handleAliasAndDefaultSettings({ alias });
         cachedCoreConnection = Promise.resolve(await Connection.create({ authInfo }));
         cachedTokenConnection = null;
+        cachedSalesforceIdentity = null;
         return { success: true };
     })();
     return loginPromise.finally(() => { loginPromise = null; });
@@ -268,6 +270,7 @@ export async function logout() {
     cachedCoreConnection = null;
     cachedTokenConnection = null;
     cachedQuoteDescription = null;
+    cachedSalesforceIdentity = null;
 
     const remover = await AuthRemover.create({ skipCache: true });
     try {
@@ -310,6 +313,46 @@ export async function getStatus() {
     await query("SELECT Id FROM User LIMIT 1");
     const connection = getTokenConnection() ?? await getCoreConnection();
     return { connected: true, instanceUrl: connection?.instanceUrl ?? null };
+}
+
+export async function getCurrentUserDisplayName() {
+    if (cachedSalesforceIdentity) return cachedSalesforceIdentity;
+
+    const tokenConnection = getTokenConnection();
+    if (tokenConnection) {
+        try {
+            const response = await fetch(`${tokenConnection.instanceUrl}/services/oauth2/userinfo`, {
+                headers: { Authorization: `Bearer ${tokenConnection.accessToken}` }
+            });
+            if (response.ok) {
+                const info = await response.json();
+                cachedSalesforceIdentity = info.name
+                    || info.preferred_username
+                    || info.email
+                    || info.user_id
+                    || null;
+                return cachedSalesforceIdentity;
+            }
+        } catch {
+            // Fall through to the local Salesforce connection or the fallback
+            // stored by the knowledge mutation route.
+        }
+    }
+
+    const connection = await getCoreConnection();
+    if (!connection) return null;
+    const authInfo = typeof connection.getAuthInfo === "function" ? connection.getAuthInfo() : null;
+    const username = authInfo?.getUsername?.() || connection.username || "";
+    if (!username) return null;
+
+    try {
+        const result = await query(`SELECT Name, Username, Email FROM User WHERE Username = '${escapeSoql(username)}' LIMIT 1`);
+        const user = result?.records?.[0];
+        cachedSalesforceIdentity = user?.Name || user?.Username || user?.Email || username;
+    } catch {
+        cachedSalesforceIdentity = username;
+    }
+    return cachedSalesforceIdentity;
 }
 
 export async function warmConnection() {

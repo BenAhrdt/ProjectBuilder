@@ -2,6 +2,23 @@
 
 Alle wichtigen Änderungen an ProjectBuilder werden in dieser Datei dokumentiert.
 
+## 1.5.80 - 23.11.2026
+
+### Neu
+
+- Vergleichszellen können nach einer Bestätigung direkt bearbeitet werden. Bei
+  fehlenden Merkmalen wird der Editor mit Artikel und Merkmal vorausgefüllt.
+- Die Excel-Arbeitsmappe enthält pro FAQ-/Technikzeile `Änderungsart` und
+  `Geändert von` für neue, bearbeitete und archivierte Einträge.
+
+### Behoben
+
+- Parallele Bearbeitungen aus mehreren Tabs erkennen jetzt auch Änderungen in
+  Salesforce, wenn der zweite Tab selbst keine lokale Feldänderung vorgenommen
+  hat. Die Salesforce-Version ist in diesem Fall vorausgewählt und überschreibt
+  den neueren Stand nicht unbemerkt.
+- Technische Daten erhalten weiterhin kein `Neu`-Label in der Anwendung.
+
 ## 1.5.79 - 22.11.2026
 
 ### Behoben

@@ -2,6 +2,22 @@
 
 All notable changes to ProjectBuilder are documented here.
 
+## 1.5.80 - 2026-11-23
+
+### Added
+
+- Comparison cells can be edited directly after confirmation. Missing
+  characteristics open the editor with the article and characteristic filled in.
+- The Excel workbook now records `Change type` and `Changed by` for new, edited,
+  and archived FAQ/technical-data rows.
+
+### Fixed
+
+- Parallel edits from multiple tabs now also detect Salesforce changes when the
+  second tab made no local field change. The Salesforce version is preselected
+  in that case and cannot be silently overwritten by an older tab.
+- Technical data continue to have no `New` label in the application.
+
 ## 1.5.79 - 2026-11-22
 
 ### Fixed

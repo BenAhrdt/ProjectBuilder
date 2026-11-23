@@ -22,7 +22,9 @@ function initializeKnowledge(database) {
             active INTEGER NOT NULL DEFAULT 1,
             sortOrder INTEGER NOT NULL DEFAULT 0,
             createdAt TEXT,
-            updatedAt TEXT NOT NULL
+            updatedAt TEXT NOT NULL,
+            changeType TEXT NOT NULL DEFAULT 'Bearbeitet',
+            changedBy TEXT
         );
 
         CREATE INDEX IF NOT EXISTS faqEntriesSearchIndex
@@ -40,7 +42,9 @@ function initializeKnowledge(database) {
             source TEXT,
             notes TEXT,
             createdAt TEXT,
-            updatedAt TEXT NOT NULL
+            updatedAt TEXT NOT NULL,
+            changeType TEXT NOT NULL DEFAULT 'Bearbeitet',
+            changedBy TEXT
         );
 
         CREATE INDEX IF NOT EXISTS technicalDataSearchIndex
@@ -52,7 +56,9 @@ function initializeKnowledge(database) {
             recordJson TEXT NOT NULL,
             archivedAt TEXT NOT NULL,
             createdAt TEXT,
-            updatedAt TEXT
+            updatedAt TEXT,
+            changeType TEXT NOT NULL DEFAULT 'Archiviert',
+            changedBy TEXT
         );
 
         CREATE INDEX IF NOT EXISTS knowledgeArchiveTypeIndex
@@ -62,11 +68,19 @@ function initializeKnowledge(database) {
     const faqColumns = new Set(database.prepare("PRAGMA table_info(faqEntries)").all().map(column => column.name));
     if (!faqColumns.has("externalId")) database.exec("ALTER TABLE faqEntries ADD COLUMN externalId TEXT");
     if (!faqColumns.has("createdAt")) database.exec("ALTER TABLE faqEntries ADD COLUMN createdAt TEXT");
+    if (!faqColumns.has("changeType")) database.exec("ALTER TABLE faqEntries ADD COLUMN changeType TEXT NOT NULL DEFAULT 'Bearbeitet'");
+    if (!faqColumns.has("changedBy")) database.exec("ALTER TABLE faqEntries ADD COLUMN changedBy TEXT");
     database.prepare("UPDATE faqEntries SET createdAt = COALESCE(NULLIF(createdAt, ''), updatedAt) WHERE createdAt IS NULL OR createdAt = ''").run();
     const technicalColumns = new Set(database.prepare("PRAGMA table_info(technicalData)").all().map(column => column.name));
     if (!technicalColumns.has("active")) database.exec("ALTER TABLE technicalData ADD COLUMN active INTEGER NOT NULL DEFAULT 1");
     if (!technicalColumns.has("createdAt")) database.exec("ALTER TABLE technicalData ADD COLUMN createdAt TEXT");
+    if (!technicalColumns.has("changeType")) database.exec("ALTER TABLE technicalData ADD COLUMN changeType TEXT NOT NULL DEFAULT 'Bearbeitet'");
+    if (!technicalColumns.has("changedBy")) database.exec("ALTER TABLE technicalData ADD COLUMN changedBy TEXT");
     database.prepare("UPDATE technicalData SET createdAt = COALESCE(NULLIF(createdAt, ''), updatedAt) WHERE createdAt IS NULL OR createdAt = ''").run();
+
+    const archiveColumns = new Set(database.prepare("PRAGMA table_info(knowledgeArchive)").all().map(column => column.name));
+    if (!archiveColumns.has("changeType")) database.exec("ALTER TABLE knowledgeArchive ADD COLUMN changeType TEXT NOT NULL DEFAULT 'Archiviert'");
+    if (!archiveColumns.has("changedBy")) database.exec("ALTER TABLE knowledgeArchive ADD COLUMN changedBy TEXT");
 }
 
 registerDatabaseInitializer(initializeKnowledge);

@@ -19,16 +19,19 @@ const SALESFORCE_LAST_MODIFIED_SETTING = "knowledge.salesforceLastModifiedAt";
 const ARCHIVE_SHEET_NAME = "Archiv";
 const FAQ_HEADERS = [
     "FAQ-ID", "Frage", "Antwort", "Kategorie", "Artikelnummer", "Gerät",
-    "Suchbegriffe", "Quelle", "Aktiv", "Sortierung", "Erstellt am", "Zuletzt geändert"
+    "Suchbegriffe", "Quelle", "Aktiv", "Sortierung", "Erstellt am", "Zuletzt geändert",
+    "Änderungsart", "Geändert von"
 ];
 const TECHNICAL_HEADERS = [
     "Artikelnummer", "Gerät", "Kategorie", "Merkmal", "Wert", "Einheit",
-    "Quelle", "Hinweis", "Aktiv", "Erstellt am", "Zuletzt geändert"
+    "Quelle", "Hinweis", "Aktiv", "Erstellt am", "Zuletzt geändert", "Änderungsart",
+    "Geändert von"
 ];
 const ARCHIVE_HEADERS = [
     "Typ", "Archiviert am", "FAQ-ID", "Frage", "Antwort", "Kategorie",
     "Artikelnummer", "Gerät", "Suchbegriffe", "Quelle", "Aktiv", "Sortierung",
-    "Merkmal", "Wert", "Einheit", "Hinweis", "Erstellt am", "Zuletzt geändert"
+    "Merkmal", "Wert", "Einheit", "Hinweis", "Erstellt am", "Zuletzt geändert",
+    "Änderungsart", "Geändert von"
 ];
 
 function normalizeKey(value) {
@@ -70,6 +73,22 @@ function parseActive(value) {
 
 function timestampFrom(row, aliases, fallback) {
     return valueFrom(row, aliases) || fallback;
+}
+
+function changeTypeFrom(row, fallback) {
+    return valueFrom(row, [
+        "Änderungsart", "Aenderungsart", "Änderung", "Aenderung", "ChangeType", "Change"
+    ]) || fallback;
+}
+
+function changedByFrom(row) {
+    return valueFrom(row, [
+        "Geändert von", "Geaendert von", "Bearbeitet von", "ChangedBy", "LastModifiedBy", "User"
+    ]);
+}
+
+function inferChangeType(createdAt, updatedAt, fallback = "Bearbeitet") {
+    return createdAt && updatedAt && createdAt === updatedAt ? "Neu" : fallback;
 }
 
 function normalizeActive(value) {
@@ -114,6 +133,9 @@ function parseFaqRows(rows, updatedAt) {
         const rowUpdatedAt = timestampFrom(row,
             ["Zuletzt geaendert", "Zuletzt geändert", "UpdatedAt", "Updated", "LastModified"],
             updatedAt);
+        const createdAt = timestampFrom(row,
+            ["Erstellt am", "Erstellt", "CreatedAt", "Created", "CreationDate"],
+            rowUpdatedAt);
         parsed.push({
             externalId: valueFrom(row, ["FAQ-ID", "FAQ ID", "ID", "ExternalId"]),
             question,
@@ -125,10 +147,10 @@ function parseFaqRows(rows, updatedAt) {
             source,
             active: parseActive(valueFrom(row, ["Aktiv", "Active", "Status"])),
             sortOrder: Number(valueFrom(row, ["Sortierung", "SortOrder", "Reihenfolge"])) || parsed.length,
-            createdAt: timestampFrom(row,
-                ["Erstellt am", "Erstellt", "CreatedAt", "Created", "CreationDate"],
-                rowUpdatedAt),
-            updatedAt: rowUpdatedAt
+            createdAt,
+            updatedAt: rowUpdatedAt,
+            changeType: changeTypeFrom(row, inferChangeType(createdAt, rowUpdatedAt)),
+            changedBy: changedByFrom(row)
         });
     });
     return { parsed, errors };
@@ -155,6 +177,8 @@ function parseTechnicalRows(rows, updatedAt) {
         const createdAt = timestampFrom(row,
             ["Erstellt am", "Erstellt", "CreatedAt", "Created", "CreationDate"],
             rowUpdatedAt);
+        const changeType = changeTypeFrom(row, inferChangeType(createdAt, rowUpdatedAt));
+        const changedBy = changedByFrom(row);
         const hasContent = [articleNumber, deviceType, category, parameter, value, unit, source, notes].some(Boolean);
         if (!hasContent) return;
         if (!articleNumber && !deviceType) {
@@ -175,7 +199,9 @@ function parseTechnicalRows(rows, updatedAt) {
                 source,
                 notes,
                 createdAt,
-                updatedAt: rowUpdatedAt
+                updatedAt: rowUpdatedAt,
+                changeType,
+                changedBy
             }));
             return;
         }
@@ -187,6 +213,7 @@ function parseTechnicalRows(rows, updatedAt) {
             "hinweis", "hinweise", "notiz", "notes", "bemerkung",
             "aktiv", "active", "status", "zuletztgeandert", "zuletztgeaendert", "zuletztgeandertam",
             "erstellt", "erstelltam", "createdat", "created", "creationdate",
+            "anderungsart", "anderung", "changetype", "change", "geandertvon", "bearbeitetvon", "changedby", "lastmodifiedby", "user",
             "merkmal", "parameter", "eigenschaft", "specification", "feature", "wert", "value", "auspraegung"
         ]);
         const propertyColumns = Object.entries(row)
@@ -209,7 +236,9 @@ function parseTechnicalRows(rows, updatedAt) {
                 source,
                 notes,
                 createdAt,
-                updatedAt: rowUpdatedAt
+                updatedAt: rowUpdatedAt,
+                changeType,
+                changedBy
             }));
         });
     });
@@ -237,6 +266,8 @@ function parseArchiveRows(rows, updatedAt) {
         const archivedAt = timestampFrom(row,
             ["Archiviert am", "Archiviert", "ArchivedAt", "ArchiveDate"],
             updatedAt);
+        const changeType = changeTypeFrom(row, "Archiviert");
+        const changedBy = changedByFrom(row);
 
         const record = isTechnical
             ? {
@@ -274,7 +305,9 @@ function parseArchiveRows(rows, updatedAt) {
             recordJson: JSON.stringify(record),
             archivedAt,
             createdAt,
-            updatedAt: rowUpdatedAt
+            updatedAt: rowUpdatedAt,
+            changeType,
+            changedBy
         });
     });
     return parsed;
@@ -285,16 +318,18 @@ function replaceFaqEntries(rows) {
     const insert = database.faqEntries.prepare(`
         INSERT INTO faqEntries (
             externalId, question, answer, category, articleReferences, deviceTypes,
-            tags, source, active, sortOrder, createdAt, updatedAt
+            tags, source, active, sortOrder, createdAt, updatedAt, changeType, changedBy
         ) VALUES (
             @externalId, @question, @answer, @category, @articleReferences, @deviceTypes,
-            @tags, @source, @active, @sortOrder, @createdAt, @updatedAt
+            @tags, @source, @active, @sortOrder, @createdAt, @updatedAt, @changeType, @changedBy
         )
     `);
     rows.forEach(row => insert.run({
         ...row,
         externalId: row.externalId || `faq-${randomUUID()}`,
-        createdAt: row.createdAt || row.updatedAt
+        createdAt: row.createdAt || row.updatedAt,
+        changeType: row.changeType || inferChangeType(row.createdAt || row.updatedAt, row.updatedAt),
+        changedBy: row.changedBy || ""
     }));
 }
 
@@ -303,25 +338,34 @@ function replaceTechnicalData(rows) {
     const insert = database.technicalData.prepare(`
         INSERT INTO technicalData (
             active, articleNumber, deviceType, category, parameter, value,
-            unit, source, notes, createdAt, updatedAt
+            unit, source, notes, createdAt, updatedAt, changeType, changedBy
         ) VALUES (
             @active, @articleNumber, @deviceType, @category, @parameter, @value,
-            @unit, @source, @notes, @createdAt, @updatedAt
+            @unit, @source, @notes, @createdAt, @updatedAt, @changeType, @changedBy
         )
     `);
-    rows.forEach(row => insert.run({ ...row, createdAt: row.createdAt || row.updatedAt }));
+    rows.forEach(row => insert.run({
+        ...row,
+        createdAt: row.createdAt || row.updatedAt,
+        changeType: row.changeType || inferChangeType(row.createdAt || row.updatedAt, row.updatedAt),
+        changedBy: row.changedBy || ""
+    }));
 }
 
 function replaceArchive(rows) {
     database.knowledgeArchive.prepare("DELETE FROM knowledgeArchive").run();
     const insert = database.knowledgeArchive.prepare(`
         INSERT INTO knowledgeArchive (
-            entryType, recordJson, archivedAt, createdAt, updatedAt
+            entryType, recordJson, archivedAt, createdAt, updatedAt, changeType, changedBy
         ) VALUES (
-            @entryType, @recordJson, @archivedAt, @createdAt, @updatedAt
+            @entryType, @recordJson, @archivedAt, @createdAt, @updatedAt, @changeType, @changedBy
         )
     `);
-    rows.forEach(row => insert.run(row));
+    rows.forEach(row => insert.run({
+        ...row,
+        changeType: row.changeType || "Archiviert",
+        changedBy: row.changedBy || ""
+    }));
 }
 
 function getSalesforceLastModifiedAt() {
@@ -519,8 +563,10 @@ function detectFaqMutationConflict(request, remoteFaqEntries) {
 
     const localChangedFields = knowledgeEntryChangedFields(request, baseline, FAQ_MUTABLE_FIELDS);
     const remoteChangedFields = knowledgeEntryChangedFields(remote, baseline, FAQ_MUTABLE_FIELDS);
-    const fields = localChangedFields.filter(field => remoteChangedFields.includes(field)
-        && !knowledgeValuesEqual(field, request[field], remote[field]));
+    const fields = remoteChangedFields.filter(field => {
+        const localChanged = localChangedFields.includes(field);
+        return !localChanged || !knowledgeValuesEqual(field, request[field], remote[field]);
+    });
     return fields.length ? { fields, remote } : null;
 }
 
@@ -547,8 +593,8 @@ function detectTechnicalMutationConflict(request, remoteTechnicalEntries) {
         const local = localByKey.get(key) || null;
         const remote = remoteByKey.get(key) || null;
         if (!baseline) {
-            if (local && remote && TECHNICAL_MUTABLE_FIELDS.some(field =>
-                !knowledgeValuesEqual(field, local[field], remote[field]))) {
+            if (remote && (!local || TECHNICAL_MUTABLE_FIELDS.some(field =>
+                !knowledgeValuesEqual(field, local[field], remote[field])))) {
                 conflicts.push(key);
             }
             return;
@@ -559,7 +605,7 @@ function detectTechnicalMutationConflict(request, remoteTechnicalEntries) {
             const remoteChanged = !remote || !knowledgeValuesEqual(field, remote[field], baseline[field]);
             const localValue = local?.[field] ?? "";
             const remoteValue = remote?.[field] ?? "";
-            if (localChanged && remoteChanged && !knowledgeValuesEqual(field, localValue, remoteValue)) {
+            if (remoteChanged && (!localChanged || !knowledgeValuesEqual(field, localValue, remoteValue))) {
                 conflicts.push(`${key}:${field}`);
             }
         });
@@ -600,7 +646,9 @@ function createKnowledgeWorkbookBufferFromEntries({ faq = [], technical = [], ar
         Number(entry.active) ? "1" : "0",
         entry.sortOrder,
         entry.createdAt || entry.updatedAt,
-        entry.updatedAt
+        entry.updatedAt,
+        entry.changeType || inferChangeType(entry.createdAt || entry.updatedAt, entry.updatedAt),
+        entry.changedBy || ""
     ]).sort((left, right) => {
         const rightDate = Date.parse(right[11] || right[10] || "") || 0;
         const leftDate = Date.parse(left[11] || left[10] || "") || 0;
@@ -617,7 +665,9 @@ function createKnowledgeWorkbookBufferFromEntries({ faq = [], technical = [], ar
         entry.notes,
         Number(entry.active) ? "1" : "0",
         entry.createdAt || entry.updatedAt,
-        entry.updatedAt
+        entry.updatedAt,
+        entry.changeType || inferChangeType(entry.createdAt || entry.updatedAt, entry.updatedAt),
+        entry.changedBy || ""
     ]);
     const archiveRows = archive.map(row => {
         const record = safeArchiveRecord(row);
@@ -640,7 +690,9 @@ function createKnowledgeWorkbookBufferFromEntries({ faq = [], technical = [], ar
             isFaq ? "" : record.unit,
             isFaq ? "" : record.notes,
             row.createdAt || record.createdAt,
-            row.updatedAt || record.updatedAt
+            row.updatedAt || record.updatedAt,
+            row.changeType || "Archiviert",
+            row.changedBy || ""
         ];
     });
 
@@ -680,28 +732,39 @@ function mergeKnowledgeArchiveEntries(remoteArchive = [], localArchive = []) {
     return merged;
 }
 
-function mergeKnowledgeFaqEntry(remote, local, baseline = null) {
+function mergeKnowledgeFaqEntry(remote, local, baseline = null, conflictChoices = {}) {
     if (!remote || !baseline) return local;
     const merged = { ...remote };
     FAQ_MUTABLE_FIELDS.forEach(field => {
-        if (!knowledgeValuesEqual(field, local[field], baseline[field])) merged[field] = local[field];
+        if (conflictChoices[field] === "local"
+            || !knowledgeValuesEqual(field, local[field], baseline[field])) {
+            merged[field] = local[field];
+        }
     });
     merged.externalId = remote.externalId || local.externalId;
     merged.createdAt = remote.createdAt || local.createdAt;
     merged.updatedAt = local.updatedAt || remote.updatedAt;
+    merged.changeType = local.changeType || remote.changeType || "Bearbeitet";
+    merged.changedBy = local.changedBy || remote.changedBy || "";
     return merged;
 }
 
-function mergeKnowledgeTechnicalGroup(remoteGroup, localGroup, baselineEntries) {
+function mergeKnowledgeTechnicalGroup(remoteGroup, localGroup, baselineEntries, options = {}) {
     const remoteByKey = buildTechnicalKnowledgeMap(remoteGroup);
     const localByKey = buildTechnicalKnowledgeMap(localGroup);
     const baselineByKey = buildTechnicalKnowledgeMap(baselineEntries);
     const mergedByKey = new Map(remoteByKey);
+    const forceLocalKeys = new Set(options.forceLocalKeys || []);
+    const forceLocalDeletes = new Set(options.forceLocalDeletes || []);
 
     baselineByKey.forEach((baseline, key) => {
         const local = localByKey.get(key) || null;
         const remote = remoteByKey.get(key) || null;
         if (!local) {
+            if (forceLocalDeletes.has(key)) {
+                mergedByKey.delete(key);
+                return;
+            }
             if (remote && TECHNICAL_MUTABLE_FIELDS.every(field =>
                 knowledgeValuesEqual(field, remote[field], baseline[field]))) {
                 mergedByKey.delete(key);
@@ -710,11 +773,13 @@ function mergeKnowledgeTechnicalGroup(remoteGroup, localGroup, baselineEntries) 
         }
         const localChanged = TECHNICAL_MUTABLE_FIELDS.some(field =>
             !knowledgeValuesEqual(field, local[field], baseline[field]));
-        if (!localChanged) return;
+        if (!localChanged && !forceLocalKeys.has(key)) return;
         mergedByKey.set(key, remote ? {
             ...remote,
             createdAt: remote.createdAt || local.createdAt,
             updatedAt: local.updatedAt || remote.updatedAt,
+            changeType: local.changeType || remote.changeType || "Bearbeitet",
+            changedBy: local.changedBy || remote.changedBy || "",
             ...TECHNICAL_MUTABLE_FIELDS.reduce((result, field) => {
                 if (!knowledgeValuesEqual(field, local[field], baseline[field])) result[field] = local[field];
                 return result;
@@ -724,7 +789,7 @@ function mergeKnowledgeTechnicalGroup(remoteGroup, localGroup, baselineEntries) 
 
     localByKey.forEach((local, key) => {
         if (baselineByKey.has(key)) return;
-        if (!mergedByKey.has(key)) mergedByKey.set(key, local);
+        if (forceLocalKeys.has(key) || !mergedByKey.has(key)) mergedByKey.set(key, local);
     });
     return [...mergedByKey.values()];
 }
@@ -743,7 +808,12 @@ function mergeKnowledgeWorkbookBuffers(remoteBuffer, localBuffer, operation, req
             || (request?.question && entry.question === request.question)
         );
         const faq = [...remoteEntries.faq];
-        if (remoteIndex >= 0) faq[remoteIndex] = mergeKnowledgeFaqEntry(faq[remoteIndex], localTarget, baseline);
+        if (remoteIndex >= 0) faq[remoteIndex] = mergeKnowledgeFaqEntry(
+            faq[remoteIndex],
+            localTarget,
+            baseline,
+            request?.conflictChoices || {}
+        );
         else faq.push(localTarget);
         return createKnowledgeWorkbookBufferFromEntries({
             faq,
@@ -768,7 +838,11 @@ function mergeKnowledgeWorkbookBuffers(remoteBuffer, localBuffer, operation, req
             ...mergeKnowledgeTechnicalGroup(
                 remoteEntries.technical.filter(sameGroup),
                 localEntries.technical.filter(sameGroup),
-                baselineEntries
+                baselineEntries,
+                {
+                    forceLocalKeys: request?.forceLocalKeys,
+                    forceLocalDeletes: request?.forceLocalDeletes
+                }
             )
         ];
         return createKnowledgeWorkbookBufferFromEntries({
@@ -852,18 +926,28 @@ async function synchronizeKnowledgeWorkbook({ remote: suppliedRemote = undefined
     }
 }
 
-function archiveRecord(entryType, record, archivedAt = new Date().toISOString()) {
+function archiveRecord(entryType, record, archivedAt = new Date().toISOString(), changedBy = "") {
     database.knowledgeArchive.prepare(`
         INSERT INTO knowledgeArchive (
-            entryType, recordJson, archivedAt, createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?)
+            entryType, recordJson, archivedAt, createdAt, updatedAt, changeType, changedBy
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(
         entryType,
         JSON.stringify(record),
         archivedAt,
         record.createdAt || record.updatedAt || archivedAt,
-        record.updatedAt || archivedAt
+        record.updatedAt || archivedAt,
+        "Archiviert",
+        changedBy
     );
+}
+
+async function getKnowledgeActor() {
+    try {
+        return text(await salesforce.getCurrentUserDisplayName()) || "Salesforce-Benutzer";
+    } catch {
+        return "Salesforce-Benutzer";
+    }
 }
 
 function requireText(value, fieldLabel) {
@@ -872,7 +956,7 @@ function requireText(value, fieldLabel) {
     return result;
 }
 
-function getFaqPayload(body, existing = null) {
+function getFaqPayload(body, existing = null, changedBy = "Salesforce-Benutzer") {
     const now = new Date().toISOString();
     return {
         externalId: text(body.externalId) || existing?.externalId || `faq-${randomUUID()}`,
@@ -886,11 +970,13 @@ function getFaqPayload(body, existing = null) {
         active: normalizeActive(body.active ?? existing?.active ?? 1),
         sortOrder: numericValue(body.sortOrder, existing?.sortOrder ?? 0),
         createdAt: existing?.createdAt || text(body.createdAt) || now,
-        updatedAt: now
+        updatedAt: now,
+        changeType: existing ? "Bearbeitet" : "Neu",
+        changedBy
     };
 }
 
-function getTechnicalPayload(body, existing = null) {
+function getTechnicalPayload(body, existing = null, changedBy = "Salesforce-Benutzer") {
     const articleNumber = text(body.articleNumber);
     const deviceType = text(body.deviceType);
     if (!articleNumber && !deviceType) throw new Error("Artikelnummer oder Gerät ist erforderlich.");
@@ -905,7 +991,9 @@ function getTechnicalPayload(body, existing = null) {
         source: text(body.source),
         notes: text(body.notes),
         createdAt: existing?.createdAt || text(body.createdAt) || new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        changeType: existing ? "Bearbeitet" : "Neu",
+        changedBy
     };
 }
 
@@ -987,6 +1075,7 @@ router.post("/archive/:id/restore", async (req, res) => {
 
         const record = safeArchiveRecord(archived);
         const now = new Date().toISOString();
+        const changedBy = await getKnowledgeActor();
         const transaction = database.knowledgeArchive.transaction(() => {
             if (archived.entryType === "faq") {
                 requireText(record.question, "Die Frage");
@@ -994,10 +1083,10 @@ router.post("/archive/:id/restore", async (req, res) => {
                 database.faqEntries.prepare(`
                     INSERT INTO faqEntries (
                         externalId, question, answer, category, articleReferences, deviceTypes,
-                        tags, source, active, sortOrder, createdAt, updatedAt
+                        tags, source, active, sortOrder, createdAt, updatedAt, changeType, changedBy
                     ) VALUES (
                         @externalId, @question, @answer, @category, @articleReferences, @deviceTypes,
-                        @tags, @source, 1, @sortOrder, @createdAt, @updatedAt
+                        @tags, @source, 1, @sortOrder, @createdAt, @updatedAt, @changeType, @changedBy
                     )
                 `).run({
                     externalId: record.externalId || `faq-${randomUUID()}`,
@@ -1010,7 +1099,9 @@ router.post("/archive/:id/restore", async (req, res) => {
                     source: record.source || "",
                     sortOrder: numericValue(record.sortOrder, 0),
                     createdAt: record.createdAt || archived.createdAt || now,
-                    updatedAt: now
+                    updatedAt: now,
+                    changeType: "Bearbeitet",
+                    changedBy
                 });
             } else {
                 requireText(record.parameter, "Das Merkmal");
@@ -1021,10 +1112,10 @@ router.post("/archive/:id/restore", async (req, res) => {
                 database.technicalData.prepare(`
                     INSERT INTO technicalData (
                         active, articleNumber, deviceType, category, parameter, value,
-                        unit, source, notes, createdAt, updatedAt
+                        unit, source, notes, createdAt, updatedAt, changeType, changedBy
                     ) VALUES (
                         1, @articleNumber, @deviceType, @category, @parameter, @value,
-                        @unit, @source, @notes, @createdAt, @updatedAt
+                        @unit, @source, @notes, @createdAt, @updatedAt, @changeType, @changedBy
                     )
                 `).run({
                     articleNumber: record.articleNumber || "",
@@ -1036,7 +1127,9 @@ router.post("/archive/:id/restore", async (req, res) => {
                     source: record.source || "",
                     notes: record.notes || "",
                     createdAt: record.createdAt || archived.createdAt || now,
-                    updatedAt: now
+                    updatedAt: now,
+                    changeType: "Bearbeitet",
+                    changedBy
                 });
             }
             database.knowledgeArchive.prepare("DELETE FROM knowledgeArchive WHERE id = ?").run(archiveId);
@@ -1054,7 +1147,7 @@ router.post("/archive/:id/restore", async (req, res) => {
 router.post("/faq", async (req, res) => {
     try {
         const body = req.body || {};
-        const payload = getFaqPayload(body);
+        const payload = getFaqPayload(body, null, await getKnowledgeActor());
         const preflight = await preflightKnowledgeMutation(req, "faq");
         if (preflight.conflict) {
             return respondWithKnowledgeConflict(res, preflight, "faq", payload);
@@ -1073,7 +1166,10 @@ router.post("/faq", async (req, res) => {
             remote: preflight.remote,
             force: preflight.forced,
             autoMerge: preflight.autoMerge,
-            mutation: { operation: "faq", request: payload }
+            mutation: {
+                operation: "faq",
+                request: { ...payload, conflictChoices: body.conflictChoices || {} }
+            }
         });
     } catch (error) {
         res.status(400).json({ success: false, error: error.message || "FAQ konnte nicht gespeichert werden." });
@@ -1090,7 +1186,7 @@ router.put("/faq/:id", async (req, res) => {
         }
         if (!existing) return res.status(404).json({ success: false, error: "FAQ-Eintrag wurde nicht gefunden." });
         const body = req.body || {};
-        const payload = getFaqPayload(body, existing);
+        const payload = getFaqPayload(body, existing, await getKnowledgeActor());
         const preflight = await preflightKnowledgeMutation(req, "faq");
         if (preflight.conflict) {
             return respondWithKnowledgeConflict(res, preflight, "faq", { ...payload, id });
@@ -1108,7 +1204,9 @@ router.put("/faq/:id", async (req, res) => {
                 active = @active,
                 sortOrder = @sortOrder,
                 createdAt = @createdAt,
-                updatedAt = @updatedAt
+                updatedAt = @updatedAt,
+                changeType = @changeType,
+                changedBy = @changedBy
             WHERE id = @id
         `).run({ ...payload, id });
         await respondAfterLocalSave(res, { entryId: id }, {
@@ -1120,6 +1218,7 @@ router.put("/faq/:id", async (req, res) => {
                 request: {
                     ...payload,
                     id,
+                    conflictChoices: body.conflictChoices || {},
                     // The conflict check uses the browser's opening state to
                     // identify only fields changed by this browser. Keep the
                     // same baseline for the actual workbook merge as well.
@@ -1187,6 +1286,7 @@ router.post("/technical/group", async (req, res) => {
             : [];
         const existingById = new Map(existingRows.map(row => [Number(row.id), row]));
         const now = new Date().toISOString();
+        const changedBy = await getKnowledgeActor();
         const transaction = database.technicalData.transaction(() => {
             const savedIds = [];
             const update = database.technicalData.prepare(`
@@ -1201,22 +1301,24 @@ router.post("/technical/group", async (req, res) => {
                     source = @source,
                     notes = @notes,
                     createdAt = @createdAt,
-                    updatedAt = @updatedAt
+                    updatedAt = @updatedAt,
+                    changeType = @changeType,
+                    changedBy = @changedBy
                 WHERE id = @id
             `);
             const insert = database.technicalData.prepare(`
                 INSERT INTO technicalData (
                     active, articleNumber, deviceType, category, parameter, value,
-                    unit, source, notes, createdAt, updatedAt
+                    unit, source, notes, createdAt, updatedAt, changeType, changedBy
                 ) VALUES (
                     @active, @articleNumber, @deviceType, @category, @parameter, @value,
-                    @unit, @source, @notes, @createdAt, @updatedAt
+                    @unit, @source, @notes, @createdAt, @updatedAt, @changeType, @changedBy
                 )
             `);
 
             entries.forEach(entry => {
                 const id = numericValue(entry.id, 0);
-                const payload = getTechnicalPayload({ ...entry, updatedAt: now }, existingById.get(id));
+                const payload = getTechnicalPayload({ ...entry, updatedAt: now }, existingById.get(id), changedBy);
                 payload.updatedAt = now;
                 if (id && existingById.has(id)) {
                     update.run({ ...payload, id });
@@ -1230,7 +1332,7 @@ router.post("/technical/group", async (req, res) => {
             removedIds.forEach(id => {
                 if (archivedIds.has(id) || !existingById.has(id)) return;
                 const row = existingById.get(id);
-                archiveRecord("technical", row, now);
+                archiveRecord("technical", row, now, changedBy);
                 database.technicalData.prepare("DELETE FROM technicalData WHERE id = ?").run(id);
                 archivedIds.add(id);
             });
@@ -1262,8 +1364,9 @@ router.post("/archive", async (req, res) => {
         const table = entryType === "faq" ? database.faqEntries : database.technicalData;
         const row = table.prepare("SELECT * FROM " + (entryType === "faq" ? "faqEntries" : "technicalData") + " WHERE id = ?").get(id);
         if (!row) return res.status(404).json({ success: false, error: "Eintrag wurde nicht gefunden." });
+        const changedBy = await getKnowledgeActor();
         const transaction = table.transaction(() => {
-            archiveRecord(entryType, row);
+            archiveRecord(entryType, row, new Date().toISOString(), changedBy);
             table.prepare("DELETE FROM " + (entryType === "faq" ? "faqEntries" : "technicalData") + " WHERE id = ?").run(id);
         });
         transaction();
